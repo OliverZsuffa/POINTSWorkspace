@@ -431,7 +431,7 @@ Circle passing defines one pattern, not a separate independently authored patter
 2. The circle participant count is a separate sequence property. For example, a pattern defined once can be instantiated for ten people arranged around the circle.
 3. The renderer repeats the same authored pattern for every participant, rotated or mapped consistently around the circle.
 4. Do not require duplicate performer notation rows or separate edits for each participant in circle passing mode.
-5. The editor must make clear that the displayed notation is the representative pattern and that the configured participant count controls how many times it is instantiated.
+5. The editor must make clear that the displayed notation is the representative pattern, label it Pattern, and provide a direct People count control that determines how many times it is instantiated.
 6. Circle passing target distance and direction are interpreted relative to the participant's position in the circle. The same relative instruction applies consistently to every participant.
 7. The number of sides in the rendered polygon must update whenever the participant count changes. The editor must not permit a circle passing configuration with fewer than three participants.
 7. Circle passing validation must validate the representative pattern and its repeated interactions around the configured circle, including wraparound between the last and first participant.
