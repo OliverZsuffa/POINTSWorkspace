@@ -308,6 +308,7 @@ export default function App() {
 
   const selectCell = (cell: EditorCell, extend = false) => {
     setSelected(cell);
+    if (!extend) { setPassRecipientId(''); setPassRecipientHand('left'); }
     setSelectedCells((current) => extend
       ? current.some((item) => item.performerId === cell.performerId && item.hand === cell.hand && item.beatId === cell.beatId && compareRational(item.offset ?? rational(0), cell.offset ?? rational(0)) === 0) ? current : [...current, cell]
       : [cell]);
@@ -407,16 +408,16 @@ export default function App() {
       hands.map((hand) => ({ performerId: performer.id, hand })),
     );
     const rowIndex = rows.findIndex((row) => row.performerId === selected.performerId && row.hand === selected.hand);
-    const beatIndex = sequence.beats.findIndex((beat) => beat.id === selected.beatId);
+    const slotIndex = timelineSlots.findIndex((slot) => slot.beatId === selected.beatId && compareRational(slot.offset, selected.offset ?? rational(0)) === 0);
     let nextRow = rowIndex;
-    let nextBeat = beatIndex;
-    if (event.key === 'ArrowLeft') nextBeat -= 1;
-    if (event.key === 'ArrowRight') nextBeat += 1;
+    let nextSlot = slotIndex;
+    if (event.key === 'ArrowLeft') nextSlot -= 1;
+    if (event.key === 'ArrowRight') nextSlot += 1;
     if (event.key === 'ArrowUp') nextRow -= 1;
     if (event.key === 'ArrowDown') nextRow += 1;
     const row = rows[Math.max(0, Math.min(rows.length - 1, nextRow))];
-    const beat = sequence.beats[Math.max(0, Math.min(sequence.beats.length - 1, nextBeat))];
-    if (row && beat) selectCell({ performerId: row.performerId, hand: row.hand, beatId: beat.id, offset: selected.offset, duration: selected.duration }, event.shiftKey);
+    const slot = timelineSlots[Math.max(0, Math.min(timelineSlots.length - 1, nextSlot))];
+    if (row && slot) selectCell({ performerId: row.performerId, hand: row.hand, beatId: slot.beatId, offset: slot.offset, duration: slot.duration }, event.shiftKey);
   };
 
   const addAction = (type: ActionName) => {
@@ -507,10 +508,10 @@ export default function App() {
       window.alert('Move a rectangle within the same hand row.');
       return;
     }
-    const sourceIndex = sequence.beats.findIndex((beat) => beat.id === first.beatId);
-    const targetIndex = sequence.beats.findIndex((beat) => beat.id === last.beatId);
-    const offset = targetIndex - sourceIndex;
-    if (offset === 0) return;
+    const sourceSlot = timelineSlots.findIndex((slot) => slot.beatId === first.beatId && compareRational(slot.offset, first.offset ?? rational(0)) === 0);
+    const targetSlot = timelineSlots.findIndex((slot) => slot.beatId === last.beatId && compareRational(slot.offset, last.offset ?? rational(0)) === 0);
+    const offset = targetSlot - sourceSlot;
+    if (sourceSlot < 0 || targetSlot < 0 || offset === 0) return;
     const selectedSourceCells = selectedCells.some((cell) =>
       cell.performerId === first.performerId && cell.hand === first.hand && cell.beatId === first.beatId &&
       compareRational(cell.offset ?? rational(0), first.offset ?? rational(0)) === 0,
@@ -527,26 +528,25 @@ export default function App() {
     if (!rectangle.length) return;
     const movingIds = new Set(rectangle.map((entry) => entry.id));
     const destinations = rectangle.map((entry) => {
-      const currentIndex = sequence.beats.findIndex((beat) => beat.id === entry.time.beatId);
-      return { entry, beat: sequence.beats[currentIndex + offset] };
+      const currentSlot = timelineSlots.findIndex((slot) => slot.beatId === entry.time.beatId && compareRational(slot.offset, entry.time.offset) === 0);
+      return { entry, slot: timelineSlots[currentSlot + offset] };
     });
-    if (destinations.some((item) => !item.beat)) {
+    if (destinations.some((item) => !item.slot)) {
       window.alert('The complete rectangle selection would extend beyond the sequence.');
       return;
     }
-    const conflict = destinations.some(({ entry, beat }) => sequence.notation.some((other) =>
+    const conflict = destinations.some(({ entry, slot }) => sequence.notation.some((other) =>
       !movingIds.has(other.id) && other.performerId === entry.performerId && other.hand === entry.hand &&
-      other.time.beatId === beat!.id &&
-      compareRational(other.time.offset, entry.time.offset) === 0,
+      other.time.beatId === slot!.beatId && compareRational(other.time.offset, slot!.offset) === 0,
     ));
     if (conflict) {
       window.alert('Move cancelled because the destination contains notation.');
       return;
     }
-    const beatByEntry = new Map(destinations.map(({ entry, beat }) => [entry.id, beat!.id]));
+    const slotByEntry = new Map(destinations.map(({ entry, slot }) => [entry.id, slot!]));
     commit({ ...sequence, notation: sequence.notation.map((entry) => {
-      const beatId = beatByEntry.get(entry.id);
-      return beatId ? { ...entry, time: { ...entry.time, beatId } } : entry;
+      const slot = slotByEntry.get(entry.id);
+      return slot ? { ...entry, time: { beatId: slot.beatId, offset: slot.offset } } : entry;
     }) });
   };
 
