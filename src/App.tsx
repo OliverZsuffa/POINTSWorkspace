@@ -1,4 +1,4 @@
-import { useMemo, useState, type KeyboardEvent } from 'react';
+import { useEffect, useMemo, useState, type KeyboardEvent } from 'react';
 import {
   asActionEntryId,
   asBallId,
@@ -308,7 +308,13 @@ export default function App() {
   const [history, setHistory] = useState<Sequence[]>([]);
   const [future, setFuture] = useState<Sequence[]>([]);
   const [showSettings, setShowSettings] = useState(false);
-  const [showRenderer, setShowRenderer] = useState(false);
+  const [showEditor, setShowEditor] = useState(true);
+  const [showRenderer, setShowRenderer] = useState(true);
+  const [activeWorkspaceTab, setActiveWorkspaceTab] = useState<'editor' | 'renderer'>('editor');
+  const [panelsSwapped, setPanelsSwapped] = useState(false);
+  const [editorShare, setEditorShare] = useState(50);
+  const [resizingPanels, setResizingPanels] = useState(false);
+  const [showInitialPositions, setShowInitialPositions] = useState(false);
   const [showActionMenu, setShowActionMenu] = useState(false);
   const [showState, setShowState] = useState(false);
   const [showShortcutHelp, setShowShortcutHelp] = useState(false);
@@ -316,7 +322,32 @@ export default function App() {
   const [passRecipientId, setPassRecipientId] = useState('');
   const [passRecipientHand, setPassRecipientHand] = useState<Hand>('left');
 
+  useEffect(() => {
+    if (!resizingPanels) return;
+    const move = (event: PointerEvent) => {
+      const workspace = document.querySelector('.workspace-panels');
+      if (!workspace) return;
+      const bounds = workspace.getBoundingClientRect();
+      if (bounds.width <= 0) return;
+      const percentage = ((event.clientX - bounds.left) / bounds.width) * 100;
+      setEditorShare(Math.max(25, Math.min(75, percentage)));
+    };
+    const stop = () => setResizingPanels(false);
+    window.addEventListener('pointermove', move);
+    window.addEventListener('pointerup', stop);
+    window.addEventListener('pointercancel', stop);
+    return () => {
+      window.removeEventListener('pointermove', move);
+      window.removeEventListener('pointerup', stop);
+      window.removeEventListener('pointercancel', stop);
+    };
+  }, [resizingPanels]);
+
   const editorPerformers = sequence.sequenceType === 'circle-passing' ? sequence.performers.slice(0, 1) : sequence.performers;
+  const editorPositions = sequence.positions.filter((position) =>
+    position.kind === 'table' && (sequence.sequenceType !== 'circle-passing' ||
+      (position.owner.kind === 'performer' && position.owner.performerId === sequence.performers[0]?.id)),
+  );
   const simulationModel = useMemo(() => {
     if (sequence.sequenceType !== 'circle-passing' || sequence.performers.length <= 1) {
       return { sequence, sourceEntryById: new Map<string, NotationEntry['id']>() };
