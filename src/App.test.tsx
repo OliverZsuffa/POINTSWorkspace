@@ -571,4 +571,80 @@ describe('sequence editor', () => {
     expect(screen.getByRole('button', { name: 'Juggler 1 left beat 1 LIFT B' })).toBeInTheDocument();
   });
 
+
+
+  it('navigates to the exact subdivision cell from a validation issue', async () => {
+    const user = userEvent.setup();
+    render(<App />);
+
+    await user.click(screen.getByRole('button', { name: 'Subdivide beat 1 interval 1' }));
+    await user.click(screen.getByRole('button', { name: 'Juggler 1 left beat 1 & empty' }));
+    await user.click(screen.getByRole('button', { name: 'LIFT' }));
+
+    expect(screen.queryByText('Sequence valid')).not.toBeInTheDocument();
+    const invalidCell = screen.getByRole('button', { name: 'Juggler 1 left beat 1 & LIFT A' });
+    expect(invalidCell).toHaveClass('invalid');
+
+    await user.click(screen.getAllByRole('button', { name: 'Go to' })[0]!);
+    expect(invalidCell).toHaveClass('selected');
+  });
+
+  it('copies and pastes both linked ZIP symbols as one structure', async () => {
+    const user = userEvent.setup();
+    render(<App />);
+
+    fireEvent.mouseDown(screen.getByRole('button', { name: 'Juggler 1 left beat 1 empty' }), { shiftKey: true });
+    fireEvent.mouseUp(screen.getByRole('button', { name: 'Juggler 1 right beat 4 empty' }));
+
+    await user.click(screen.getByRole('button', { name: 'Juggler 1 left beat 2 ZIP ↗' }));
+    await user.click(screen.getByRole('button', { name: 'Copy' }));
+    await user.click(screen.getByRole('button', { name: 'Juggler 1 left beat 5 empty' }));
+    await user.click(screen.getByRole('button', { name: 'Paste' }));
+
+    expect(screen.getByRole('button', { name: 'Juggler 1 left beat 5 ZIP ↗' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Juggler 1 right beat 5 ZIP ↙' })).toBeInTheDocument();
+  });
+
+  it('rejects a conflicting paste without partially changing the sequence', async () => {
+    const user = userEvent.setup();
+    const alert = vi.spyOn(window, 'alert').mockImplementation(() => undefined);
+    render(<App />);
+
+    await user.click(screen.getByRole('button', { name: 'Juggler 1 left beat 1 empty' }));
+    await user.click(screen.getByRole('button', { name: 'LIFT' }));
+    await user.click(screen.getByRole('button', { name: 'Copy' }));
+    await user.click(screen.getByRole('button', { name: 'Juggler 1 left beat 2 empty' }));
+    await user.click(screen.getByRole('button', { name: 'HOLD' }));
+    await user.click(screen.getByRole('button', { name: 'Paste' }));
+
+    expect(alert).toHaveBeenCalledWith('Paste cancelled because one or more destination cells are occupied.');
+    expect(screen.getByRole('button', { name: 'Juggler 1 left beat 1 LIFT A' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Juggler 1 left beat 2 HOLD' })).toBeInTheDocument();
+    alert.mockRestore();
+  });
+
+  it('restores and reapplies an edit with undo and redo', async () => {
+    const user = userEvent.setup();
+    render(<App />);
+
+    await user.click(screen.getByRole('button', { name: 'Juggler 1 left beat 1 empty' }));
+    await user.click(screen.getByRole('button', { name: 'LIFT' }));
+    await user.click(screen.getByTitle('Undo'));
+    expect(screen.getByRole('button', { name: 'Juggler 1 left beat 1 empty' })).toBeInTheDocument();
+
+    await user.click(screen.getByTitle('Redo'));
+    expect(screen.getByRole('button', { name: 'Juggler 1 left beat 1 LIFT A' })).toBeInTheDocument();
+  });
+
+  it('does not trigger notation shortcuts while a settings input is focused', async () => {
+    const user = userEvent.setup();
+    render(<App />);
+
+    await user.click(screen.getByRole('button', { name: 'Settings' }));
+    const bpm = screen.getByRole('spinbutton');
+    bpm.focus();
+    await user.keyboard('1');
+
+    expect(screen.getByRole('button', { name: 'Juggler 1 left beat 1 empty' })).toBeInTheDocument();
+  });
 });
