@@ -207,3 +207,9 @@ button:disabled { cursor: default; opacity: .35; }
 .beat-head:hover .subdivide-interval, .subdivide-interval:focus-visible { opacity: 1; }
 .beat-head.beat-start { border-left: 2px solid #b7c7dc; }
 .timeline-note { padding: 5px 12px; color: #65758d; font-size: 10px; }
+
+.move-beat { position: absolute; top: 2px; width: 11px; height: 12px; padding: 0; border: 0; background: transparent; color: #57708f; font-size: 12px; line-height: 12px; opacity: 0; }
+.move-beat-left { left: 1px; }
+.move-beat-right { right: 14px; }
+.beat-head:hover .move-beat, .move-beat:focus-visible { opacity: 1; }
+.move-beat:disabled { opacity: .08; }
