@@ -574,12 +574,12 @@ export default function SequenceRenderer({ sequence, simulation, onSelectHand }:
           <input type="checkbox" checked={repeat} onChange={(event) => setRepeat(event.target.checked)} />
           Repeat
         </label>
-        <label className="renderer-control">Layout
+        {sequence.sequenceType !== 'circle-passing' && <label className="renderer-control">Layout
           <select value={layout} onChange={(event) => setLayout(event.target.value as SceneLayout)}>
             <option value="circle">Circle</option>
             <option value="line">Line</option>
           </select>
-        </label>
+        </label>}
         <label className="renderer-control">Ball colours
           <select value={palette} onChange={(event) => setPalette(event.target.value as keyof typeof BALL_PALETTES)}>
             <option value="classic">Classic</option>
