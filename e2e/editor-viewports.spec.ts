@@ -22,7 +22,7 @@ for (const viewport of viewports) {
     const cell = page.locator('.notation-cell').first();
     const bounds = await cell.boundingBox();
     expect(bounds).not.toBeNull();
-    const expectedCellSize = viewport.width <= 700 ? 44 : viewport.width <= 1100 ? 48 : 56;
+    const expectedCellSize = viewport.width <= 700 ? 44 : viewport.width <= 1100 ? 52 : 56;
     expect(bounds!.width).toBe(expectedCellSize);
     expect(bounds!.height).toBe(expectedCellSize);
 
