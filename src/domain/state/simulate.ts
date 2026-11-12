@@ -105,7 +105,7 @@ function initialState(sequence: Sequence): { state: State; issues: ValidationIss
     if (!valid) continue;
     const locationId = key(location);
     if (occupied.has(locationId)) {
-      issues.push(problem('initial-position-capacity', 'More than one ball occupies the same initial position.'));
+      issues.push(problem('initial-position-capacity', 'More than one ball occupies the same initial position.', [], location.kind === 'position' || location.kind === 'hand-back' ? [location.positionId] : []));
       continue;
     }
     occupied.add(locationId);
