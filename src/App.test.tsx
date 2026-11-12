@@ -230,6 +230,40 @@ describe('sequence editor', () => {
     expect(cell.querySelector('text')?.textContent).toBe('A(b)');
   });
 
+  it('draws notation by switching the square cell edges on and off', async () => {
+    const user = userEvent.setup();
+    render(<App />);
+
+    await user.click(screen.getByRole('button', { name: 'Juggler 1 left beat 1 empty' }));
+    await user.click(screen.getByRole('button', { name: 'LIFT' }));
+    expect(screen.getByRole('button', { name: 'Juggler 1 left beat 1 LIFT A' }).querySelector('.ball-segment path'))
+      .toHaveAttribute('d', 'M0 0H100 M0 0V100 M0 100H100');
+
+    await user.click(screen.getByRole('button', { name: 'Juggler 1 left beat 2 empty' }));
+    await user.click(screen.getByRole('button', { name: 'HOLD' }));
+    expect(screen.getByRole('button', { name: 'Juggler 1 left beat 2 HOLD' }).querySelector('.ball-segment path'))
+      .toHaveAttribute('d', 'M0 0H100 M0 100H100');
+
+    await user.click(screen.getByRole('button', { name: 'Juggler 1 left beat 3 empty' }));
+    await user.click(screen.getByRole('button', { name: 'LEAVE' }));
+    expect(screen.getByRole('button', { name: 'Juggler 1 left beat 3 LEAVE A' }).querySelector('.ball-segment path'))
+      .toHaveAttribute('d', 'M0 0H100 M100 0V100 M0 100H100');
+  });
+
+  it('refreshes circle passing target controls when the sequence mode changes', async () => {
+    const user = userEvent.setup();
+    render(<App />);
+    await user.click(screen.getByRole('button', { name: 'Settings' }));
+    await user.click(screen.getByRole('button', { name: 'Add performer' }));
+    await user.click(screen.getByRole('button', { name: 'Add performer' }));
+    await user.click(screen.getByRole('button', { name: 'Juggler 1 left beat 1 empty' }));
+    await user.click(screen.getByRole('button', { name: 'LIFT' }));
+
+    await user.selectOptions(screen.getByLabelText('Type'), 'circle-passing');
+    expect(screen.getByLabelText('Performer')).toHaveValue('self');
+    expect(screen.queryByLabelText('Target')).not.toBeInTheDocument();
+  });
+
   it('does not print HOLD or ZIP inside the ball rectangle symbols', async () => {
     const user = userEvent.setup();
     const { container } = render(<App />);
