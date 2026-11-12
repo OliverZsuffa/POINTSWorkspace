@@ -287,7 +287,6 @@ export default function App() {
   const [eraseStart, setEraseStart] = useState<EditorCell | null>(null);
   const [moveStart, setMoveStart] = useState<EditorCell | null>(null);
   const [touchMode, setTouchMode] = useState<'select' | 'draw' | 'move' | 'erase' | null>(null);
-  const [skipCellClick, setSkipCellClick] = useState(false);
   const [history, setHistory] = useState<Sequence[]>([]);
   const [future, setFuture] = useState<Sequence[]>([]);
   const [showSettings, setShowSettings] = useState(false);
@@ -1363,17 +1362,16 @@ export default function App() {
                         onMouseUp={() => {
                           if (touchMode) return;
                           const cell = { performerId: performer.id, hand, beatId: beat.id, offset: slot.offset, duration: slot.duration };
-                          if (eraseStart) { eraseRectangle(eraseStart, cell); setEraseStart(null); setSkipCellClick(true); return; }
-                          if (dragStart) { drawRectangle(dragStart, cell); setDragStart(null); setSkipCellClick(true); return; }
+                          if (eraseStart) { eraseRectangle(eraseStart, cell); setEraseStart(null); return; }
+                          if (dragStart) { drawRectangle(dragStart, cell); setDragStart(null); return; }
                           if (moveStart) {
                             const sameCell = moveStart.performerId === cell.performerId && moveStart.hand === cell.hand && moveStart.beatId === cell.beatId && compareRational(moveStart.offset ?? rational(0), cell.offset ?? rational(0)) === 0;
-                            if (!sameCell) { moveRectangle(moveStart, cell); setSkipCellClick(true); }
+                            if (!sameCell) moveRectangle(moveStart, cell);
                             setMoveStart(null);
                           }
                         }}
                         onClick={(event) => {
                           const cell = { performerId: performer.id, hand, beatId: beat.id, offset: slot.offset, duration: slot.duration };
-                          if (skipCellClick) { setSkipCellClick(false); return; }
                           if (touchMode === 'select') { selectCell(cell, true); setShowActionMenu(false); return; }
                           if (touchMode === 'draw') {
                             if (!dragStart) { selectCell(cell); setDragStart(cell); }
