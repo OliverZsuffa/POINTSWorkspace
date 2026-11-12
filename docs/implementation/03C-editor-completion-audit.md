@@ -2,7 +2,7 @@
 
 ## Status
 
-Approved by Oliver on 12 November 2026. The first implementation pass merged through PR #9. The final correction and verification pass is in PR #10. Automated verification passes, and six viewport screenshots have been visually reviewed. The matrix retains Partial for requirements whose full edge case coverage is not yet established.
+Approved by Oliver on 12 November 2026. The first implementation pass merged through PR #9. The final correction and verification pass merged through PR #10. Automated verification passes, and six viewport screenshots have been visually reviewed. The matrix retains Partial for requirements whose full edge case coverage is not yet established.
 
 ## Goal
 
@@ -204,4 +204,4 @@ Package 07 owns the overall workspace shell. This package may reorganise the edi
 
 ## Approval
 
-Approved by Oliver on 12 November 2026. First implementation pass merged through PR #9. Final corrections and verification are prepared in PR #10. CI run #43282862600 passed formatting, lint, strict TypeScript, 90 unit and component tests, production build and six browser viewport checks. Screenshot review covered 1440x900, 1280x800, 1024x768, 768x1024, 390x844 and 320x700. The verification matrix retains Partial where exhaustive interaction coverage remains incomplete.
+Approved by Oliver on 12 November 2026. First implementation pass merged through PR #9. Final corrections and verification merged through PR #10. CI run #43282862600 passed formatting, lint, strict TypeScript, 90 unit and component tests, production build and six browser viewport checks. Screenshot review covered 1440x900, 1280x800, 1024x768, 768x1024, 390x844 and 320x700. The verification matrix retains Partial where exhaustive interaction coverage remains incomplete.
