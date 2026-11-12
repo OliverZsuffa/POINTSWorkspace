@@ -82,7 +82,7 @@ Keep renderer appearance settings separate from sequence data. Ball colours, cam
 - [ ] Object continuity across transfers
 - [ ] Tempo and time signature timing
 - [ ] Playback stop and playhead preservation after edits
-- [ ] Manual visual review of all action types on desktop and mobile
+- [ ] Manual visual review of all action types on desktop and mobile\n\n## Renderer correction pass 04B\n\nThe correction pass is tracked in [`04B-renderer-corrections.md`](04B-renderer-corrections.md). It corrects camera local panning, automatic performer spacing, table position geometry, hand reach distance and pickup or placement contact timing. The simulator remains the sole source of object state. Subdivision animation remains unsupported.
 
 ## Dependencies
 
