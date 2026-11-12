@@ -76,10 +76,6 @@ function makeSequence(): Sequence {
 
 function positionTargetId(action: NotationAction): ReturnType<typeof asPositionId> | undefined {
   switch (action.type) {
-    case 'TAP':
-      if (action.target.kind === 'position') label = positionReference(sequence, action.target.positionId);
-      else { label = action.target.position; subscript = circleSubscript(action.target); }
-      break;
     case 'LIFT':
     case 'LEAVE':
     case 'TAP':
@@ -265,6 +261,10 @@ function NotationMark({ action, sequence, hand }: { action: NotationAction; sequ
   let subscript = '';
   let circledTarget = false;
   switch (action.type) {
+    case 'TAP':
+      if (action.target.kind === 'position') label = positionReference(sequence, action.target.positionId);
+      else { label = action.target.position; subscript = circleSubscript(action.target); }
+      break;
     case 'LIFT':
       path = 'M0 0H100 M0 0V100 M0 100H100';
       if (action.target.kind === 'position') label = positionReference(sequence, action.target.positionId);
