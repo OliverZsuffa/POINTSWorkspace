@@ -66,6 +66,32 @@ describe('renderer geometry', () => {
     expect(point.y).toBeGreaterThan(0);
   });
 
+  it('keeps rectangular table positions separated across all performer seats', () => {
+    const base = sequence(6, { type: 'rectangle', longSideSeatCount: 3, shortSideSeatCount: 0 });
+    const positions = base.performers.flatMap((performer) => ['A', 'B', 'C'].map((name) => ({
+      id: asPositionId(name + '-' + performer.id),
+      kind: 'table' as const,
+      name,
+      owner: { kind: 'performer' as const, performerId: performer.id },
+    })));
+    const seatAssignments = base.performers.map((performer, index) => ({
+      performerId: performer.id,
+      seat: {
+        kind: 'rectangle-side' as const,
+        side: (index % 2 === 0 ? 'long-a' : 'long-b') as 'long-a' | 'long-b',
+        seatIndex: Math.floor(index / 2),
+      },
+    }));
+    const value = { ...base, positions, seatAssignments };
+    const points = positions.map((position) => getTablePositionPosition(value, position, 'circle'));
+    for (let i = 0; i < points.length; i += 1) {
+      for (let j = i + 1; j < points.length; j += 1) {
+        const distance = Math.hypot(points[i]!.x - points[j]!.x, points[i]!.z - points[j]!.z);
+        expect(distance).toBeGreaterThan(0.4);
+      }
+    }
+  });
+
   it('aligns rectangle table positions with the assigned seat edge', () => {
     const performerId = asPerformerId('a');
     const value = sequence(1, { type: 'rectangle', longSideSeatCount: 2, shortSideSeatCount: 1 }, [
