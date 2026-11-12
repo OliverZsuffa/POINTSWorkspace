@@ -128,3 +128,36 @@ test('phone workspace switches between editor and renderer tabs', async ({ page 
   await expect(editor).toBeVisible();
   await expect(renderer).toBeHidden();
 });
+
+
+test('PWA manifest is installable and the app shell reloads offline', async ({ page, context }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto('./');
+
+  const manifest = await page.evaluate(async () => {
+    const link = document.querySelector<HTMLLinkElement>('link[rel="manifest"]');
+    if (!link?.href) throw new Error('Manifest link is missing');
+    const response = await fetch(link.href);
+    if (!response.ok) throw new Error('Manifest could not be loaded');
+    return response.json() as Promise<{ display: string; start_url: string; icons: Array<{ src: string }> }>;
+  });
+  expect(manifest.display).toBe('standalone');
+  expect(manifest.start_url).toBe('/POINTSWorkspace/');
+  expect(manifest.icons.length).toBeGreaterThan(0);
+
+  await page.evaluate(async () => {
+    await navigator.serviceWorker.ready;
+    if (!navigator.serviceWorker.controller) {
+      await new Promise<void>((resolve) => {
+        navigator.serviceWorker.addEventListener('controllerchange', () => resolve(), { once: true });
+      });
+    }
+  });
+
+  await context.setOffline(true);
+  await page.reload();
+  await expect(page.getByRole('main', { name: 'POINTS Workspace' })).toBeVisible();
+  await expect(page.getByRole('region', { name: 'Notation editor' })).toBeVisible();
+  await expect(page.getByRole('region', { name: 'Sequence renderer' })).toBeVisible();
+  await context.setOffline(false);
+});
