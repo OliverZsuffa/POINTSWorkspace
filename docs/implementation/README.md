@@ -12,7 +12,7 @@ The implementation is divided into bounded work packages so separate agents can 
 | 02 | Object state and validation | Simultaneous beat processing, state transitions and validity checks | 01 | Implemented and merged to main |
 | 03 | Sequence editor | Notation grid, editing interactions, settings and undo | 01, 02 | Implemented and merged to main via PR #6 |
 | 03B | Editor corrections and visual refinement | Correct initial ball setup, notation visuals, beat state and target editing | 03 | Merged into main via PR #5 |
-| 04 | Sequence renderer | 3D scene, animation, playback and editor synchronisation | 01, 02 | Approved, implementation in progress |
+| 04 | Sequence renderer | 3D scene, animation, playback and editor synchronisation | 01, 02 | Implemented in PR #7, automated checks pass, manual visual review pending |
 | 05 | Sequence generator | Constraint search and candidate generation | 01, 02 | Awaiting approval |
 | 06 | Data, persistence and export | Sequence codes, import, local persistence, presets and image export | 01, 02 | Awaiting approval |
 | 07 | Workspace shell and PWA | Application layout, responsive shell, panel management and offline support | 01 | Awaiting approval |
