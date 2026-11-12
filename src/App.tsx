@@ -1522,6 +1522,8 @@ export default function App() {
           <div><kbd>← ↑ ↓ →</kbd><span>Move selection</span></div>
           <div><kbd>Shift + arrows</kbd><span>Extend selection</span></div>
           <div><kbd>1 to 8</kbd><span>Insert LIFT, HOLD, LEAVE, BOUNCE, TAP, EMPTY, ZIP or SPECIAL</span></div>
+          <div><kbd>A / B / C / L / R</kbd><span>Set a position target, where available</span></div>
+          <div><kbd>Performer ID</kbd><span>Set a passing performer target</span></div>
           <div><kbd>Ctrl / ⌘ + C</kbd><span>Copy selected notation</span></div>
           <div><kbd>Ctrl / ⌘ + V</kbd><span>Paste at selected cell</span></div>
           <div><kbd>Ctrl / ⌘ + Z</kbd><span>Undo</span></div>
