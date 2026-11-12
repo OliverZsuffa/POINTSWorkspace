@@ -299,3 +299,7 @@ export function getObjectPosition(
   const hand = getHandPosition(sequence, location.performerId, location.hand, layout);
   return location.kind === 'hand-back' ? { ...hand, y: hand.y + 0.18 } : hand;
 }
+
+export function isStationaryHandAction(actionType: string): boolean {
+  return actionType === 'HOLD' || actionType === 'EMPTY';
+}
