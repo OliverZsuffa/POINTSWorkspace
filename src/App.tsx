@@ -380,7 +380,9 @@ export default function App() {
     selectedEntry.action.type === 'LEAVE' ||
     selectedEntry.action.type === 'TAP' ||
     selectedEntry.action.type === 'BOUNCE'
-  ) ? selectedEntry : undefined;
+  ) ? selectedEntry as NotationEntry & {
+    action: Extract<NotationAction, { type: 'LIFT' | 'LEAVE' | 'TAP' | 'BOUNCE' }>;
+  } : undefined;
 
   return (
     <main className="app-root" aria-label="POINTS Workspace">
