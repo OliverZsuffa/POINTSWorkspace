@@ -331,6 +331,7 @@ describe('object state simulation', () => {
     const sequence: Sequence = {
       ...representativeIndividualPassingSequence,
       sequenceType: 'circle-passing',
+      individualPassingLayout: 'per-performer-positions',
       positions: circlePositions,
       initialState: {
         placements: [{
