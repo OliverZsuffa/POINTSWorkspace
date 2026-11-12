@@ -392,10 +392,6 @@ export default function App() {
 
   const handleEditorKeyDown = (event: KeyboardEvent<HTMLElement>) => {
     if (event.target instanceof HTMLElement && ['INPUT', 'SELECT', 'TEXTAREA'].includes(event.target.tagName)) return;
-    if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'c') { event.preventDefault(); copySelected(); return; }
-    if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'v') { event.preventDefault(); pasteSelected(); return; }
-    if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'z') { event.preventDefault(); undo(); return; }
-    if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'y') { event.preventDefault(); redo(); return; }
     if (event.key === 'Escape') { clearSelection(); return; }
     if (!selected) return;
     if (event.key === 'Backspace' || event.key === 'Delete') {
@@ -1228,6 +1224,8 @@ export default function App() {
 
       <section className="editor-toolbar" aria-label="Notation actions">
         <div className="action-tools">
+          <button type="button" className="tool clipboard-tool" onClick={copySelected} disabled={!selected || !(selectedCells.length ? selectedCells : [selected]).some((cell) => Boolean(entryAt(cell.performerId, cell.hand, cell.beatId, cell.offset ?? rational(0))))}>Copy</button>
+          <button type="button" className="tool clipboard-tool" onClick={pasteSelected} disabled={!selected || clipboard.length === 0}>Paste</button>
           <button type="button" className={'tool mode-tool' + (touchMode === 'draw' ? ' active' : '')} onClick={() => { setTouchMode(touchMode === 'draw' ? null : 'draw'); setDragStart(null); }}>Draw</button>
           <button type="button" className={'tool mode-tool' + (touchMode === 'move' ? ' active' : '')} onClick={() => { setTouchMode(touchMode === 'move' ? null : 'move'); setMoveStart(null); }}>Move</button>
           <button type="button" className={'tool mode-tool' + (touchMode === 'erase' ? ' active' : '')} onClick={() => { setTouchMode(touchMode === 'erase' ? null : 'erase'); setEraseStart(null); }}>Erase</button>
