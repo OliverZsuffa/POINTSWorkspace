@@ -404,8 +404,17 @@ html, body, #root { min-height: 100%; background: #90d0d5; }
   background: transparent;
 }
 .notation-cell:hover { background: rgba(53, 105, 189, 0.08); }
+.notation-cell::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  border: 1px solid #e0e7f2;
+  pointer-events: none;
+}
 .notation-cell .ball-segment {
   position: absolute;
+  z-index: 1;
   inset: 0;
   display: block;
   width: 100%;
