@@ -319,11 +319,11 @@ export default function App() {
   const editorPerformers = sequence.sequenceType === 'circle-passing' ? sequence.performers.slice(0, 1) : sequence.performers;
   const simulationModel = useMemo(() => {
     if (sequence.sequenceType !== 'circle-passing' || sequence.performers.length <= 1) {
-      return { sequence, sourceEntryById: new Map<string, string>() };
+      return { sequence, sourceEntryById: new Map<string, NotationEntry['id']>() };
     }
     const representative = sequence.performers[0]!;
     const pattern = sequence.notation.filter((entry) => entry.performerId === representative.id);
-    const sourceEntryById = new Map<string, string>();
+    const sourceEntryById = new Map<string, NotationEntry['id']>();
     const instances = sequence.performers.slice(1).flatMap((performer) => {
       const linkIds = new Map<string, ReturnType<typeof asLinkId>>();
       return pattern.map((entry) => {
