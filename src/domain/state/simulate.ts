@@ -1,3 +1,4 @@
+import type { SequenceSimulator, SequenceValidator } from '../../contracts';
 import type { ActionEntryId, BallId, PerformerId, PositionId } from '../ids';
 import type {
   Hand,
@@ -379,3 +380,6 @@ export function simulateSequence(sequence: Sequence): SimulationResult {
 export function validateSequence(sequence: Sequence) {
   return simulateSequence(sequence).validation;
 }
+
+export const sequenceSimulator: SequenceSimulator = { simulate: simulateSequence };
+export const sequenceValidator: SequenceValidator = { validate: validateSequence };
