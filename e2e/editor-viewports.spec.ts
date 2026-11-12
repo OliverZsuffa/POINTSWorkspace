@@ -147,12 +147,8 @@ test('PWA manifest is installable and the app shell reloads offline', async ({ p
 
   await page.evaluate(async () => {
     await navigator.serviceWorker.ready;
-    if (!navigator.serviceWorker.controller) {
-      await new Promise<void>((resolve) => {
-        navigator.serviceWorker.addEventListener('controllerchange', () => resolve(), { once: true });
-      });
-    }
   });
+  await page.waitForFunction(() => Boolean(navigator.serviceWorker.controller));
 
   await context.setOffline(true);
   await page.reload();
