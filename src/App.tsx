@@ -315,6 +315,7 @@ export default function App() {
   const [editorShare, setEditorShare] = useState(50);
   const [resizingPanels, setResizingPanels] = useState(false);
   const [showInitialPositions, setShowInitialPositions] = useState(false);
+  const [updateReady, setUpdateReady] = useState(false);
   const [showActionMenu, setShowActionMenu] = useState(false);
   const [showState, setShowState] = useState(false);
   const [showShortcutHelp, setShowShortcutHelp] = useState(false);
@@ -347,6 +348,12 @@ export default function App() {
     if (resizingPanels) return;
     window.dispatchEvent(new Event('resize'));
   }, [activeWorkspaceTab, editorShare, panelsSwapped, showEditor, showRenderer, resizingPanels]);
+
+  useEffect(() => {
+    const announceUpdate = () => setUpdateReady(true);
+    window.addEventListener('points-update-ready', announceUpdate);
+    return () => window.removeEventListener('points-update-ready', announceUpdate);
+  }, []);
 
   const editorPerformers = sequence.sequenceType === 'circle-passing' ? sequence.performers.slice(0, 1) : sequence.performers;
   const editorPositions = sequence.positions.filter((position) =>
@@ -1436,6 +1443,10 @@ export default function App() {
           <button type="button" onClick={() => setShowShortcutHelp(true)} aria-label="Keyboard shortcuts" title="Keyboard shortcuts">?</button>
         </div>
       </header>
+      {updateReady && <div className="update-banner" role="status">
+        <span>An update is ready. It will activate after all POINTS tabs are closed. This tab will not reload automatically.</span>
+        <button type="button" onClick={() => setUpdateReady(false)} aria-label="Dismiss update notice">Dismiss</button>
+      </div>}
       <nav className="workspace-tabs" aria-label="Workspace views">
         {showEditor && <button type="button" className={activeWorkspaceTab === 'editor' ? 'active' : ''} aria-pressed={activeWorkspaceTab === 'editor'} onClick={() => setActiveWorkspaceTab('editor')}>Editor</button>}
         {showRenderer && <button type="button" className={activeWorkspaceTab === 'renderer' ? 'active' : ''} aria-pressed={activeWorkspaceTab === 'renderer'} onClick={() => setActiveWorkspaceTab('renderer')}>Renderer</button>}
