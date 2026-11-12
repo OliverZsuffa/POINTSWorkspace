@@ -158,6 +158,20 @@ export default function App() {
       action = { type: 'SPECIAL', text };
     }
     let notation = sequence.notation.filter((entry) => entry.id !== existing?.id);
+    if (existing && 'linkId' in existing.action && existing.action.linkId) {
+      const existingLinkId = existing.action.linkId;
+      if (existing.action.type === 'ZIP') {
+        notation = notation.filter((entry) =>
+          !('linkId' in entry.action && entry.action.linkId === existingLinkId),
+        );
+      } else if (existing.action.type === 'SPECIAL') {
+        notation = notation.map((entry) =>
+          entry.action.type === 'SPECIAL' && entry.action.linkId === existingLinkId
+            ? { ...entry, action: { type: 'SPECIAL', text: entry.action.text } }
+            : entry,
+        );
+      }
+    }
     const newEntry: NotationEntry = {
       id: existing?.id ?? asActionEntryId(id('entry')),
       performerId: asPerformerId(performerId),
@@ -170,7 +184,10 @@ export default function App() {
     if (type === 'ZIP') {
       const otherHand = hand === 'left' ? 'right' : 'left';
       const other = entryAt(performerId, otherHand, beatId);
-      if (other) notation = notation.filter((entry) => entry.id !== other.id);
+      if (other) {
+        window.alert('The other hand already has notation at this beat.');
+        return;
+      }
       const paired: NotationEntry = {
         id: asActionEntryId(id('entry')),
         performerId: asPerformerId(performerId),
@@ -189,14 +206,19 @@ export default function App() {
     if (!existing) return;
     const removeIds = new Set([existing.id]);
     const linkId = 'linkId' in existing.action ? existing.action.linkId : undefined;
-    if (linkId) {
-      const linked = sequence.notation.filter((entry) =>
-        'linkId' in entry.action && entry.action.linkId === linkId &&
-        entry.action.type === 'ZIP',
+    let notation = sequence.notation.filter((entry) => !removeIds.has(entry.id));
+    if (linkId && existing.action.type === 'ZIP') {
+      notation = notation.filter((entry) =>
+        !('linkId' in entry.action && entry.action.linkId === linkId),
       );
-      linked.forEach((entry) => removeIds.add(entry.id));
+    } else if (linkId && existing.action.type === 'SPECIAL') {
+      notation = notation.map((entry) =>
+        entry.action.type === 'SPECIAL' && entry.action.linkId === linkId
+          ? { ...entry, action: { type: 'SPECIAL', text: entry.action.text } }
+          : entry,
+      );
     }
-    commit({ ...sequence, notation: sequence.notation.filter((entry) => !removeIds.has(entry.id)) });
+    commit({ ...sequence, notation });
   };
 
   const undo = () => {
