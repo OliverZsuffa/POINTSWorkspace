@@ -95,6 +95,16 @@ function updatePositionTarget(entry: NotationEntry, positionId: ReturnType<typeo
   }
 }
 
+function passRecipientTarget(entry: NotationEntry) {
+  const action = entry.action;
+  return action.type === 'LEAVE' && action.target.kind === 'pass-recipient-hand' ? action.target : undefined;
+}
+
+function passSourceTarget(entry: NotationEntry) {
+  const action = entry.action;
+  return action.type === 'LIFT' && action.target.kind === 'pass-source' ? action.target : undefined;
+}
+
 function positionName(sequence: Sequence, positionId: string): string {
   const position = sequence.positions.find((item) => item.id === positionId);
   return position?.name ?? '?';
@@ -850,6 +860,8 @@ export default function App() {
     action: Extract<NotationAction, { type: 'LIFT' | 'LEAVE' | 'TAP' | 'BOUNCE' }>;
   } : undefined;
 
+  const selectedPassRecipient = selectedEntry ? passRecipientTarget(selectedEntry) : undefined;
+  const selectedPassSource = selectedEntry ? passSourceTarget(selectedEntry) : undefined;
   const selectedBeatIndex = selected ? sequence.beats.findIndex((beat) => beat.id === selected.beatId) : -1;
   const selectedSnapshot = selectedBeatIndex >= 0 ? simulation.snapshots.find((snapshot) => snapshot.at.beatId === selected?.beatId && snapshot.phase === 'after') : simulation.snapshots.find((snapshot) => snapshot.phase === 'before');
 
@@ -996,14 +1008,14 @@ export default function App() {
             </>}
           </div>
         )}
-        {targetableEntry && targetableEntry.action.type === 'LEAVE' && targetableEntry.action.target.kind === 'pass-recipient-hand' && (
+        {targetableEntry && selectedPassRecipient && (
           <div className="target-control">
-            <label>Recipient <select value={targetableEntry.action.target.performerId} onChange={(event) => changePassTarget(targetableEntry, event.target.value, targetableEntry.action.target.hand)}>{sequence.performers.filter((person) => person.id !== selected?.performerId).map((person) => <option key={person.id} value={person.id}>{person.name} ({person.identifier ?? '?'})</option>)}</select></label>
-            <label>Hand <select value={targetableEntry.action.target.hand} onChange={(event) => changePassTarget(targetableEntry, targetableEntry.action.target.performerId, event.target.value as Hand)}><option value="left">Left</option><option value="right">Right</option></select></label>
+            <label>Recipient <select value={selectedPassRecipient.performerId} onChange={(event) => changePassTarget(targetableEntry, event.target.value, selectedPassRecipient.hand)}>{sequence.performers.filter((person) => person.id !== selected?.performerId).map((person) => <option key={person.id} value={person.id}>{person.name} ({person.identifier ?? '?'})</option>)}</select></label>
+            <label>Hand <select value={selectedPassRecipient.hand} onChange={(event) => changePassTarget(targetableEntry, selectedPassRecipient.performerId, event.target.value as Hand)}><option value="left">Left</option><option value="right">Right</option></select></label>
           </div>
         )}
-        {targetableEntry && targetableEntry.action.type === 'LIFT' && targetableEntry.action.target.kind === 'pass-source' && (
-          <label className="target-control">Source <select value={targetableEntry.action.target.performerId} onChange={(event) => changePassTarget(targetableEntry, event.target.value)}>{sequence.performers.filter((person) => person.id !== selected?.performerId).map((person) => <option key={person.id} value={person.id}>{person.name} ({person.identifier ?? '?'})</option>)}</select></label>
+        {targetableEntry && selectedPassSource && (
+          <label className="target-control">Source <select value={selectedPassSource.performerId} onChange={(event) => changePassTarget(targetableEntry, event.target.value)}>{sequence.performers.filter((person) => person.id !== selected?.performerId).map((person) => <option key={person.id} value={person.id}>{person.name} ({person.identifier ?? '?'})</option>)}</select></label>
         )}
       </section>
 
