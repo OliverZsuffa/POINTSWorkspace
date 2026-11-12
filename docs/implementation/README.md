@@ -11,7 +11,8 @@ The implementation is divided into bounded work packages so separate agents can 
 | 01 | Foundation and domain model | Project scaffold, shared types, sequence model and interfaces | None | Implemented and merged to main |
 | 02 | Object state and validation | Simultaneous beat processing, state transitions and validity checks | 01 | Implemented and merged to main |
 | 03 | Sequence editor | Notation grid, editing interactions, settings and undo | 01, 02 | Implemented and merged to main via PR #6 |
-| 03B | Editor corrections and visual refinement | Correct initial ball setup, notation visuals, beat state and target editing | 03 | Merged into main via PR #5 |
+| 03B | Editor corrections and visual refinement | Correct initial ball setup, notation visuals, beat state and target editing | 03 | Implemented and merged into main via PR #5 |
+| 03C | Editor completion and feature verification | Full audit of Packages 03 and 03B, complete missing interactions, notation grid and usability corrections | 03, 03B | Plan proposed, awaiting approval |
 | 04 | Sequence renderer | 3D scene, animation, playback and editor synchronisation | 01, 02 | Implemented in PR #7, automated checks pass, manual visual review pending |
 | 05 | Sequence generator | Constraint search and candidate generation | 01, 02 | Awaiting approval |
 | 06 | Data, persistence and export | Sequence codes, import, local persistence, presets and image export | 01, 02 | Awaiting approval |
@@ -54,4 +55,4 @@ Agents may implement unrelated parts while a blocker remains open, but must not 
 
 ## Approval
 
-Packages 01, 02 and 03B are implemented and merged to main. Package 03 is implemented on `work/03-sequence-editor-completion` and is awaiting review in PR #6. Packages 04 to 07 remain awaiting approval. Package 08 has a detailed implementation plan and remains awaiting approval.
+Packages 01, 02, 03 and 03B are implemented and merged to main. Package 04 was implemented and merged through PR #7; manual visual and behavioural verification remains outstanding. Package 03C has a proposed completion and verification plan and is awaiting approval. Packages 05, 06 and 07 remain awaiting approval. Package 08 has a detailed implementation plan and remains awaiting approval.
