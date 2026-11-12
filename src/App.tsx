@@ -217,23 +217,23 @@ function ActionSymbol({ action, sequence, hand }: { action: NotationAction; sequ
     case 'HOLD': path = 'M7 9H41 M7 39H41'; break;
     case 'LIFT':
       path = 'M7 9H41 M7 9V39 M7 39H41';
-      if (action.target.kind === 'position') target = positionReference(sequence, action.target.positionId);
+      if (action.target.kind === 'position') { const reference = positionNotation(sequence, action.target.positionId); target = reference.name; subscript = reference.subscript ?? ''; }
       else if (action.target.kind === 'circle-position') { target = action.target.position; subscript = circleSubscript(action.target); }
       else if ('performerId' in action.target) { const targetPerformerId = action.target.performerId; target = 'X'; subscript = sequence.performers.find((person) => person.id === targetPerformerId)?.identifier ?? '?'; }
       break;
     case 'LEAVE':
       path = 'M7 9H41 M41 9V39 M7 39H41';
-      if (action.target.kind === 'position') target = positionReference(sequence, action.target.positionId);
+      if (action.target.kind === 'position') { const reference = positionNotation(sequence, action.target.positionId); target = reference.name; subscript = reference.subscript ?? ''; }
       else if (action.target.kind === 'circle-position') { target = action.target.position; subscript = circleSubscript(action.target); }
       else if ('hand' in action.target) { const targetHand = action.target.hand; const targetPerformerId = action.target.performerId; target = targetHand === 'left' ? 'L' : 'R'; circledTarget = true; subscript = sequence.performers.find((person) => person.id === targetPerformerId)?.identifier ?? '?'; }
       break;
     case 'BOUNCE':
       path = 'M7 9H41 M7 39H41';
-      if (action.target.kind === 'position') target = positionReference(sequence, action.target.positionId);
+      if (action.target.kind === 'position') { const reference = positionNotation(sequence, action.target.positionId); target = reference.name; subscript = reference.subscript ?? ''; }
       else { target = action.target.position; subscript = circleSubscript(action.target); }
       break;
     case 'TAP':
-      if (action.target.kind === 'position') target = positionReference(sequence, action.target.positionId);
+      if (action.target.kind === 'position') { const reference = positionNotation(sequence, action.target.positionId); target = reference.name; subscript = reference.subscript ?? ''; }
       else { target = action.target.position; subscript = circleSubscript(action.target); }
       break;
     case 'ZIP':
@@ -263,20 +263,20 @@ function NotationMark({ action, sequence, hand }: { action: NotationAction; sequ
   switch (action.type) {
     case 'LIFT':
       path = 'M0 19H100 M0 19V81 M0 81H100';
-      if (action.target.kind === 'position') label = positionReference(sequence, action.target.positionId);
+      if (action.target.kind === 'position') { const reference = positionNotation(sequence, action.target.positionId); label = reference.name; subscript = reference.subscript ?? ''; }
       else if (action.target.kind === 'circle-position') { label = action.target.position; subscript = circleSubscript(action.target); }
       else if ('performerId' in action.target) { const targetPerformerId = action.target.performerId; label = 'X'; subscript = sequence.performers.find((person) => person.id === targetPerformerId)?.identifier ?? '?'; }
       break;
     case 'HOLD': path = 'M0 19H100 M0 81H100'; break;
     case 'LEAVE':
       path = 'M0 19H100 M100 19V81 M0 81H100';
-      if (action.target.kind === 'position') label = positionReference(sequence, action.target.positionId);
+      if (action.target.kind === 'position') { const reference = positionNotation(sequence, action.target.positionId); label = reference.name; subscript = reference.subscript ?? ''; }
       else if (action.target.kind === 'circle-position') { label = action.target.position; subscript = circleSubscript(action.target); }
       else if ('hand' in action.target) { const targetHand = action.target.hand; const targetPerformerId = action.target.performerId; label = targetHand === 'left' ? 'L' : 'R'; circledTarget = true; subscript = sequence.performers.find((person) => person.id === targetPerformerId)?.identifier ?? '?'; }
       break;
     case 'BOUNCE':
       path = 'M0 19H100 M0 81H100';
-      if (action.target.kind === 'position') label = positionReference(sequence, action.target.positionId);
+      if (action.target.kind === 'position') { const reference = positionNotation(sequence, action.target.positionId); label = reference.name; subscript = reference.subscript ?? ''; }
       else { label = action.target.position; subscript = circleSubscript(action.target); }
       break;
     case 'ZIP':
