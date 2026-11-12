@@ -479,6 +479,7 @@ export default function App() {
       notation = [...notation.filter((entry) => entry.id !== newEntry.id), newEntry, paired];
     }
     commit({ ...sequence, notation });
+    setShowActionMenu(false);
   };
 
   const removeCells = (cells: readonly EditorCell[]) => {
