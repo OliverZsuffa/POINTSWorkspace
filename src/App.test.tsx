@@ -1,6 +1,10 @@
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+vi.mock('./features/renderer/SequenceRenderer', () => ({
+  default: () => <section aria-label="Sequence renderer"><button type="button">Play</button></section>,
+}));
+
 import App from './App';
 
 describe('sequence editor', () => {
@@ -96,7 +100,7 @@ describe('sequence editor', () => {
     expect(screen.getByRole('button', { name: 'A, occupied' })).toBeInTheDocument();
   });
 
-  it('renders notation using the POINTS symbol geometry', async () => {
+  it('renders notation using large target labels and square cells', async () => {
     const user = userEvent.setup();
     render(<App />);
 
@@ -107,6 +111,15 @@ describe('sequence editor', () => {
     expect(symbol).toBeInTheDocument();
     expect(symbol).toHaveAttribute('viewBox', '0 0 100 100');
     expect(symbol?.querySelector('path')).toHaveAttribute('d', 'M0 19H100 M0 19V81 M0 81H100');
+    expect(symbol?.querySelector('text')).toHaveAttribute('font-size', '38');
+  });
+
+  it('opens the interactive sequence renderer from the top bar', async () => {
+    const user = userEvent.setup();
+    render(<App />);
+    await user.click(screen.getByRole('button', { name: 'Renderer' }));
+    expect(screen.getByRole('region', { name: 'Sequence renderer' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Play' })).toBeInTheDocument();
   });
 
   it('exposes sequence settings and initial object distribution', async () => {
@@ -203,6 +216,29 @@ describe('sequence editor', () => {
     await user.selectOptions(screen.getByLabelText('Direction'), 'right');
     const cell = screen.getByRole('button', { name: /Juggler 1 left beat 1 LIFT/ });
     expect(cell.querySelector('tspan')?.textContent).toBe('R');
+  });
+
+  it('shows the performer identifier as a subscript for duplicate position names', async () => {
+    const user = userEvent.setup();
+    render(<App />);
+    await user.click(screen.getByRole('button', { name: 'Settings' }));
+    await user.click(screen.getByRole('button', { name: 'Add performer' }));
+    await user.selectOptions(screen.getByLabelText('Type'), 'individual-passing');
+    await user.click(screen.getByRole('button', { name: 'Juggler 2 left beat 1 empty' }));
+    await user.click(screen.getByRole('button', { name: 'LIFT' }));
+    const cell = screen.getByRole('button', { name: 'Juggler 2 left beat 1 LIFT A(b)' });
+    expect(cell.querySelector('text')?.textContent).toBe('A(b)');
+  });
+
+  it('does not print HOLD or ZIP inside the ball rectangle symbols', async () => {
+    const user = userEvent.setup();
+    const { container } = render(<App />);
+    await user.click(screen.getByRole('button', { name: 'Juggler 1 left beat 1 empty' }));
+    await user.click(screen.getByRole('button', { name: 'HOLD' }));
+    expect(container.querySelector('.notation-cell.occupied text')).toBeNull();
+    await user.click(screen.getByRole('button', { name: 'Change action' }));
+    await user.click(screen.getByRole('button', { name: 'ZIP' }));
+    expect(container.querySelectorAll('.notation-cell.occupied text')).toHaveLength(0);
   });
 
   it('shows both halves of the ZIP toolbar symbol', () => {
@@ -423,7 +459,7 @@ describe('sequence editor', () => {
     const leave = screen.getByRole('button', { name: /Juggler 1 left beat 3 LEAVE/ });
     fireEvent.mouseDown(hold);
     fireEvent.mouseUp(leave);
-    expect(screen.getByRole('button', { name: 'Juggler 1 left beat 2 LIFT A' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Juggler 1 left beat 2 LIFT A(a)' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Juggler 1 left beat 3 HOLD' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Juggler 1 left beat 4 LEAVE/ })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Juggler 2 left beat 4 LIFT X/ })).toBeInTheDocument();
