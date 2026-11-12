@@ -262,6 +262,7 @@ export default function SequenceRenderer({ sequence, simulation, onSelectHand }:
       : new THREE.BoxGeometry(footprint.width, 0.08, footprint.depth);
     const table = new THREE.Mesh(tableGeometry, makeMaterial('#b9c8db'));
     table.position.y = -0.04;
+    if (footprint.round && footprint.sideCount) table.rotation.y = Math.PI / footprint.sideCount;
     table.castShadow = true;
     table.receiveShadow = true;
     scene.add(table);
@@ -443,6 +444,8 @@ export default function SequenceRenderer({ sequence, simulation, onSelectHand }:
               const otherHand = visual.hand === 'left' ? 'right' : 'left';
               const other = getHandPosition(current.sequence, visual.performerId, otherHand, current.layout);
               targetPoint = { x: (base.x + other.x) / 2, y: 1.15, z: (base.z + other.z) / 2 };
+            } else if (action.type === 'HOLD' || action.type === 'EMPTY') {
+              targetPoint = undefined;
             }
           }
           const handPoint = targetPoint
