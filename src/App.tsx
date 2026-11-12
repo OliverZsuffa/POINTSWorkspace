@@ -1297,6 +1297,104 @@ export default function App() {
         </div>
       </section>
 
+      <section className="editor-scroll" aria-label="Notation editor" onClick={(event) => { if (event.target === event.currentTarget) clearSelection(); }}>
+        <div className="notation-grid">
+          <div className="grid-head" style={{ gridTemplateColumns: `82px repeat(${timelineSlots.length}, 42px) 18px` }}>
+            <div className="row-label heading-label">PERFORMER</div>
+            {timelineSlots.map((slot, index) => {
+              const beatIndex = sequence.beats.findIndex((beat) => beat.id === slot.beatId);
+              const beat = sequence.beats[beatIndex]!;
+              const isBeatStart = compareRational(slot.offset, rational(0)) === 0;
+              const isBeatEnd = timelineSlots[index + 1]?.beatId !== slot.beatId;
+              return <div className={'beat-head' + (isBeatStart ? ' beat-start' : '') + (isBeatStart && beatIndex % sequence.timeSignature.beatGrouping.length === 0 ? ' bar-start' : '')} key={beat.id + ':' + slot.offset.numerator + '/' + slot.offset.denominator}>
+                <button type="button" className="beat-select" onClick={() => isBeatStart ? selectBeat(beat.id) : selectInterval(beat.id, slot.offset, slot.duration)} aria-label={isBeatStart ? 'Select beat ' + (beatIndex + 1) : 'Select beat ' + (beatIndex + 1) + ' subdivision ' + slot.label}>
+                  <span>{slot.label}</span><small>{isBeatStart ? Math.floor(beatIndex / sequence.timeSignature.beatGrouping.length) + 1 + '.' + (beatIndex % sequence.timeSignature.beatGrouping.length + 1) : ' '}</small>
+                </button>
+                {isBeatStart && <button type="button" className="move-beat move-beat-left" onClick={() => moveBeat(beat.id, -1)} disabled={beatIndex === 0} aria-label={'Move beat ' + (beatIndex + 1) + ' left'}>‹</button>}
+                {isBeatStart && <button type="button" className="move-beat move-beat-right" onClick={() => moveBeat(beat.id, 1)} disabled={beatIndex === sequence.beats.length - 1} aria-label={'Move beat ' + (beatIndex + 1) + ' right'}>›</button>}
+                <button type="button" className="subdivide-interval" onClick={() => subdivideInterval(beat.id, slot.offset, slot.duration)} aria-label={'Subdivide beat ' + (beatIndex + 1) + ' interval ' + slot.label}>÷</button>
+                {isBeatEnd && <button type="button" className="insert-beat" onClick={() => insertBeatAfter(beat.id)} aria-label={'Insert beat after ' + (beatIndex + 1)}>+</button>}
+              </div>;
+            })}
+            <button type="button" className="add-beat" onClick={addBeat} aria-label="Add beat">+</button>
+          </div>
+          {(sequence.beats.some((beat) => beat.subdivisions.length > 0) || (sequence.timeSignature.numerator === 6 && sequence.timeSignature.denominator === 8)) && <p className="timeline-note">Subdivisions are shown in the notation grid, but the simulator currently evaluates all actions in a main beat simultaneously. The current binary subdivision model does not represent triplet subdivisions in 6/8.</p>}
+          {sequence.performers.map((performer) => (
+            <div className="performer-block" key={performer.id}>
+              <div className="performer-heading">{performer.name}<span>{performer.identifier ?? ''}</span></div>
+              {hands.map((hand) => (
+                <div className="hand-row" key={hand} style={{ gridTemplateColumns: `82px repeat(${timelineSlots.length}, 42px) 18px` }}>
+                  <div className="row-label">{hand === 'left' ? 'L' : 'R'}</div>
+                  {timelineSlots.map((slot) => {
+                    const beatIndex = sequence.beats.findIndex((beat) => beat.id === slot.beatId);
+                    const beat = sequence.beats[beatIndex]!;
+                    const entry = entryAt(performer.id, hand, beat.id, slot.offset);
+                    const selectedCell = selectedCells.some((cell) => cell.performerId === performer.id && cell.hand === hand && cell.beatId === beat.id && compareRational(cell.offset ?? rational(0), slot.offset) === 0);
+                    const errors = entry ? issuesByEntry.get(entry.id) ?? [] : [];
+                    return (
+                      <button
+                        type="button"
+                        key={beat.id + ':' + slot.offset.numerator + '/' + slot.offset.denominator}
+                        className={'notation-cell' + (selectedCell ? ' selected' : '') + (errors.length ? ' invalid' : '') + (entry ? ' occupied' : '') + (beatIndex % sequence.timeSignature.beatGrouping.length === 0 && compareRational(slot.offset, rational(0)) === 0 ? ' bar-start' : '')}
+                        onMouseDown={(event) => {
+                          if (touchMode) return;
+                          const cell = { performerId: performer.id, hand, beatId: beat.id, offset: slot.offset, duration: slot.duration };
+                          if (event.ctrlKey) {
+                            event.preventDefault();
+                            setEraseStart(cell);
+                          } else if (event.shiftKey) {
+                            event.preventDefault();
+                            selectCell(cell);
+                            setDragStart(cell);
+                          } else if (entry) {
+                            setMoveStart(cell);
+                          }
+                        }}
+                        onMouseUp={() => {
+                          if (touchMode) return;
+                          const cell = { performerId: performer.id, hand, beatId: beat.id, offset: slot.offset, duration: slot.duration };
+                          if (eraseStart) { eraseRectangle(eraseStart, cell); setEraseStart(null); return; }
+                          if (dragStart) { drawRectangle(dragStart, cell); setDragStart(null); return; }
+                          if (moveStart) { moveRectangle(moveStart, cell); setMoveStart(null); }
+                        }}
+                        onClick={(event) => {
+                          const cell = { performerId: performer.id, hand, beatId: beat.id, offset: slot.offset, duration: slot.duration };
+                          if (touchMode === 'select') { selectCell(cell, true); return; }
+                          if (touchMode === 'draw') {
+                            if (!dragStart) { selectCell(cell); setDragStart(cell); }
+                            else { drawRectangle(dragStart, cell); setDragStart(null); setTouchMode(null); }
+                            return;
+                          }
+                          if (touchMode === 'erase') {
+                            if (!eraseStart) setEraseStart(cell);
+                            else { eraseRectangle(eraseStart, cell); setEraseStart(null); setTouchMode(null); }
+                            return;
+                          }
+                          if (touchMode === 'move') {
+                            if (!moveStart) {
+                              if (entry) { selectCell(cell); setMoveStart(cell); }
+                            } else { moveRectangle(moveStart, cell); setMoveStart(null); setTouchMode(null); }
+                            return;
+                          }
+                          if (dragStart || eraseStart || moveStart) return;
+                          selectCell(cell, event.shiftKey);
+                        }}
+                        onContextMenu={(event) => { if (entry?.action.type === 'SPECIAL') { event.preventDefault(); editSpecial(entry, { performerId: performer.id, hand, beatId: beat.id, offset: slot.offset, duration: slot.duration }); } }}
+                        aria-label={performer.name + ' ' + hand + ' beat ' + (beatIndex + 1) + (compareRational(slot.offset, rational(0)) === 0 ? '' : ' ' + slot.label) + (entry ? ' ' + actionLabel(entry.action, sequence) : ' empty')}
+                        title={errors.join(' ')}
+                      >
+                        {entry ? <NotationMark action={entry.action} sequence={sequence} hand={hand} /> : null}
+                      </button>
+                    );
+                  })}
+                  <span className="grid-end" />
+                </div>
+              ))}
+            </div>
+          ))}
+        </div>
+      </section>
+
       <section className="bottom-panels">
         <div className="validation-panel" role="region" aria-label="Validation">
           <div className="panel-heading"><strong>Validation</strong><span className={simulation.validation.isValid ? 'valid-count' : 'error-count'}>{simulation.validation.issues.length} {simulation.validation.issues.length === 1 ? 'issue' : 'issues'}</span></div>
