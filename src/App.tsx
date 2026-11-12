@@ -704,6 +704,14 @@ export default function App() {
     selectCell({ performerId: sequence.performers[0]!.id, hand: 'left', beatId: beat.id });
   };
   const addBeat = () => insertBeatAfter();
+  const moveBeat = (beatId: string, direction: -1 | 1) => {
+    const index = sequence.beats.findIndex((beat) => beat.id === beatId);
+    const target = index + direction;
+    if (index < 0 || target < 0 || target >= sequence.beats.length) return;
+    const beats = [...sequence.beats];
+    [beats[index], beats[target]] = [beats[target]!, beats[index]!];
+    commit({ ...sequence, beats });
+  };
   const removeBeat = () => {
     const target = selected?.beatId ? sequence.beats.find((beat) => beat.id === selected.beatId) : sequence.beats[sequence.beats.length - 1];
     if (!target || sequence.beats.length <= 1) return;
@@ -1228,6 +1236,8 @@ export default function App() {
                 <button type="button" className="beat-select" onClick={() => isBeatStart ? selectBeat(beat.id) : selectInterval(beat.id, slot.offset, slot.duration)} aria-label={isBeatStart ? 'Select beat ' + (beatIndex + 1) : 'Select beat ' + (beatIndex + 1) + ' subdivision ' + slot.label}>
                   <span>{slot.label}</span><small>{isBeatStart ? Math.floor(beatIndex / sequence.timeSignature.beatGrouping.length) + 1 + '.' + (beatIndex % sequence.timeSignature.beatGrouping.length + 1) : ' '}</small>
                 </button>
+                {isBeatStart && <button type="button" className="move-beat move-beat-left" onClick={() => moveBeat(beat.id, -1)} disabled={beatIndex === 0} aria-label={'Move beat ' + (beatIndex + 1) + ' left'}>‹</button>}
+                {isBeatStart && <button type="button" className="move-beat move-beat-right" onClick={() => moveBeat(beat.id, 1)} disabled={beatIndex === sequence.beats.length - 1} aria-label={'Move beat ' + (beatIndex + 1) + ' right'}>›</button>}
                 <button type="button" className="subdivide-interval" onClick={() => subdivideInterval(beat.id, slot.offset, slot.duration)} aria-label={'Subdivide beat ' + (beatIndex + 1) + ' interval ' + slot.label}>÷</button>
                 {isBeatEnd && <button type="button" className="insert-beat" onClick={() => insertBeatAfter(beat.id)} aria-label={'Insert beat after ' + (beatIndex + 1)}>+</button>}
               </div>;
