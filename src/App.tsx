@@ -757,7 +757,10 @@ export default function App() {
     const usedIdentifiers = new Set(sequence.performers.map((person) => person.identifier));
     const identifier = 'abcdefghijklmnopqrstuvwxyz'.split('').find((letter) => !usedIdentifiers.has(letter));
     if (!identifier) { window.alert('The editor supports at most 26 performer identifiers.'); return; }
-    const performer = { id: performerId, name: 'Juggler ' + performerNumber, identifier };
+    const usedNames = new Set(sequence.performers.map((person) => person.name));
+    let nameNumber = performerNumber;
+    while (usedNames.has('Juggler ' + nameNumber)) nameNumber += 1;
+    const performer = { id: performerId, name: 'Juggler ' + nameNumber, identifier };
     const sharedLayout = sequence.sequenceType === 'individual-passing' && sequence.individualPassingLayout === 'shared-positions';
     const ownedPositions = (sharedLayout ? [] : ['A', 'B', 'C']).map((name) => ({
       kind: 'table' as const, id: asPositionId(id('position')), name,
