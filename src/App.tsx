@@ -310,7 +310,8 @@ export default function App() {
 
   const selectCell = (cell: EditorCell, extend = false) => {
     setSelected(cell);
-    if (!extend) { setPassRecipientId(''); setPassRecipientHand('left'); }
+    setPassRecipientId('');
+    setPassRecipientHand('left');
     setSelectedCells((current) => extend
       ? current.some((item) => item.performerId === cell.performerId && item.hand === cell.hand && item.beatId === cell.beatId && compareRational(item.offset ?? rational(0), cell.offset ?? rational(0)) === 0) ? current : [...current, cell]
       : [cell]);
