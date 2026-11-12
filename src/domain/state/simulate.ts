@@ -1,5 +1,7 @@
-import type { ActionEntryId, BallId, Hand, HandObjectState, PerformerId, PositionId } from '../ids';
+import type { ActionEntryId, BallId, PerformerId, PositionId } from '../ids';
 import type {
+  Hand,
+  HandObjectState,
   NotationEntry,
   ObjectLocation,
   ObjectStateSnapshot,
