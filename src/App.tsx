@@ -831,7 +831,7 @@ export default function App() {
 
   const addIndividualPass = () => {
     if (!selected || sequence.sequenceType !== 'individual-passing') return;
-    const recipient = sequence.performers.find((person) => person.id === (passRecipientId || sequence.performers.find((item) => item.id !== selected.performerId)?.id));
+    const recipient = sequence.performers.find((person) => person.id === passRecipientId && person.id !== selected.performerId) ?? sequence.performers.find((person) => person.id !== selected.performerId);
     if (!recipient || recipient.id === selected.performerId) return;
     const recipientHand = passRecipientHand;
     if (entryAt(selected.performerId, selected.hand, selected.beatId) ||
@@ -894,6 +894,7 @@ export default function App() {
     action: Extract<NotationAction, { type: 'LIFT' | 'LEAVE' | 'TAP' | 'BOUNCE' }>;
   } : undefined;
 
+  const passRecipientValue = sequence.performers.find((person) => person.id === passRecipientId && person.id !== selected?.performerId)?.id ?? sequence.performers.find((person) => person.id !== selected?.performerId)?.id ?? '';
   const selectedPassRecipient = selectedEntry ? passRecipientTarget(selectedEntry) : undefined;
   const selectedPassSource = selectedEntry ? passSourceTarget(selectedEntry) : undefined;
   const selectedBeatIndex = selected ? sequence.beats.findIndex((beat) => beat.id === selected.beatId) : -1;
@@ -1025,7 +1026,7 @@ export default function App() {
             </button>
           ))}
           {sequence.sequenceType === 'individual-passing' && <>
-            <label className="target-control">Pass to <select value={passRecipientId || sequence.performers.find((person) => person.id !== selected?.performerId)?.id || ''} onChange={(event) => setPassRecipientId(event.target.value)}>{sequence.performers.filter((person) => person.id !== selected?.performerId).map((person) => <option key={person.id} value={person.id}>{person.name} ({person.identifier ?? '?'})</option>)}</select></label>
+            <label className="target-control">Pass to <select value={passRecipientValue} onChange={(event) => setPassRecipientId(event.target.value)}>{sequence.performers.filter((person) => person.id !== selected?.performerId).map((person) => <option key={person.id} value={person.id}>{person.name} ({person.identifier ?? '?'})</option>)}</select></label>
             <label className="target-control">Hand <select value={passRecipientHand} onChange={(event) => setPassRecipientHand(event.target.value as Hand)}><option value="left">Left</option><option value="right">Right</option></select></label>
             <button type="button" className="tool" onClick={addIndividualPass} disabled={!selected || sequence.performers.length < 2}>PASS</button>
           </>}
