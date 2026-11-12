@@ -69,7 +69,7 @@ General sequence settings appear above the notation table. They remain editable 
 
 The settings include, at minimum:
 - Time signature, defaulting to 4/4.
-- Number of beats.
+- Number of main musical beats. In compound meters such as 6/8, a bar contains two main beats, each grouped into three eighth notes.
 - Number of jugglers.
 - Number and names of positions available to each juggler.
 - Initial state, including which positions are occupied by objects.
@@ -90,7 +90,7 @@ The complete set of supported sequence properties and their valid values must be
 
 The notation table appears below the general settings.
 
-Each juggler has a clearly separated section with an individual row for the left hand and an individual row for the right hand, following the Godot prototype. Juggler labels initially use simple identifiers such as Juggler 1 and Juggler 2. Each juggler can have additional positions beyond the standard positions, and position definitions and names are editable.
+Each juggler has a clearly separated section with an individual row for the left hand and an individual row for the right hand, following the Godot prototype. Juggler labels initially use simple identifiers such as Juggler 1 and Juggler 2. Each juggler can have additional positions beyond the standard positions, and position definitions and names are editable. Position names must be unique within each performer. Different performers may use the same position name.
 
 The table contains a time column structure shared by the juggler hand rows. Each cell represents the action of one hand at one point in time. Clicking a beat or subdivision label selects that time position across all juggler hand rows.
 
@@ -127,7 +127,7 @@ The user can insert a new beat between existing columns. A small plus control ap
 
 Subdivisions are not restricted to a single predefined level. The user can add further subdivisions wherever needed. Each subdivision splits its selected interval in half.
 
-The time signature follows conventional musical semantics. In simple meters, the numerator indicates the number of beats in a bar and the denominator identifies the note value of each beat. In compound meters such as 6/8, the eighth notes are grouped in threes, producing two main beats per bar. The denominator therefore affects the musical duration represented by a beat, not merely its displayed label. The default time signature is 4/4. The table must make bar boundaries and the grouping of beats visually identifiable. The exact representation of compound meter grouping and its interaction with the editor's subdivision model remains to be specified.
+The time signature follows conventional musical semantics. In simple meters, the numerator indicates the number of beats in a bar and the denominator identifies the note value of each beat. In compound meters such as 6/8, the eighth notes are grouped in threes, producing two main beats per bar. The editor's beat count refers to these main musical beats, not to every written denominator note. The denominator therefore affects the musical duration represented by a beat, not merely its displayed label. The default time signature is 4/4. The table must make bar boundaries and the grouping of beats visually identifiable. The exact representation of compound meter grouping and its interaction with the editor's subdivision model remains to be specified.
 
 Subdivisions currently follow a binary model in which each subdivision splits an existing interval in half. Labels follow conventional musical counting: beat numbers for quarter note beats, `&` for eighth note subdivisions, and `e` and `a` for sixteenth note subdivisions. Labels beyond sixteenth notes remain to be defined. This binary model does not by itself represent the three eighth note subdivisions within a compound 6/8 beat. The editor's subdivision model must be clarified to support the selected conventional compound meter behaviour without misrepresenting musical timing.
 
