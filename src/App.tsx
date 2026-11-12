@@ -916,7 +916,7 @@ export default function App() {
       ] },
       tableLayout: sequence.sequenceType === 'circle-passing'
         ? { type: 'polygon', sideCount: performerNumber }
-        : sequence.sequenceType === 'solo' ? { type: 'rectangle', longSideSeatCount: Math.ceil((performerNumber + 1) / 2), shortSideSeatCount: 0 } : sequence.tableLayout,
+        : sequence.sequenceType === 'solo' ? { type: 'rectangle', longSideSeatCount: Math.max(1, Math.ceil(performerNumber / 2)), shortSideSeatCount: 0 } : sequence.tableLayout,
     });
   };
 
@@ -964,7 +964,7 @@ export default function App() {
         ? { type: 'solo' }
         : sequence.sequenceType === 'circle-passing'
           ? { type: 'polygon', sideCount: Math.max(3, sequence.performers.length - 1) }
-          : { type: 'rectangle', longSideSeatCount: Math.max(1, sequence.performers.length - 1), shortSideSeatCount: 0 },
+          : { type: 'rectangle', longSideSeatCount: Math.max(1, Math.ceil((sequence.performers.length - 1) / 2)), shortSideSeatCount: 0 },
     });
     if (selected?.performerId === performerId) clearSelection();
   };
@@ -1093,7 +1093,7 @@ export default function App() {
       ...sequence, sequenceType: type, positions, notation, individualPassingLayout,
       tableLayout: type === 'solo' ? { type: 'solo' }
         : type === 'circle-passing' ? { type: 'polygon', sideCount: sequence.performers.length }
-          : { type: 'rectangle', longSideSeatCount: Math.max(1, sequence.performers.length), shortSideSeatCount: 0 },
+          : { type: 'rectangle', longSideSeatCount: Math.max(1, Math.ceil(sequence.performers.length / 2)), shortSideSeatCount: 0 },
     });
     if (type === 'circle-passing' && selected && selected.performerId !== representativeId && representativeId) {
       selectCell({ ...selected, performerId: representativeId });
