@@ -246,8 +246,7 @@ function ActionSymbol({ action, sequence, hand }: { action: NotationAction; sequ
   }
   return (
     <svg className="notation-symbol" viewBox="0 0 48 48" aria-hidden="true">
-      <rect x="1.5" y="1.5" width="45" height="45" rx="5" fill="#ffffff" stroke="#cbd5e1" strokeWidth="1.2" />
-      <path d={path} fill="none" stroke="#263238" strokeWidth="2.6" strokeLinecap="square" strokeLinejoin="miter" />
+      <path d={path} fill="none" stroke="#172033" strokeWidth="3.5" strokeLinecap="square" strokeLinejoin="miter" />
       {circledTarget && <circle cx="20" cy="23" r="8" fill="none" stroke="#263238" strokeWidth="1.8" />}
       {target && <text x={subscript ? 20 : 24} y={subscript ? 23 : 24} textAnchor="middle" dominantBaseline="middle" fontFamily="Arial,sans-serif" fontSize={target.length > 3 ? 18 : subscript ? 22 : 25} fill="#263238">{target}{subscript && <tspan fontSize="14" baselineShift="sub">{subscript}</tspan>}</text>}
     </svg>
@@ -257,41 +256,44 @@ function ActionSymbol({ action, sequence, hand }: { action: NotationAction; sequ
 function NotationMark({ action, sequence, hand }: { action: NotationAction; sequence: Sequence; hand: Hand }) {
   if (action.type === 'EMPTY') return null;
   if (action.type === 'SPECIAL') return <span className="special-symbol">{action.text || 'SPECIAL'}{action.linkId && <span className="special-link-indicator" aria-label="Linked SPECIAL">↔</span>}</span>;
-  if (action.type === 'TAP') return <ActionSymbol action={action} sequence={sequence} hand={hand} />;
+  if (action.type === 'TAP') {
+    if (action.target.kind === 'position') label = positionReference(sequence, action.target.positionId);
+    else { label = action.target.position; subscript = circleSubscript(action.target); }
+  }
   let path = '';
   let label = '';
   let subscript = '';
   let circledTarget = false;
   switch (action.type) {
     case 'LIFT':
-      path = 'M0 19H100 M0 19V81 M0 81H100';
+      path = 'M1.5 1.5H98.5 M1.5 1.5V98.5 M1.5 98.5H98.5';
       if (action.target.kind === 'position') label = positionReference(sequence, action.target.positionId);
       else if (action.target.kind === 'circle-position') { label = action.target.position; subscript = circleSubscript(action.target); }
       else if ('performerId' in action.target) { const targetPerformerId = action.target.performerId; label = 'X'; subscript = sequence.performers.find((person) => person.id === targetPerformerId)?.identifier ?? '?'; }
       break;
-    case 'HOLD': path = 'M0 19H100 M0 81H100'; break;
+    case 'HOLD': path = 'M1.5 1.5H98.5 M1.5 98.5H98.5'; break;
     case 'LEAVE':
-      path = 'M0 19H100 M100 19V81 M0 81H100';
+      path = 'M1.5 1.5H98.5 M98.5 1.5V98.5 M1.5 98.5H98.5';
       if (action.target.kind === 'position') label = positionReference(sequence, action.target.positionId);
       else if (action.target.kind === 'circle-position') { label = action.target.position; subscript = circleSubscript(action.target); }
       else if ('hand' in action.target) { const targetHand = action.target.hand; const targetPerformerId = action.target.performerId; label = targetHand === 'left' ? 'L' : 'R'; circledTarget = true; subscript = sequence.performers.find((person) => person.id === targetPerformerId)?.identifier ?? '?'; }
       break;
     case 'BOUNCE':
-      path = 'M0 19H100 M0 81H100';
+      path = 'M1.5 1.5H98.5 M1.5 98.5H98.5';
       if (action.target.kind === 'position') label = positionReference(sequence, action.target.positionId);
       else { label = action.target.position; subscript = circleSubscript(action.target); }
       break;
     case 'ZIP':
       path = action.role === 'source'
-        ? hand === 'left' ? 'M0 19H100 M100 19V81' : 'M0 81H100 M100 19V81'
-        : hand === 'left' ? 'M0 19H100 M0 19V81' : 'M0 81H100 M0 19V81';
+        ? hand === 'left' ? 'M1.5 1.5H98.5 M98.5 1.5V98.5' : 'M1.5 98.5H98.5 M98.5 1.5V98.5'
+        : hand === 'left' ? 'M1.5 1.5H98.5 M1.5 1.5V98.5' : 'M1.5 98.5H98.5 M1.5 1.5V98.5';
       break;
   }
   return (
     <svg className="ball-segment" viewBox="0 0 100 100" aria-hidden="true">
       <path d={path} fill="none" stroke="#263238" strokeWidth="2.6" strokeLinecap="square" strokeLinejoin="miter" />
       {circledTarget && <circle cx="36" cy="50" r="13" fill="none" stroke="#263238" strokeWidth="1.8" />}
-      {label && <text x={subscript ? 38 : 50} y="50" textAnchor="middle" dominantBaseline="middle" fontFamily="Arial,sans-serif" fontSize={label.length > 3 ? 34 : 38} fontWeight="600" fill="#172033">{label}{subscript && <tspan fontSize="25" baselineShift="sub">{subscript}</tspan>}</text>}
+      {label && <text x={subscript ? 38 : 50} y="50" textAnchor="middle" dominantBaseline="middle" fontFamily="Arial,sans-serif" fontSize={label.length > 3 ? 38 : 46} fontWeight="700" fill="#172033">{label}{subscript && <tspan fontSize="28" baselineShift="sub">{subscript}</tspan>}</text>}
     </svg>
   );
 }
@@ -315,17 +317,51 @@ export default function App() {
   const [passRecipientId, setPassRecipientId] = useState('');
   const [passRecipientHand, setPassRecipientHand] = useState<Hand>('left');
 
-  const simulation = useMemo(() => simulateSequence(sequence), [sequence]);
+  const editorPerformers = sequence.sequenceType === 'circle-passing' ? sequence.performers.slice(0, 1) : sequence.performers;
+  const simulationModel = useMemo(() => {
+    if (sequence.sequenceType !== 'circle-passing' || sequence.performers.length <= 1) {
+      return { sequence, sourceEntryById: new Map<string, string>() };
+    }
+    const representative = sequence.performers[0]!;
+    const pattern = sequence.notation.filter((entry) => entry.performerId === representative.id);
+    const sourceEntryById = new Map<string, string>();
+    const instances = sequence.performers.slice(1).flatMap((performer) => {
+      const linkIds = new Map<string, ReturnType<typeof asLinkId>>();
+      return pattern.map((entry) => {
+        let action = entry.action;
+        if ('linkId' in action && action.linkId) {
+          const mapped = linkIds.get(action.linkId) ?? asLinkId('circle-' + action.linkId + '-' + performer.id);
+          linkIds.set(action.linkId, mapped);
+          action = { ...action, linkId: mapped } as NotationAction;
+        }
+        if ('target' in action && action.target.kind === 'position') {
+          const targetPosition = sequence.positions.find((position) => position.id === action.target.positionId);
+          const matchingPosition = targetPosition?.kind === 'table'
+            ? sequence.positions.find((position) => position.kind === 'table' && position.name === targetPosition.name &&
+              position.owner.kind === 'performer' && position.owner.performerId === performer.id)
+            : undefined;
+          if (matchingPosition) action = { ...action, target: { kind: 'position', positionId: matchingPosition.id } } as NotationAction;
+        }
+        const cloneId = asActionEntryId('circle-' + entry.id + '-' + performer.id);
+        sourceEntryById.set(cloneId, entry.id);
+        return { ...entry, id: cloneId, performerId: performer.id, action };
+      });
+    });
+    return { sequence: { ...sequence, notation: [...pattern, ...instances] }, sourceEntryById };
+  }, [sequence]);
+  const simulationSequence = simulationModel.sequence;
+  const simulation = useMemo(() => simulateSequence(simulationSequence), [simulationSequence]);
   const timelineSlots = getTimelineSlots(sequence.beats);
   const issuesByEntry = useMemo(() => {
     const map = new Map<string, string[]>();
     for (const issue of simulation.validation.issues) {
       for (const entryId of issue.affectedEntries) {
-        map.set(entryId, [...(map.get(entryId) ?? []), issue.description]);
+        const sourceId = simulationModel.sourceEntryById.get(entryId) ?? entryId;
+        map.set(sourceId, [...(map.get(sourceId) ?? []), issue.description]);
       }
     }
     return map;
-  }, [simulation]);
+  }, [simulation, simulationModel]);
 
   const selectCell = (cell: EditorCell, extend = false) => {
     setSelected(cell);
@@ -468,7 +504,7 @@ export default function App() {
     }
     if (!['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(event.key)) return;
     event.preventDefault();
-    const rows = sequence.performers.flatMap((performer) =>
+    const rows = editorPerformers.flatMap((performer) =>
       hands.map((hand) => ({ performerId: performer.id, hand })),
     );
     const rowIndex = rows.findIndex((row) => row.performerId === selected.performerId && row.hand === selected.hand);
@@ -635,7 +671,7 @@ export default function App() {
   };
 
   const eraseRectangle = (first: EditorCell, last: EditorCell) => {
-    const rows = sequence.performers.flatMap((performer) => hands.map((hand) => ({ performerId: performer.id, hand })));
+    const rows = editorPerformers.flatMap((performer) => hands.map((hand) => ({ performerId: performer.id, hand })));
     const firstRow = rows.findIndex((row) => row.performerId === first.performerId && row.hand === first.hand);
     const lastRow = rows.findIndex((row) => row.performerId === last.performerId && row.hand === last.hand);
     const firstSlot = timelineSlots.findIndex((slot) => slot.beatId === first.beatId && compareRational(slot.offset, first.offset ?? rational(0)) === 0);
@@ -655,7 +691,7 @@ export default function App() {
     const cells = selectedCells.length ? selectedCells : selected ? [selected] : [];
     if (!cells.length) return;
     const anchor = cells[0]!;
-    const anchorRow = sequence.performers.findIndex((person) => person.id === anchor.performerId) * 2 + hands.indexOf(anchor.hand);
+    const anchorRow = editorPerformers.findIndex((person) => person.id === anchor.performerId) * 2 + hands.indexOf(anchor.hand);
     const anchorBeat = sequence.beats.findIndex((beat) => beat.id === anchor.beatId);
     const entries = cells.map((cell) => entryAt(cell.performerId, cell.hand, cell.beatId, cell.offset ?? rational(0))).filter((entry): entry is NotationEntry => Boolean(entry));
     const links = new Set(entries.flatMap((entry) => 'linkId' in entry.action && entry.action.linkId ? [entry.action.linkId] : []));
@@ -665,7 +701,7 @@ export default function App() {
     if (!entries.length) { setClipboard([]); return; }
     setClipboard(entries.map((entry) => ({
       entry,
-      rowOffset: sequence.performers.findIndex((person) => person.id === entry.performerId) * 2 + hands.indexOf(entry.hand) - anchorRow,
+      rowOffset: editorPerformers.findIndex((person) => person.id === entry.performerId) * 2 + hands.indexOf(entry.hand) - anchorRow,
       beatOffset: sequence.beats.findIndex((beat) => beat.id === entry.time.beatId) - anchorBeat,
     })));
   };
@@ -709,12 +745,12 @@ export default function App() {
   };
 
   const selectInterval = (beatId: string, offset: Rational, duration: Rational) => {
-    const cells = sequence.performers.flatMap((performer) => hands.map((hand) => ({ performerId: performer.id, hand, beatId, offset, duration })));
+    const cells = editorPerformers.flatMap((performer) => hands.map((hand) => ({ performerId: performer.id, hand, beatId, offset, duration })));
     if (cells[0]) { setSelected(cells[0]); setSelectedCells(cells); setPassRecipientId(''); setPassRecipientHand('left'); setShowActionMenu(false); }
   };
 
   const selectBeat = (beatId: string) => {
-    const cells = sequence.performers.flatMap((performer) => hands.flatMap((hand) =>
+    const cells = editorPerformers.flatMap((performer) => hands.flatMap((hand) =>
       timelineSlots.filter((slot) => slot.beatId === beatId).map((slot) => ({
         performerId: performer.id, hand, beatId, offset: slot.offset, duration: slot.duration,
       })),
@@ -863,7 +899,9 @@ export default function App() {
         { ballId: newBalls[0]!.id, location: initialA },
         { ballId: newBalls[1]!.id, location: initialC },
       ] },
-      tableLayout: sequence.sequenceType === 'solo' ? { type: 'rectangle', longSideSeatCount: Math.ceil((performerNumber + 1) / 2), shortSideSeatCount: 0 } : sequence.tableLayout,
+      tableLayout: sequence.sequenceType === 'circle-passing'
+        ? { type: 'polygon', sideCount: performerNumber }
+        : sequence.sequenceType === 'solo' ? { type: 'rectangle', longSideSeatCount: Math.ceil((performerNumber + 1) / 2), shortSideSeatCount: 0 } : sequence.tableLayout,
     });
   };
 
@@ -907,7 +945,9 @@ export default function App() {
       seatAssignments: sequence.seatAssignments.filter((assignment) => assignment.performerId !== performerId),
       tableLayout: sequence.sequenceType === 'solo'
         ? { type: 'solo' }
-        : { type: 'rectangle', longSideSeatCount: Math.max(1, sequence.performers.length - 1), shortSideSeatCount: 0 },
+        : sequence.sequenceType === 'circle-passing'
+          ? { type: 'polygon', sideCount: Math.max(3, sequence.performers.length - 1) }
+          : { type: 'rectangle', longSideSeatCount: Math.max(1, sequence.performers.length - 1), shortSideSeatCount: 0 },
     });
     if (selected?.performerId === performerId) clearSelection();
   };
@@ -967,9 +1007,30 @@ export default function App() {
       positions = [...sequence.positions.filter((position) => position.kind === 'hand-back'), ...normalized];
       individualPassingLayout = 'per-performer-positions';
     }
+    const representativeId = sequence.performers[0]?.id;
+    const notation = sequence.notation
+      .filter((entry) => type !== 'circle-passing' || entry.performerId === representativeId)
+      .map((entry) => {
+        const action = entry.action;
+        if (!('target' in action)) return entry;
+        if (type === 'circle-passing' && action.target.kind === 'position') {
+          const targetPosition = positions.find((position) => position.id === action.target.positionId);
+          if (targetPosition?.kind === 'table' && ['A', 'B', 'C'].includes(targetPosition.name)) {
+            return { ...entry, action: { ...action, target: { kind: 'circle-position' as const, position: targetPosition.name as 'A' | 'B' | 'C' } } as NotationAction };
+          }
+        }
+        if (type !== 'circle-passing' && action.target.kind === 'circle-position') {
+          const targetPosition = positions.find((position) => position.kind === 'table' && position.name === action.target.position &&
+            (position.owner.kind === 'shared' || (position.owner.kind === 'performer' && position.owner.performerId === entry.performerId)));
+          if (targetPosition) return { ...entry, action: { ...action, target: { kind: 'position' as const, positionId: targetPosition.id } } as NotationAction };
+        }
+        return entry;
+      });
     commit({
-      ...sequence, sequenceType: type, positions, individualPassingLayout,
-      tableLayout: type === 'solo' ? { type: 'solo' } : { type: 'rectangle', longSideSeatCount: Math.max(1, sequence.performers.length), shortSideSeatCount: 0 },
+      ...sequence, sequenceType: type, positions, notation, individualPassingLayout,
+      tableLayout: type === 'solo' ? { type: 'solo' }
+        : type === 'circle-passing' ? { type: 'polygon', sideCount: Math.max(3, sequence.performers.length) }
+          : { type: 'rectangle', longSideSeatCount: Math.max(1, sequence.performers.length), shortSideSeatCount: 0 },
     });
   };
 
@@ -1318,10 +1379,10 @@ export default function App() {
       </section>
 
       {showRenderer && <SequenceRenderer
-        sequence={sequence}
+        sequence={simulationSequence}
         simulation={simulation}
         onSelectHand={(performerId, hand, beatId) => {
-          selectCell({ performerId, hand, beatId });
+          selectCell({ performerId: sequence.sequenceType === 'circle-passing' ? sequence.performers[0]!.id : performerId, hand, beatId });
           setShowActionMenu(false);
         }}
       />}
@@ -1404,7 +1465,7 @@ export default function App() {
             <button type="button" className="add-beat" onClick={addBeat} aria-label="Add beat">+</button>
           </div>
           {(sequence.beats.some((beat) => beat.subdivisions.length > 0) || (sequence.timeSignature.numerator === 6 && sequence.timeSignature.denominator === 8)) && <p className="timeline-note">Subdivisions are shown in the notation grid, but the simulator currently evaluates all actions in a main beat simultaneously. The current binary subdivision model does not represent triplet subdivisions in 6/8.</p>}
-          {sequence.performers.map((performer) => (
+          {editorPerformers.map((performer) => (
             <div className="performer-block" key={performer.id}>
               <div className="performer-heading">{performer.name}<span>{performer.identifier ?? ''}</span></div>
               {hands.map((hand) => (
@@ -1494,7 +1555,8 @@ export default function App() {
           <div className="panel-heading"><strong>Validation</strong><span className={simulation.validation.isValid ? 'valid-count' : 'error-count'}>{simulation.validation.issues.length} {simulation.validation.issues.length === 1 ? 'issue' : 'issues'}</span></div>
           {simulation.validation.issues.length === 0 ? <p className="no-issues">Sequence valid</p> : <ul>{simulation.validation.issues.map((issue, index) => (
             <li key={issue.code + index}><span>{issue.description}</span>{issue.affectedEntries[0] && <button type="button" onClick={() => {
-              const entry = sequence.notation.find((item) => item.id === issue.affectedEntries[0]);
+              const sourceId = simulationModel.sourceEntryById.get(issue.affectedEntries[0]) ?? issue.affectedEntries[0];
+              const entry = sequence.notation.find((item) => item.id === sourceId);
               if (entry) {
                 const slot = timelineSlots.find((item) =>
                   item.beatId === entry.time.beatId &&
