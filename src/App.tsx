@@ -286,7 +286,6 @@ export default function App() {
   const [clipboard, setClipboard] = useState<ClipboardItem[]>([]);
   const [eraseStart, setEraseStart] = useState<EditorCell | null>(null);
   const [moveStart, setMoveStart] = useState<EditorCell | null>(null);
-  const [activeAction, setActiveAction] = useState<ActionName>('LIFT');
   const [history, setHistory] = useState<Sequence[]>([]);
   const [future, setFuture] = useState<Sequence[]>([]);
   const [showSettings, setShowSettings] = useState(false);
@@ -1202,7 +1201,7 @@ export default function App() {
       <section className="editor-toolbar" aria-label="Notation actions">
         <div className="action-tools">
           {actionNames.map((name) => (
-            <button type="button" key={name} aria-label={name} title={name} className={(activeAction === name ? 'tool active' : 'tool') + (name === 'ZIP' ? ' zip-tool' : '')} onClick={() => { setActiveAction(name); if (selected) addAction(name); }} disabled={!selected}>
+            <button type="button" key={name} aria-label={name} title={name} className={'tool' + (name === 'ZIP' ? ' zip-tool' : '')} onClick={() => { if (selected) addAction(name); }} disabled={!selected}>
               {name === 'ZIP' ? <span className="zip-tool-preview"><ActionSymbol action={{ type: 'ZIP', role: 'source', linkId: asLinkId('zip-preview') }} sequence={sequence} hand="left" /><ActionSymbol action={{ type: 'ZIP', role: 'receiver', linkId: asLinkId('zip-preview') }} sequence={sequence} hand="right" /></span> : <ActionSymbol action={makeAction(name, sequence)} sequence={sequence} hand={selected?.hand ?? 'left'} />}
             </button>
           ))}
