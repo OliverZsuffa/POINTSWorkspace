@@ -81,3 +81,50 @@ test('circle passing renderer layout with ten participants', async ({ page }) =>
   expect(bounds!.height).toBeGreaterThan(250);
   await page.screenshot({ path: 'test-results/07-circle-renderer-ten-people.png', fullPage: true });
 });
+
+
+test('desktop workspace panels can be resized, swapped, hidden and restored', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto('./');
+  const editor = page.locator('.editor-workspace-panel');
+  const renderer = page.locator('.renderer-workspace-panel');
+  await expect(editor).toBeVisible();
+  await expect(renderer).toBeVisible();
+
+  const before = await editor.boundingBox();
+  const divider = await page.locator('.workspace-divider').boundingBox();
+  expect(before).not.toBeNull();
+  expect(divider).not.toBeNull();
+  await page.mouse.move(divider!.x + divider!.width / 2, divider!.y + divider!.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(divider!.x + divider!.width / 2 + 100, divider!.y + divider!.height / 2);
+  await page.mouse.up();
+  const after = await editor.boundingBox();
+  expect(after!.width).toBeGreaterThan(before!.width + 50);
+
+  await page.getByRole('button', { name: 'Swap panels' }).click();
+  expect((await renderer.boundingBox())!.x).toBeLessThan((await editor.boundingBox())!.x);
+
+  await editor.locator('.workspace-panel-header button').click();
+  await expect(editor).toBeHidden();
+  await page.getByRole('button', { name: 'Show editor' }).click();
+  await expect(editor).toBeVisible();
+});
+
+test('phone workspace switches between editor and renderer tabs', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto('./');
+  const editor = page.locator('.editor-workspace-panel');
+  const renderer = page.locator('.renderer-workspace-panel');
+  await expect(page.getByRole('navigation', { name: 'Workspace views' })).toBeVisible();
+  await expect(editor).toBeVisible();
+  await expect(renderer).toBeHidden();
+
+  await page.getByRole('button', { name: 'Renderer', exact: true }).click();
+  await expect(renderer).toBeVisible();
+  await expect(editor).toBeHidden();
+
+  await page.getByRole('button', { name: 'Editor', exact: true }).click();
+  await expect(editor).toBeVisible();
+  await expect(renderer).toBeHidden();
+});
