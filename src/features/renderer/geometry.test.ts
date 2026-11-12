@@ -14,7 +14,11 @@ import {
   getTablePositionPosition,
 } from './geometry';
 
-function sequence(\n  performerCount = 1,\n  tableLayout: Sequence['tableLayout'] = { type: 'solo' },\n  seatAssignments: Sequence['seatAssignments'] = [],\n): Sequence {
+function sequence(
+  performerCount = 1,
+  tableLayout: Sequence['tableLayout'] = { type: 'solo' },
+  seatAssignments: Sequence['seatAssignments'] = [],
+): Sequence {
   const performers = Array.from({ length: performerCount }, (_, index) => ({
     id: asPerformerId(String.fromCharCode(97 + index)),
     name: `Performer ${index + 1}`,
