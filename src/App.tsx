@@ -696,9 +696,12 @@ export default function App() {
       }).filter((position): position is PositionDefinition & { kind: 'table' } => Boolean(position));
       const byName = new Map<string, ReturnType<typeof asPositionId>>(shared.map((position): [string, ReturnType<typeof asPositionId>] => [position.name, position.id]));
       const oldToNew = new Map<ReturnType<typeof asPositionId>, ReturnType<typeof asPositionId>>(tables.map((position): [ReturnType<typeof asPositionId>, ReturnType<typeof asPositionId>] => [position.id, byName.get(position.name)!]));
-      const placements = sequence.initialState.placements.map((placement) => placement.location.kind === 'position' && oldToNew.has(placement.location.positionId)
-        ? { ...placement, location: { kind: 'position' as const, positionId: oldToNew.get(placement.location.positionId)! } }
-        : placement);
+      const placements = sequence.initialState.placements.map((placement) => {
+        const location = placement.location;
+        if (location.kind !== 'position') return placement;
+        const positionId = oldToNew.get(location.positionId);
+        return positionId ? { ...placement, location: { kind: 'position' as const, positionId } } : placement;
+      });
       const occupied = new Set<string>();
       for (const placement of placements) {
         const key = objectLocationKey(placement.location);
@@ -722,9 +725,12 @@ export default function App() {
     }));
     const firstPositions = new Map<string, ReturnType<typeof asPositionId>>(perPerformer.filter((position) => position.owner.kind === 'performer' && position.owner.performerId === sequence.performers[0]?.id).map((position): [string, ReturnType<typeof asPositionId>] => [position.name, position.id]));
     const sharedToFirst = new Map<ReturnType<typeof asPositionId>, ReturnType<typeof asPositionId>>(tables.filter((position) => position.owner.kind === 'shared').map((position): [ReturnType<typeof asPositionId>, ReturnType<typeof asPositionId>] => [position.id, firstPositions.get(position.name)!]));
-    const placements = sequence.initialState.placements.map((placement) => placement.location.kind === 'position' && sharedToFirst.has(placement.location.positionId)
-      ? { ...placement, location: { kind: 'position' as const, positionId: sharedToFirst.get(placement.location.positionId)! } }
-      : placement);
+    const placements = sequence.initialState.placements.map((placement) => {
+      const location = placement.location;
+      if (location.kind !== 'position') return placement;
+      const positionId = sharedToFirst.get(location.positionId);
+      return positionId ? { ...placement, location: { kind: 'position' as const, positionId } } : placement;
+    });
     const notation = sequence.notation.map((entry) => {
       const oldPositionId = positionTargetId(entry.action);
       if (!oldPositionId || !sharedToFirst.has(oldPositionId)) return entry;
