@@ -177,7 +177,7 @@ The code is generated automatically and can be copied explicitly at any time. Pa
 
 There is one current working sequence rather than a collection of named sequences. Multiple saved sequences, editable sequence names, and a duplicate sequence management feature are not required. The most recent working sequence is restored when the application is reopened, including when it is incomplete or invalid.
 
-The distinction between a code that cannot be parsed and a sequence that can be imported but fails notation validation still needs to be specified. A structurally invalid imported sequence should be made available in the editor and clearly marked as invalid, rather than silently treated as valid.
+The distinction between a code that cannot be parsed and a sequence that can be imported but fails notation validation still needs to be specified. A structurally invalid imported sequence should be made available in the editor and clearly marked as invalid, rather than silently treated as valid. If an imported code contains features the current application does not recognise, the application should import the parts it understands and report the unsupported parts. Sequence codes do not need an explicit format version.
 
 ### 1.8 Image export
 
@@ -185,7 +185,12 @@ The user can export the sequence as one continuous image or as multiple image se
 
 The export includes all sequence information by default. Before exporting, the user can open an options window to include or exclude individual parts of the output. The object state at the start and end of the sequence can be included when selected.
 
-The user can choose black or white for text and background, or choose a transparent background. The exact export options interface remains to be designed.
+The export uses a cleaner presentation than the live editor, while retaining meaningful notation colours such as red error markings and yellow linked SPECIAL markings. The user can choose black or white text and background, or a transparent background. Image resolution and scale are selected automatically to produce a good result. The notation keeps a fixed cell size, so long sequences produce wider images rather than shrinking all notation to fit a fixed width. Sequence settings and performer names are included by default. The exact export options interface remains to be designed.
+
+
+### 1.9 Curated sequence presets
+
+The repository should contain a manually maintained curated collection of sequence presets. Each entry consists of a sequence code, a preset name, and author or authors. The application should provide a way for users to browse these presets and load one into the current workspace. The list is maintained by editing repository data, not through an in-app contribution or editing interface. The exact presentation and organisation of the preset collection remain to be designed.
 
 ## 2. Sequence Renderer
 
@@ -297,7 +302,7 @@ The user can provide a subsequence by entering its compact sequence code or by s
 
 Generated sequences appear in a visual gallery. Each result shows a notation preview. A separate renderer preview is not required.
 
-Results are unranked. Their order must nevertheless be deterministic: identical inputs must produce the same result order every time. If two sequences differ anywhere in their structure or notation, they count as different sequences.
+Results are unranked. Their order must nevertheless be deterministic: identical inputs must produce the same result order every time. Duplicate detection treats time shifted versions of the same pattern as equivalent. Other differences in structure or notation continue to distinguish sequences.
 
 Duplicate results must be removed.
 
@@ -309,9 +314,9 @@ Comparing multiple candidates side by side is not required.
 
 The user explicitly starts generation by pressing a Generate control. Results appear progressively as they are found.
 
-The generator should attempt to find all valid sequences up to a fixed application defined maximum result limit. It must communicate how many results are available and divide them into pages rather than displaying an unbounded gallery at once. The user can continue searching for additional results when more are available.
+The generator should attempt to find all valid sequences up to a fixed application defined maximum result limit. It must communicate how many results are available and divide them into pages rather than displaying an unbounded gallery at once. The user can continue searching for additional results when more are available. The maximum result limit is fixed by the application rather than configurable by the user. When the generator reaches its limit, it must communicate that additional results may exist.
 
-The user can stop generation while it is running. Results already found remain available after stopping. When the generator reaches its result limit, it must communicate that additional results may exist. The exact maximum result limit, page size, and behaviour when the search space is extremely large remain to be defined.
+The user can stop generation while it is running. Results already found remain available after stopping, but a stopped search cannot be resumed. Changing any generation constraint clears the existing results. Generator settings persist when the generator panel is closed and reopened. Selecting a result does not remove the other results from the gallery and does not automatically stop an active generation run. The exact maximum result limit, page size, and behaviour when the search space is extremely large remain to be defined.
 
 The generator should be able to indicate when it has exhausted the search space within the applicable limits.
 
