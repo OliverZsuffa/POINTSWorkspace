@@ -13,7 +13,7 @@ The implementation is divided into bounded work packages so separate agents can 
 | 03 | Sequence editor | Notation grid, editing interactions, settings and undo | 01, 02 | Implemented and merged to main via PR #6 |
 | 03B | Editor corrections and visual refinement | Correct initial ball setup, notation visuals, beat state and target editing | 03 | Implemented and merged into main via PR #5 |
 | 03C | Editor completion and feature verification | Full audit of Packages 03 and 03B, complete missing interactions, notation grid and usability corrections | 03, 03B | Implemented and merged through PR #9; manual visual verification remains |
-| 04 | Sequence renderer | 3D scene, animation, playback and editor synchronisation | 01, 02 | Implemented in PR #7, automated checks pass, manual visual review pending |
+| 04 | Sequence renderer | 3D scene, animation, playback and editor synchronisation | 01, 02 | Implemented in PR #7; correction pass 04B in progress |
 | 05 | Sequence generator | Constraint search and candidate generation | 01, 02 | Awaiting approval |
 | 06 | Data, persistence and export | Sequence codes, import, local persistence, presets and image export | 01, 02 | Awaiting approval |
 | 07 | Workspace shell and PWA | Application layout, responsive shell, panel management and offline support | 01 | Awaiting approval |
@@ -57,4 +57,4 @@ Agents may implement unrelated parts while a blocker remains open, but must not 
 
 ## Approval
 
-Packages 01, 02, 03 and 03B are implemented and merged. Package 03C first pass is merged through PR #9. Its final correction and verification pass merged through PR #10. Automated checks and six viewport screenshot reviews pass. Remaining Partial requirements are documented in the 03C verification matrix. Package 04 was implemented and merged through PR #7; manual visual and behavioural verification remains outstanding. Packages 05, 06 and 07 remain awaiting approval. Package 08 has a detailed implementation plan and remains awaiting approval.
+Packages 01, 02, 03 and 03B are implemented and merged. Package 03C first pass is merged through PR #9. Its final correction and verification pass merged through PR #10. Automated checks and six viewport screenshot reviews pass. Remaining Partial requirements are documented in the 03C verification matrix. Package 04 was implemented and merged through PR #7. Renderer correction pass 04B is in progress on a separate branch and covers the outstanding camera, spacing, table and hand movement issues. Packages 05, 06 and 07 remain awaiting approval. Package 08 has a detailed implementation plan and remains awaiting approval.

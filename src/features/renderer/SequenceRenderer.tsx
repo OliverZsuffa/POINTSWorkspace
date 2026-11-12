@@ -3,9 +3,12 @@ import * as THREE from 'three';
 import type { NotationEntry, ObjectLocation, Sequence, SimulationResult } from '../../domain/model';
 import { getMainBeatDurationSeconds } from '../../domain/time/time-signature';
 import {
+  getCameraPanOffset,
   getHandPosition,
+  getHandReachPosition,
   getObjectPosition,
   getPerformerAnchor,
+  getPassMeetingPoint,
   getPerformerFacing,
   getTableFootprint,
   getTablePositionPosition,
@@ -93,7 +96,14 @@ function getActionTargetPosition(
     }
   }
   if (action.type === 'LEAVE' && action.target.kind === 'pass-recipient-hand') {
-    return getHandPosition(sequence, action.target.performerId, action.target.hand, layout);
+    return getPassMeetingPoint(
+      sequence,
+      entry.performerId,
+      entry.hand,
+      action.target.performerId,
+      action.target.hand,
+      layout,
+    );
   }
   if (action.type === 'LIFT' && action.target.kind === 'pass-source' && action.linkId) {
     const source = sequence.notation.find((item) =>
@@ -101,7 +111,16 @@ function getActionTargetPosition(
       'linkId' in item.action &&
       item.action.linkId === action.linkId,
     );
-    if (source) return getHandPosition(sequence, source.performerId, source.hand, layout);
+    if (source) {
+      return getPassMeetingPoint(
+        sequence,
+        source.performerId,
+        source.hand,
+        entry.performerId,
+        entry.hand,
+        layout,
+      );
+    }
   }
   return undefined;
 }
@@ -239,10 +258,10 @@ export default function SequenceRenderer({ sequence, simulation, onSelectHand }:
 
     const footprint = getTableFootprint(sequence);
     const tableGeometry = footprint.round
-      ? new THREE.CylinderGeometry(footprint.width / 2, footprint.width / 2, 0.2, footprint.sideCount ?? 48)
-      : new THREE.BoxGeometry(footprint.width, 0.2, footprint.depth);
+      ? new THREE.CylinderGeometry(footprint.width / 2, footprint.width / 2, 0.08, footprint.sideCount ?? 48)
+      : new THREE.BoxGeometry(footprint.width, 0.08, footprint.depth);
     const table = new THREE.Mesh(tableGeometry, makeMaterial('#b9c8db'));
-    table.position.y = -0.02;
+    table.position.y = -0.04;
     table.castShadow = true;
     table.receiveShadow = true;
     scene.add(table);
@@ -251,11 +270,11 @@ export default function SequenceRenderer({ sequence, simulation, onSelectHand }:
     for (const position of tablePositions) {
       const point = getTablePositionPosition(sequence, position, layout);
       const marker = new THREE.Mesh(
-        new THREE.CylinderGeometry(0.24, 0.24, 0.035, 24),
+        new THREE.CylinderGeometry(0.2, 0.2, 0.025, 24),
         makeMaterial('#dce7f7'),
       );
       marker.position.copy(vector(point));
-      marker.position.y = 0.1;
+      marker.position.y = 0.015;
       scene.add(marker);
     }
 
@@ -326,8 +345,17 @@ export default function SequenceRenderer({ sequence, simulation, onSelectHand }:
       const dy = event.clientY - pointerStart.y;
       if (Math.abs(dx) + Math.abs(dy) > 3) moved = true;
       if (pointerStart.button === 2) {
-        target.x -= dx * 0.012;
-        target.z += dy * 0.012;
+        camera.updateMatrixWorld(true);
+        const cameraRight = new THREE.Vector3().setFromMatrixColumn(camera.matrixWorld, 0).normalize();
+        const cameraUp = new THREE.Vector3().setFromMatrixColumn(camera.matrixWorld, 1).normalize();
+        const offset = getCameraPanOffset(
+          { x: cameraRight.x, y: cameraRight.y, z: cameraRight.z },
+          { x: cameraUp.x, y: cameraUp.y, z: cameraUp.z },
+          dx,
+          dy,
+          radius,
+        );
+        target.add(vector(offset));
       } else {
         theta -= dx * 0.008;
         phi += dy * 0.006;
@@ -417,9 +445,8 @@ export default function SequenceRenderer({ sequence, simulation, onSelectHand }:
               targetPoint = { x: (base.x + other.x) / 2, y: 1.15, z: (base.z + other.z) / 2 };
             }
           }
-          const pulse = Math.sin(progressValue * Math.PI);
           const handPoint = targetPoint
-            ? lerpPoint(base, targetPoint, pulse * 0.48)
+            ? vector(getHandReachPosition(base, targetPoint, progressValue))
             : vector(base);
           visual.mesh.position.copy(handPoint);
           const performer = current.sequence.performers.find((item) => item.id === visual.performerId);
@@ -458,6 +485,31 @@ export default function SequenceRenderer({ sequence, simulation, onSelectHand }:
         }
       }
 
+        if (beat) {
+          for (const ball of current.sequence.balls) {
+            const before = snapshotLocation(current.simulation, beat.id, 'before', ball.id);
+            const after = snapshotLocation(current.simulation, beat.id, 'after', ball.id);
+            const mesh = balls.get(ball.id);
+            if (!before || !after || !mesh) continue;
+
+          if (before.kind === 'position' && after.kind === 'hand-held') {
+            if (progressValue >= 0.5) {
+              const hand = handVisuals.find((item) => item.performerId === after.performerId && item.hand === after.hand);
+              if (hand) mesh.position.copy(hand.mesh.position);
+            } else {
+              mesh.position.copy(vector(getObjectPosition(current.sequence, before, current.layout)));
+            }
+          } else if (before.kind === 'hand-held' && after.kind === 'position') {
+            if (progressValue <= 0.5) {
+              const hand = handVisuals.find((item) => item.performerId === before.performerId && item.hand === before.hand);
+              if (hand) mesh.position.copy(hand.mesh.position);
+            } else {
+              mesh.position.copy(vector(getObjectPosition(current.sequence, after, current.layout)));
+            }
+          }
+        }
+
+        }
       renderer.render(scene, camera);
     };
     animate();
