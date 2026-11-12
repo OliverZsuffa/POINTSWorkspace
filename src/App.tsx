@@ -432,7 +432,9 @@ export default function App() {
     let notation = sequence.notation.filter((entry) => entry.id !== existing?.id);
     if (existing && 'linkId' in existing.action && existing.action.linkId) {
       const existingLinkId = existing.action.linkId;
-      if (existing.action.type === 'ZIP') {
+      if (existing.action.type === 'ZIP' ||
+          (existing.action.type === 'LEAVE' && existing.action.target.kind === 'pass-recipient-hand') ||
+          (existing.action.type === 'LIFT' && existing.action.target.kind === 'pass-source')) {
         notation = notation.filter((entry) =>
           !('linkId' in entry.action && entry.action.linkId === existingLinkId),
         );
@@ -484,6 +486,15 @@ export default function App() {
     const zipLinks = new Set(entries.flatMap((entry) => entry.action.type === 'ZIP' ? [entry.action.linkId] : []));
     for (const linkId of zipLinks) {
       for (const entry of sequence.notation) if (entry.action.type === 'ZIP' && entry.action.linkId === linkId) removeIds.add(entry.id);
+    }
+    const passLinks = new Set(entries.flatMap((entry) =>
+      (entry.action.type === 'LEAVE' && entry.action.target.kind === 'pass-recipient-hand') ||
+      (entry.action.type === 'LIFT' && entry.action.target.kind === 'pass-source')
+        ? 'linkId' in entry.action && entry.action.linkId ? [entry.action.linkId] : []
+        : [],
+    ));
+    for (const linkId of passLinks) {
+      for (const entry of sequence.notation) if ('linkId' in entry.action && entry.action.linkId === linkId) removeIds.add(entry.id);
     }
     const specialLinks = new Set(entries.filter((entry) => entry.action.type === 'SPECIAL' && entry.action.linkId).map((entry) => (entry.action as Extract<NotationAction, { type: 'SPECIAL' }>).linkId!));
     let notation = sequence.notation.filter((entry) => !removeIds.has(entry.id));
