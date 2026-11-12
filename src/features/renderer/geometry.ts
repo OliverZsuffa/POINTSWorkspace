@@ -149,11 +149,50 @@ export function getTablePositionPosition(
 
   const performer = sequence.performers.find((item) => item.id === owner.performerId);
   if (!performer) return ZERO;
+  const assignment = sequence.seatAssignments.find((item) => item.performerId === performer.id);
+  const inwardOffset = 0.42;
+
+  if (assignment?.seat.kind === 'rectangle-side' && sequence.tableLayout.type === 'rectangle') {
+    const width = footprint.width;
+    const depth = footprint.depth;
+    const seat = assignment.seat;
+    if (seat.side === 'long-a' || seat.side === 'long-b') {
+      const countOnSide = Math.max(1, sequence.tableLayout.longSideSeatCount);
+      const seatX = countOnSide === 1 ? 0 : -width / 2 + (seat.seatIndex * width) / (countOnSide - 1);
+      const tangentOffset = Math.max(-depth / 2 + 0.2, Math.min(depth / 2 - 0.2, positionOffset(position.name)));
+      return {
+        x: Math.max(-width / 2 + 0.2, Math.min(width / 2 - 0.2, seatX + positionOffset(position.name))),
+        y: 0.19,
+        z: (seat.side === 'long-a' ? -1 : 1) * (depth / 2 - inwardOffset),
+      };
+    }
+    const countOnSide = Math.max(1, sequence.tableLayout.shortSideSeatCount);
+    const seatZ = countOnSide === 1 ? 0 : -depth / 2 + (seat.seatIndex * depth) / (countOnSide - 1);
+    return {
+      x: (seat.side === 'short-a' ? -1 : 1) * (width / 2 - inwardOffset),
+      y: 0.19,
+      z: Math.max(-depth / 2 + 0.2, Math.min(depth / 2 - 0.2, seatZ + positionOffset(position.name))),
+    };
+  }
+
+  if (assignment?.seat.kind === 'polygon-edge' && sequence.tableLayout.type === 'polygon') {
+    const sideCount = Math.max(3, sequence.tableLayout.sideCount);
+    const radius = footprint.width / 2;
+    const angle = (Math.PI / 2) + ((assignment.seat.edgeIndex + 0.5) * Math.PI * 2) / sideCount;
+    const normal = { x: Math.cos(angle), y: 0, z: Math.sin(angle) };
+    const tangent = { x: -normal.z, y: 0, z: normal.x };
+    const apothem = radius * Math.cos(Math.PI / sideCount);
+    const maxOffset = Math.max(0, radius * Math.sin(Math.PI / sideCount) - 0.2);
+    const tangentOffset = Math.max(-maxOffset, Math.min(maxOffset, positionOffset(position.name)));
+    return add(
+      scale(normal, apothem - inwardOffset),
+      add(scale(tangent, tangentOffset), { x: 0, y: 0.19, z: 0 }),
+    );
+  }
+
   const anchor = getPerformerAnchor(sequence, performer, layout);
   const direction = normalize(anchor);
-  const inwardOffset = 0.42;
   let edgeDistance: number;
-
   let maximumTangentOffset: number;
   if (footprint.round) {
     const sideCount = footprint.sideCount ?? 48;
