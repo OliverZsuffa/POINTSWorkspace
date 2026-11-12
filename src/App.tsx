@@ -68,6 +68,33 @@ function makeSequence(): Sequence {
   };
 }
 
+function positionTargetId(action: NotationAction): ReturnType<typeof asPositionId> | undefined {
+  switch (action.type) {
+    case 'LIFT':
+    case 'LEAVE':
+    case 'TAP':
+    case 'BOUNCE':
+      return action.target.kind === 'position' ? action.target.positionId : undefined;
+    default:
+      return undefined;
+  }
+}
+
+function updatePositionTarget(entry: NotationEntry, positionId: ReturnType<typeof asPositionId>): NotationEntry {
+  const action = entry.action;
+  switch (action.type) {
+    case 'LIFT':
+    case 'LEAVE':
+    case 'TAP':
+    case 'BOUNCE':
+      return action.target.kind === 'position'
+        ? { ...entry, action: { ...action, target: { ...action.target, positionId } } }
+        : entry;
+    default:
+      return entry;
+  }
+}
+
 function positionName(sequence: Sequence, positionId: string): string {
   const position = sequence.positions.find((item) => item.id === positionId);
   return position?.name ?? '?';
@@ -76,14 +103,18 @@ function positionName(sequence: Sequence, positionId: string): string {
 function actionLabel(action: NotationAction, sequence: Sequence): string {
   switch (action.type) {
     case 'LIFT':
+      if (action.target.kind === 'position') return 'LIFT ' + positionName(sequence, action.target.positionId);
+      if (action.target.kind === 'circle-position') return 'LIFT ' + action.target.position + circleSubscript(action.target);
+      return 'LIFT X' + (sequence.performers.find((person) => person.id === action.target.performerId)?.identifier ?? '?');
     case 'LEAVE':
+      if (action.target.kind === 'position') return 'LEAVE ' + positionName(sequence, action.target.positionId);
+      if (action.target.kind === 'circle-position') return 'LEAVE ' + action.target.position + circleSubscript(action.target);
+      return 'LEAVE ' + (action.target.hand === 'left' ? 'L' : 'R') + (sequence.performers.find((person) => person.id === action.target.performerId)?.identifier ?? '?');
     case 'TAP':
     case 'BOUNCE':
       return action.target.kind === 'position'
         ? action.type + ' ' + positionName(sequence, action.target.positionId)
-        : action.target.kind === 'circle-position'
-          ? action.type + ' ' + action.target.position + (action.target.direction ? (action.target.distance && action.target.distance > 1 ? action.target.distance : '') + (action.target.direction === 'left' ? 'L' : 'R') : '')
-          : action.type + ' ' + (sequence.performers.find((person) => person.id === action.target.performerId)?.identifier ?? '?');
+        : action.type + ' ' + action.target.position + circleSubscript(action.target);
     case 'ZIP':
       return 'ZIP ' + (action.role === 'source' ? '↗' : '↙');
     case 'SPECIAL':
@@ -142,13 +173,13 @@ function ActionSymbol({ action, sequence, hand }: { action: NotationAction; sequ
       path = 'M7 9H41 M7 9V39 M7 39H41';
       if (action.target.kind === 'position') target = positionName(sequence, action.target.positionId);
       else if (action.target.kind === 'circle-position') { target = action.target.position; subscript = circleSubscript(action.target); }
-      else { target = 'X'; subscript = sequence.performers.find((person) => person.id === action.target.performerId)?.identifier ?? '?'; }
+      else if (action.target.kind === 'pass-source') { target = 'X'; subscript = sequence.performers.find((person) => person.id === action.target.performerId)?.identifier ?? '?'; }
       break;
     case 'LEAVE':
       path = 'M7 9H41 M41 9V39 M7 39H41';
       if (action.target.kind === 'position') target = positionName(sequence, action.target.positionId);
       else if (action.target.kind === 'circle-position') { target = action.target.position; subscript = circleSubscript(action.target); }
-      else { target = action.target.hand === 'left' ? 'L' : 'R'; circledTarget = true; subscript = sequence.performers.find((person) => person.id === action.target.performerId)?.identifier ?? '?'; }
+      else if (action.target.kind === 'pass-recipient-hand') { target = action.target.hand === 'left' ? 'L' : 'R'; circledTarget = true; subscript = sequence.performers.find((person) => person.id === action.target.performerId)?.identifier ?? '?'; }
       break;
     case 'BOUNCE':
       path = 'M7 9H41 M7 39H41';
@@ -188,14 +219,14 @@ function NotationMark({ action, sequence, hand }: { action: NotationAction; sequ
       path = 'M0 19H100 M0 19V81 M0 81H100';
       if (action.target.kind === 'position') label = positionName(sequence, action.target.positionId);
       else if (action.target.kind === 'circle-position') { label = action.target.position; subscript = circleSubscript(action.target); }
-      else { label = 'X'; subscript = sequence.performers.find((person) => person.id === action.target.performerId)?.identifier ?? '?'; }
+      else if (action.target.kind === 'pass-source') { label = 'X'; subscript = sequence.performers.find((person) => person.id === action.target.performerId)?.identifier ?? '?'; }
       break;
     case 'HOLD': path = 'M0 19H100 M0 81H100'; label = 'HOLD'; break;
     case 'LEAVE':
       path = 'M0 19H100 M100 19V81 M0 81H100';
       if (action.target.kind === 'position') label = positionName(sequence, action.target.positionId);
       else if (action.target.kind === 'circle-position') { label = action.target.position; subscript = circleSubscript(action.target); }
-      else { label = action.target.hand === 'left' ? 'L' : 'R'; circledTarget = true; subscript = sequence.performers.find((person) => person.id === action.target.performerId)?.identifier ?? '?'; }
+      else if (action.target.kind === 'pass-recipient-hand') { label = action.target.hand === 'left' ? 'L' : 'R'; circledTarget = true; subscript = sequence.performers.find((person) => person.id === action.target.performerId)?.identifier ?? '?'; }
       break;
     case 'BOUNCE':
       path = 'M0 19H100 M0 81H100';
@@ -470,11 +501,9 @@ export default function App() {
         const initial = sequence.initialState.placements.find((placement) => placement.ballId === ball.id);
         const current = latest?.ballLocations[ball.id];
         if (!initial || !current || initial.location.kind !== 'position') return true;
-        const referencedByNotation = sequence.notation.some((entry) => {
-          const action = entry.action;
-          return (action.type === 'LIFT' || action.type === 'LEAVE' || action.type === 'TAP' || action.type === 'BOUNCE') &&
-            action.target.kind === 'position' && action.target.positionId === initial.location.positionId;
-        });
+        const referencedByNotation = sequence.notation.some((entry) =>
+          positionTargetId(entry.action) === initial.location.positionId,
+        );
         return referencedByNotation || simulation.snapshots.some((snapshot) =>
           !snapshot.ballLocations[ball.id] || !sameLocation(initial.location, snapshot.ballLocations[ball.id]!),
         );
@@ -652,11 +681,9 @@ export default function App() {
         occupied.add(key);
       }
       const notation = sequence.notation.map((entry) => {
-        const action = entry.action;
-        if ((action.type === 'LIFT' || action.type === 'LEAVE' || action.type === 'TAP' || action.type === 'BOUNCE') && action.target.kind === 'position' && oldToNew.has(action.target.positionId)) {
-          return { ...entry, action: { ...action, target: { ...action.target, positionId: oldToNew.get(action.target.positionId)! } } };
-        }
-        return entry;
+        const oldPositionId = positionTargetId(entry.action);
+        const newPositionId = oldPositionId ? oldToNew.get(oldPositionId) : undefined;
+        return newPositionId ? updatePositionTarget(entry, newPositionId) : entry;
       });
       commit({ ...sequence, positions: [...sequence.positions.filter((position) => position.kind === 'hand-back'), ...shared], initialState: { placements }, notation, individualPassingLayout: layout });
       return;
@@ -674,13 +701,11 @@ export default function App() {
       ? { ...placement, location: { kind: 'position' as const, positionId: sharedToFirst.get(placement.location.positionId)! } }
       : placement);
     const notation = sequence.notation.map((entry) => {
-      const action = entry.action;
-      if ((action.type === 'LIFT' || action.type === 'LEAVE' || action.type === 'TAP' || action.type === 'BOUNCE') && action.target.kind === 'position' && sharedToFirst.has(action.target.positionId)) {
-        const oldPosition = tables.find((position) => position.id === action.target.positionId);
-        const targetId = perPerformer.find((position) => position.name === oldPosition?.name && position.owner.kind === 'performer' && position.owner.performerId === entry.performerId)?.id ?? sharedToFirst.get(action.target.positionId)!;
-        return { ...entry, action: { ...action, target: { ...action.target, positionId: targetId } } };
-      }
-      return entry;
+      const oldPositionId = positionTargetId(entry.action);
+      if (!oldPositionId || !sharedToFirst.has(oldPositionId)) return entry;
+      const oldPosition = tables.find((position) => position.id === oldPositionId);
+      const targetId = perPerformer.find((position) => position.name === oldPosition?.name && position.owner.kind === 'performer' && position.owner.performerId === entry.performerId)?.id ?? sharedToFirst.get(oldPositionId)!;
+      return updatePositionTarget(entry, targetId);
     });
     commit({ ...sequence, positions: [...sequence.positions.filter((position) => position.kind === 'hand-back'), ...perPerformer], initialState: { placements }, notation, individualPassingLayout: layout });
   };
@@ -701,8 +726,14 @@ export default function App() {
   const changePassTarget = (entry: NotationEntry, targetPerformerId: string, hand?: Hand) => {
     const linkId = 'linkId' in entry.action ? entry.action.linkId : undefined;
     if (!linkId) return;
-    const sender = sequence.notation.find((item) => item.action.type === 'LEAVE' && item.action.target.kind === 'pass-recipient-hand' && item.action.linkId === linkId);
-    const receiver = sequence.notation.find((item) => item.action.type === 'LIFT' && item.action.target.kind === 'pass-source' && item.action.linkId === linkId);
+    const sender = sequence.notation.find((item) => {
+      const action = item.action;
+      return action.type === 'LEAVE' && action.target.kind === 'pass-recipient-hand' && action.linkId === linkId;
+    });
+    const receiver = sequence.notation.find((item) => {
+      const action = item.action;
+      return action.type === 'LIFT' && action.target.kind === 'pass-source' && action.linkId === linkId;
+    });
     if (!sender || sender.action.type !== 'LEAVE' || sender.action.target.kind !== 'pass-recipient-hand' || !receiver || receiver.action.type !== 'LIFT' || receiver.action.target.kind !== 'pass-source') return;
     const recipientId = entry.action.type === 'LIFT' ? receiver.performerId : targetPerformerId;
     const sourceId = entry.action.type === 'LEAVE' ? sender.performerId : targetPerformerId;
@@ -786,24 +817,26 @@ export default function App() {
   };
 
   const changeCircleTarget = (entry: NotationEntry, field: 'position' | 'direction' | 'distance', value: string) => {
-    if (entry.action.type !== 'LIFT' && entry.action.type !== 'LEAVE' && entry.action.type !== 'TAP' && entry.action.type !== 'BOUNCE') return;
-    if (entry.action.target.kind !== 'circle-position') return;
+    const action = entry.action;
+    if (action.type !== 'LIFT' && action.type !== 'LEAVE' && action.type !== 'TAP' && action.type !== 'BOUNCE') return;
+    if (action.target.kind !== 'circle-position') return;
     const target = {
-      ...entry.action.target,
+      ...action.target,
       ...(field === 'position' ? { position: value as 'A' | 'B' | 'C' } : {}),
       ...(field === 'direction' ? { direction: value as 'left' | 'right' } : {}),
       ...(field === 'distance' ? { distance: Math.max(1, Number(value) || 1) } : {}),
     };
     commit({ ...sequence, notation: sequence.notation.map((item) =>
-      item.id === entry.id ? { ...item, action: { ...entry.action, target } } : item,
+      item.id === entry.id ? { ...item, action: { ...action, target } } : item,
     ) });
   };
   const setCircleTargetMode = (entry: NotationEntry, mode: 'self' | 'other') => {
-    if (!('target' in entry.action) || entry.action.target.kind !== 'circle-position') return;
+    const action = entry.action;
+    if (!('target' in action) || action.target.kind !== 'circle-position') return;
     const target = mode === 'self'
-      ? { kind: 'circle-position' as const, position: entry.action.target.position }
-      : { kind: 'circle-position' as const, position: entry.action.target.position, direction: 'left' as const, distance: 1 };
-    commit({ ...sequence, notation: sequence.notation.map((item) => item.id === entry.id ? { ...item, action: { ...entry.action, target } as NotationAction } : item) });
+      ? { kind: 'circle-position' as const, position: action.target.position }
+      : { kind: 'circle-position' as const, position: action.target.position, direction: 'left' as const, distance: 1 };
+    commit({ ...sequence, notation: sequence.notation.map((item) => item.id === entry.id ? { ...item, action: { ...action, target } as NotationAction } : item) });
   };
   const selectedEntry = selected
     ? entryAt(selected.performerId, selected.hand, selected.beatId)
