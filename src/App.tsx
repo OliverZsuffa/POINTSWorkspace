@@ -1754,11 +1754,14 @@ export default function App() {
           role="separator"
           aria-orientation="vertical"
           aria-label="Resize workspace panels"
+          aria-valuemin={25}
+          aria-valuemax={75}
+          aria-valuenow={editorShare}
           tabIndex={0}
           onPointerDown={(event) => { event.preventDefault(); setResizingPanels(true); }}
           onKeyDown={(event) => {
-            if (event.key === 'ArrowLeft') setEditorShare((value) => Math.max(25, value - 3));
-            if (event.key === 'ArrowRight') setEditorShare((value) => Math.min(75, value + 3));
+            if (event.key === 'ArrowLeft') setEditorShare((value) => panelsSwapped ? Math.min(75, value + 3) : Math.max(25, value - 3));
+            if (event.key === 'ArrowRight') setEditorShare((value) => panelsSwapped ? Math.max(25, value - 3) : Math.min(75, value + 3));
           }}
         />}
         {showRenderer && <div className="renderer-workspace-panel">
