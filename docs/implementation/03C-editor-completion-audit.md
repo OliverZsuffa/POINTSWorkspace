@@ -2,7 +2,7 @@
 
 ## Status
 
-Approved by Oliver on 12 November 2026. Implementation is in progress on `work/03c-editor-completion`.
+Approved by Oliver on 12 November 2026. Implementation merged into `main` through PR #9. Automated verification passes. Manual visual verification remains outstanding.
 
 ## Goal
 
@@ -204,4 +204,4 @@ Package 07 owns the overall workspace shell. This package may reorganise the edi
 
 ## Approval
 
-Approved by Oliver on 12 November 2026. Implementation began on `work/03c-editor-completion`.
+Approved by Oliver on 12 November 2026. Implementation merged into `main` through PR #9. Automated verification passed. Manual visual review at desktop, tablet and phone remains pending.
