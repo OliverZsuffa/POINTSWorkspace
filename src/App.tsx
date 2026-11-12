@@ -1556,16 +1556,16 @@ export default function App() {
         </div>}
       </section>
 
-      {showRenderer && <SequenceRenderer
-        sequence={simulationSequence}
-        simulation={simulation}
-        onSelectHand={(performerId, hand, beatId) => {
-          selectCell({ performerId: sequence.sequenceType === 'circle-passing' ? sequence.performers[0]!.id : performerId, hand, beatId });
-          setShowActionMenu(false);
-        }}
-      />}
-
-      <div className="editor-workspace">
+      <section
+        className={'workspace-panels' + (panelsSwapped && showEditor && showRenderer ? ' swapped' : '') + ' active-' + activeWorkspaceTab}
+        style={{ gridTemplateColumns: showEditor && showRenderer ? `${editorShare}% 8px ${100 - editorShare}%` : 'minmax(0, 1fr)' }}
+      >
+        {showEditor && <div className="editor-workspace-panel">
+          <div className="workspace-panel-header">
+            <strong>Sequence editor</strong>
+            <button type="button" onClick={() => { setShowEditor(false); setActiveWorkspaceTab('renderer'); }} disabled={!showRenderer}>Hide</button>
+          </div>
+          <div className="editor-workspace">
       <section className="editor-toolbar" aria-label="Notation actions">
         <div className="action-tools">
           <button type="button" className={'tool mode-tool' + (touchMode === 'select' ? ' active' : '')} onClick={() => { setTouchMode(touchMode === 'select' ? null : 'select'); setDragStart(null); setMoveStart(null); setShowActionMenu(false); }}>Select</button>
@@ -1727,7 +1727,35 @@ export default function App() {
         </div>
       </section>
 
-      </div>
+          </div>
+        </div>}
+        {showEditor && showRenderer && <div
+          className="workspace-divider"
+          role="separator"
+          aria-orientation="vertical"
+          aria-label="Resize workspace panels"
+          tabIndex={0}
+          onPointerDown={(event) => { event.preventDefault(); setResizingPanels(true); }}
+          onKeyDown={(event) => {
+            if (event.key === 'ArrowLeft') setEditorShare((value) => Math.max(25, value - 3));
+            if (event.key === 'ArrowRight') setEditorShare((value) => Math.min(75, value + 3));
+          }}
+        />}
+        {showRenderer && <div className="renderer-workspace-panel">
+          <div className="workspace-panel-header">
+            <strong>Sequence renderer</strong>
+            <button type="button" onClick={() => { setShowRenderer(false); setActiveWorkspaceTab('editor'); }} disabled={!showEditor}>Hide</button>
+          </div>
+          <SequenceRenderer
+            sequence={simulationSequence}
+            simulation={simulation}
+            onSelectHand={(performerId, hand, beatId) => {
+              selectCell({ performerId: sequence.sequenceType === 'circle-passing' ? sequence.performers[0]!.id : performerId, hand, beatId });
+              setShowActionMenu(false);
+            }}
+          />
+        </div>}
+      </section>
 
       <section className="bottom-panels">
         <div className="validation-panel" role="region" aria-label="Validation">
