@@ -16,8 +16,6 @@ export const asPerformerId = (value: string): PerformerId => value as PerformerI
 export const asPositionId = (value: string): PositionId => value as PositionId;
 export const asBallId = (value: string): BallId => value as BallId;
 export const asBeatId = (value: string): BeatId => value as BeatId;
-export const asSubdivisionId = (value: string): SubdivisionId =>
-  value as SubdivisionId;
-export const asActionEntryId = (value: string): ActionEntryId =>
-  value as ActionEntryId;
+export const asSubdivisionId = (value: string): SubdivisionId => value as SubdivisionId;
+export const asActionEntryId = (value: string): ActionEntryId => value as ActionEntryId;
 export const asLinkId = (value: string): LinkId => value as LinkId;

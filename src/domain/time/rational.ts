@@ -52,8 +52,7 @@ export function multiplyRational(value: Rational, factor: number): Rational {
 
 export function compareRational(left: Rational, right: Rational): -1 | 0 | 1 {
   const difference =
-    left.numerator * right.denominator -
-    right.numerator * left.denominator;
+    left.numerator * right.denominator - right.numerator * left.denominator;
 
   return difference < 0 ? -1 : difference > 0 ? 1 : 0;
 }

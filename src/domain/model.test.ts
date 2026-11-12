@@ -25,16 +25,7 @@ describe('shared sequence model fixtures', () => {
     ]);
 
     expect(actionTypes).toEqual(
-      new Set([
-        'HOLD',
-        'LIFT',
-        'LEAVE',
-        'BOUNCE',
-        'TAP',
-        'EMPTY',
-        'ZIP',
-        'SPECIAL',
-      ]),
+      new Set(['HOLD', 'LIFT', 'LEAVE', 'BOUNCE', 'TAP', 'EMPTY', 'ZIP', 'SPECIAL']),
     );
   });
 
@@ -58,9 +49,7 @@ describe('shared sequence model fixtures', () => {
 
   it('can represent invalid imported state without changing its structure', () => {
     expect(invalidInitialStateSequence.initialState.placements).toHaveLength(2);
-    expect(
-      invalidInitialStateSequence.initialState.placements[0]?.location,
-    ).toEqual(
+    expect(invalidInitialStateSequence.initialState.placements[0]?.location).toEqual(
       invalidInitialStateSequence.initialState.placements[1]?.location,
     );
   });

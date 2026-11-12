@@ -23,9 +23,7 @@ export function createTimeSignature(
 
   if (
     beatGrouping.length === 0 ||
-    beatGrouping.some(
-      (group) => !Number.isSafeInteger(group) || group < 1,
-    )
+    beatGrouping.some((group) => !Number.isSafeInteger(group) || group < 1)
   ) {
     throw new RangeError('A time signature needs positive integer beat groups.');
   }
@@ -47,29 +45,20 @@ export const DEFAULT_TIME_SIGNATURE = createTimeSignature(4, 4, [1, 1, 1, 1]);
 export const SIX_EIGHT_TIME_SIGNATURE = createTimeSignature(6, 8, [3, 3]);
 
 /** Returns the duration of one denominator note, measured in quarter notes. */
-export function getDenominatorNoteDuration(
-  signature: TimeSignature,
-): Rational {
+export function getDenominatorNoteDuration(signature: TimeSignature): Rational {
   return rational(4, signature.denominator);
 }
 
 /** Returns the duration of each main beat group, measured in quarter notes. */
-export function getMainBeatDurations(
-  signature: TimeSignature,
-): readonly Rational[] {
+export function getMainBeatDurations(signature: TimeSignature): readonly Rational[] {
   const noteDuration = getDenominatorNoteDuration(signature);
 
-  return signature.beatGrouping.map((group) =>
-    multiplyRational(noteDuration, group),
-  );
+  return signature.beatGrouping.map((group) => multiplyRational(noteDuration, group));
 }
 
 /** Returns the duration of a complete bar, measured in quarter notes. */
 export function getBarDuration(signature: TimeSignature): Rational {
-  return multiplyRational(
-    getDenominatorNoteDuration(signature),
-    signature.numerator,
-  );
+  return multiplyRational(getDenominatorNoteDuration(signature), signature.numerator);
 }
 
 export function getMainBeatsPerBar(signature: TimeSignature): number {

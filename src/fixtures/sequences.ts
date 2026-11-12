@@ -8,11 +8,7 @@ import {
   asSequenceId,
   asSubdivisionId,
 } from '../domain/ids';
-import type {
-  NotationEntry,
-  Sequence,
-  SequenceFragment,
-} from '../domain/model';
+import type { NotationEntry, Sequence, SequenceFragment } from '../domain/model';
 import { rational } from '../domain/time/rational';
 import { DEFAULT_TIME_SIGNATURE } from '../domain/time/time-signature';
 
@@ -231,10 +227,7 @@ export const representativeIndividualPassingSequence: Sequence = {
 export const invalidInitialStateSequence: Sequence = {
   ...representativeSoloSequence,
   id: asSequenceId('sequence-invalid-example'),
-  balls: [
-    { id: asBallId('ball-1') },
-    { id: asBallId('ball-2') },
-  ],
+  balls: [{ id: asBallId('ball-1') }, { id: asBallId('ball-2') }],
   initialState: {
     placements: [
       {
