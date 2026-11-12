@@ -12,6 +12,7 @@ import type {
   Hand,
   NotationAction,
   NotationEntry,
+  ObjectLocation,
   PositionDefinition,
   Sequence,
   SequenceType,
@@ -281,6 +282,96 @@ export default function App() {
   const changeBpm = (value: number) => {
     if (Number.isFinite(value) && value > 0) commit({ ...sequence, bpm: value });
   };
+
+  const changeInitialLocation = (ballId: string, value: string) => {
+    const parts = value.split(':');
+    let location: ObjectLocation | undefined;
+    if (parts[0] === 'position' && parts[1]) {
+      location = { kind: 'position', positionId: asPositionId(parts[1]) };
+    } else if (parts[0] === 'held' && parts[1] && (parts[2] === 'left' || parts[2] === 'right')) {
+      location = { kind: 'hand-held', performerId: asPerformerId(parts[1]), hand: parts[2] };
+    } else if (parts[0] === 'back' && parts[1]) {
+      const position = sequence.positions.find((item) => item.id === parts[1]);
+      if (position?.kind === 'hand-back') {
+        location = { kind: 'hand-back', positionId: position.id, performerId: position.performerId, hand: position.hand };
+      }
+    }
+    if (!location) return;
+    const placements = sequence.initialState.placements.filter((placement) => placement.ballId !== ballId);
+    commit({ ...sequence, initialState: { placements: [...placements, { ballId: asBallId(ballId), location }] } });
+  };
+
+  const addClap = () => {
+    if (!selected) return;
+    const otherHand = selected.hand === 'left' ? 'right' : 'left';
+    if (entryAt(selected.performerId, selected.hand, selected.beatId) ||
+        entryAt(selected.performerId, otherHand, selected.beatId)) return;
+    const linkId = asLinkId(id('special-link'));
+    const entries: NotationEntry[] = hands.map((hand) => ({
+      id: asActionEntryId(id('entry')),
+      performerId: asPerformerId(selected.performerId),
+      hand,
+      time: { beatId: asBeatId(selected.beatId), offset: rational(0) },
+      action: { type: 'SPECIAL', text: 'Clap', linkId },
+    }));
+    commit({ ...sequence, notation: [...sequence.notation, ...entries] });
+  };
+
+  const addIndividualPass = () => {
+    if (!selected || sequence.sequenceType !== 'individual-passing') return;
+    const recipientInput = window.prompt('Recipient performer identifier or name');
+    if (!recipientInput) return;
+    const recipient = sequence.performers.find((person) =>
+      person.id !== selected.performerId &&
+      (person.identifier?.toLowerCase() === recipientInput.toLowerCase() ||
+       person.name.toLowerCase() === recipientInput.toLowerCase()),
+    );
+    if (!recipient) {
+      window.alert('Performer not found.');
+      return;
+    }
+    const handInput = window.prompt('Receiving hand: left or right', selected.hand === 'left' ? 'right' : 'left');
+    if (handInput !== 'left' && handInput !== 'right') return;
+    const recipientHand = handInput as Hand;
+    if (entryAt(selected.performerId, selected.hand, selected.beatId) ||
+        entryAt(recipient.id, recipientHand, selected.beatId)) {
+      window.alert('Both hands must be empty at this beat.');
+      return;
+    }
+    const linkId = asLinkId(id('pass-link'));
+    const time = { beatId: asBeatId(selected.beatId), offset: rational(0) };
+    const entries: NotationEntry[] = [
+      {
+        id: asActionEntryId(id('entry')),
+        performerId: asPerformerId(selected.performerId),
+        hand: selected.hand,
+        time,
+        action: { type: 'LEAVE', target: { kind: 'pass-recipient-hand', performerId: recipient.id, hand: recipientHand }, linkId },
+      },
+      {
+        id: asActionEntryId(id('entry')),
+        performerId: recipient.id,
+        hand: recipientHand,
+        time,
+        action: { type: 'LIFT', target: { kind: 'pass-source', performerId: asPerformerId(selected.performerId) }, linkId },
+      },
+    ];
+    commit({ ...sequence, notation: [...sequence.notation, ...entries] });
+  };
+
+  const changeCircleTarget = (entry: NotationEntry, field: 'position' | 'direction' | 'distance', value: string) => {
+    if (entry.action.type !== 'LIFT' && entry.action.type !== 'LEAVE' && entry.action.type !== 'TAP' && entry.action.type !== 'BOUNCE') return;
+    if (entry.action.target.kind !== 'circle-position') return;
+    const target = {
+      ...entry.action.target,
+      ...(field === 'position' ? { position: value as 'A' | 'B' | 'C' } : {}),
+      ...(field === 'direction' ? { direction: value as 'left' | 'right' } : {}),
+      ...(field === 'distance' ? { distance: Math.max(1, Number(value) || 1) } : {}),
+    };
+    commit({ ...sequence, notation: sequence.notation.map((item) =>
+      item.id === entry.id ? { ...item, action: { ...entry.action, target } } : item,
+    ) });
+  };
   const selectedEntry = selected
     ? entryAt(selected.performerId, selected.hand, selected.beatId)
     : undefined;
@@ -326,6 +417,28 @@ export default function App() {
           </label>
           <div className="setting-control"><span>Beats</span><div className="stepper"><button type="button" onClick={removeBeat} disabled={sequence.beats.length <= 1 || sequence.notation.some((entry) => entry.time.beatId === sequence.beats[sequence.beats.length - 1]?.id)}>−</button><output>{sequence.beats.length}</output><button type="button" onClick={addBeat}>+</button></div></div>
           <div className="performer-settings"><span>Performers</span>{sequence.performers.map((performer) => <span className="performer-chip" key={performer.id}>{performer.name}</span>)}<button type="button" onClick={addPerformer}>Add performer</button></div>
+          <details className="initial-state-settings">
+            <summary>Initial object distribution</summary>
+            <div className="initial-state-grid">
+              {sequence.balls.map((ball, index) => {
+                const placement = sequence.initialState.placements.find((item) => item.ballId === ball.id);
+                const location = placement?.location;
+                const value = !location ? '' : location.kind === 'position'
+                  ? 'position:' + location.positionId
+                  : location.kind === 'hand-held'
+                    ? 'held:' + location.performerId + ':' + location.hand
+                    : 'back:' + location.positionId;
+                return <label key={ball.id}>Object {index + 1}
+                  <select value={value} onChange={(event) => changeInitialLocation(ball.id, event.target.value)}>
+                    <option value="">Unplaced</option>
+                    {sequence.positions.filter((position) => position.kind === 'table').map((position) => <option key={position.id} value={'position:' + position.id}>{position.name}</option>)}
+                    {sequence.performers.flatMap((person) => hands.map((hand) => <option key={person.id + hand} value={'held:' + person.id + ':' + hand}>{person.name} {hand}</option>))}
+                    {sequence.positions.filter((position) => position.kind === 'hand-back').map((position) => <option key={position.id} value={'back:' + position.id}>{sequence.performers.find((person) => person.id === position.performerId)?.name} {position.name} back</option>)}
+                  </select>
+                </label>;
+              })}
+            </div>
+          </details>
         </section>
       )}
 
@@ -336,6 +449,8 @@ export default function App() {
               {name}
             </button>
           ))}
+          {sequence.sequenceType === 'individual-passing' && <button type="button" className="tool" onClick={addIndividualPass} disabled={!selected}>PASS</button>}
+          <button type="button" className="tool" onClick={addClap} disabled={!selected}>CLAP</button>
           <button type="button" className="tool delete-tool" onClick={removeSelected} disabled={!selected || !entryAt(selected.performerId, selected.hand, selected.beatId)}>Delete</button>
         </div>
         <span className="selection-label">{selected ? sequence.performers.find((item) => item.id === selected.performerId)?.name + ' · ' + selected.hand + ' · beat ' + (sequence.beats.findIndex((beat) => beat.id === selected.beatId) + 1) : 'Select a cell'}</span>
@@ -347,6 +462,13 @@ export default function App() {
               ))}
             </select>
           </label>
+        )}
+        {targetableEntry && targetableEntry.action.target.kind === 'circle-position' && (
+          <div className="target-control">
+            <label>Position <select value={targetableEntry.action.target.position} onChange={(event) => changeCircleTarget(targetableEntry, 'position', event.target.value)}><option>A</option><option>B</option><option>C</option></select></label>
+            <label>Direction <select value={targetableEntry.action.target.direction} onChange={(event) => changeCircleTarget(targetableEntry, 'direction', event.target.value)}><option value="left">Left</option><option value="right">Right</option></select></label>
+            <label>Distance <input type="number" min="1" max={Math.max(1, sequence.performers.length - 1)} value={targetableEntry.action.target.distance} onChange={(event) => changeCircleTarget(targetableEntry, 'distance', event.target.value)} /></label>
+          </div>
         )}
       </section>
 
