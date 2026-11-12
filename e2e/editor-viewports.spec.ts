@@ -123,6 +123,12 @@ test('phone workspace switches between editor and renderer tabs', async ({ page 
   await page.getByRole('button', { name: 'Renderer', exact: true }).click();
   await expect(renderer).toBeVisible();
   await expect(editor).toBeHidden();
+  const canvas = renderer.locator('canvas');
+  await expect(canvas).toBeVisible();
+  const canvasBounds = await canvas.boundingBox();
+  expect(canvasBounds).not.toBeNull();
+  expect(canvasBounds!.width).toBeGreaterThan(200);
+  expect(canvasBounds!.height).toBeGreaterThan(200);
 
   await page.getByRole('button', { name: 'Editor', exact: true }).click();
   await expect(editor).toBeVisible();
