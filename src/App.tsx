@@ -392,6 +392,7 @@ export default function App() {
     selectCell(endCell);
   };
 
+  // Keyboard mappings are limited to the interactions approved in Package 03.
   const handleEditorKeyDown = (event: KeyboardEvent<HTMLElement>) => {
     if (event.target instanceof HTMLElement && ['INPUT', 'SELECT', 'TEXTAREA'].includes(event.target.tagName)) return;
     if (event.key === 'Escape') { clearSelection(); return; }
