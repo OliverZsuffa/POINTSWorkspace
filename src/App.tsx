@@ -579,6 +579,16 @@ export default function App() {
       kind: 'hand-back' as const, id: asPositionId(id('back')), name: (hand === 'left' ? 'L' : 'R') as 'L' | 'R', performerId, hand,
     }))];
     const newBalls = [{ id: asBallId(id('new-ball')) }, { id: asBallId(id('new-ball')) }];
+    const sharedA = sharedLayout ? sequence.positions.find((position) => position.kind === 'table' && position.owner.kind === 'shared' && position.name === 'A') : undefined;
+    const sharedC = sharedLayout ? sequence.positions.find((position) => position.kind === 'table' && position.owner.kind === 'shared' && position.name === 'C') : undefined;
+    const sharedAOccupied = sharedA ? sequence.initialState.placements.some((placement) => objectLocationKey(placement.location) === 'p:' + sharedA.id) : true;
+    const sharedCOccupied = sharedC ? sequence.initialState.placements.some((placement) => objectLocationKey(placement.location) === 'p:' + sharedC.id) : true;
+    const initialA: ObjectLocation = sharedLayout
+      ? sharedA && !sharedAOccupied ? { kind: 'position', positionId: sharedA.id } : { kind: 'hand-held', performerId, hand: 'left' }
+      : { kind: 'position', positionId: ownedPositions[0]!.id };
+    const initialC: ObjectLocation = sharedLayout
+      ? sharedC && !sharedCOccupied ? { kind: 'position', positionId: sharedC.id } : { kind: 'hand-held', performerId, hand: 'right' }
+      : { kind: 'position', positionId: ownedPositions[2]!.id };
     const seatAssignments = [...sequence.seatAssignments, {
       performerId, seat: { kind: 'rectangle-side' as const, side: (performerNumber % 2 ? 'long-a' : 'long-b') as 'long-a' | 'long-b', seatIndex: Math.floor((performerNumber - 1) / 2) },
     }];
@@ -586,8 +596,8 @@ export default function App() {
       ...sequence, performers: [...sequence.performers, performer], positions, seatAssignments,
       balls: [...sequence.balls, ...newBalls],
       initialState: { placements: [...sequence.initialState.placements,
-        { ballId: newBalls[0]!.id, location: sharedLayout && sequence.positions.find((position) => position.kind === 'table' && position.owner.kind === 'shared' && position.name === 'A') && !sequence.initialState.placements.some((placement) => placement.location.kind === 'position' && placement.location.positionId === sequence.positions.find((position) => position.kind === 'table' && position.owner.kind === 'shared' && position.name === 'A')!.id) ? { kind: 'position', positionId: sequence.positions.find((position) => position.kind === 'table' && position.owner.kind === 'shared' && position.name === 'A')!.id } : sharedLayout ? { kind: 'hand-held', performerId, hand: 'left' } : { kind: 'position', positionId: ownedPositions[0]!.id } },
-        { ballId: newBalls[1]!.id, location: sharedLayout && sequence.positions.find((position) => position.kind === 'table' && position.owner.kind === 'shared' && position.name === 'C') && !sequence.initialState.placements.some((placement) => placement.location.kind === 'position' && placement.location.positionId === sequence.positions.find((position) => position.kind === 'table' && position.owner.kind === 'shared' && position.name === 'C')!.id) ? { kind: 'position', positionId: sequence.positions.find((position) => position.kind === 'table' && position.owner.kind === 'shared' && position.name === 'C')!.id } : sharedLayout ? { kind: 'hand-held', performerId, hand: 'right' } : { kind: 'position', positionId: ownedPositions[2]!.id } },
+        { ballId: newBalls[0]!.id, location: initialA },
+        { ballId: newBalls[1]!.id, location: initialC },
       ] },
       tableLayout: sequence.sequenceType === 'solo' ? { type: 'rectangle', longSideSeatCount: Math.ceil((performerNumber + 1) / 2), shortSideSeatCount: 0 } : sequence.tableLayout,
     });
