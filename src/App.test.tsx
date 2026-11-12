@@ -533,4 +533,42 @@ describe('sequence editor', () => {
     expect(screen.getByRole('button', { name: 'Juggler 1 left beat 1 HOLD' })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'HOLD' })).not.toBeInTheDocument();
   });
+
+  it('supports action shortcuts and exposes the keyboard reference', () => {
+    render(<App />);
+    fireEvent.click(screen.getByRole('button', { name: 'Juggler 1 left beat 1 empty' }));
+    fireEvent.keyDown(screen.getByRole('main', { name: 'POINTS Workspace' }), { key: '1' });
+    expect(screen.getByRole('button', { name: 'Juggler 1 left beat 1 LIFT A' })).toBeInTheDocument();
+    fireEvent.keyDown(screen.getByRole('main', { name: 'POINTS Workspace' }), { key: '?' });
+    expect(screen.getByRole('dialog', { name: 'Keyboard shortcuts' })).toBeInTheDocument();
+    expect(screen.getByText('Insert LIFT, HOLD, LEAVE, BOUNCE, TAP, EMPTY, ZIP or SPECIAL')).toBeInTheDocument();
+    fireEvent.keyDown(screen.getByRole('main', { name: 'POINTS Workspace' }), { key: 'Escape' });
+    expect(screen.queryByRole('dialog', { name: 'Keyboard shortcuts' })).not.toBeInTheDocument();
+  });
+
+  it('copies and pastes selected notation with keyboard shortcuts and supports keyboard undo', () => {
+    render(<App />);
+    const main = screen.getByRole('main', { name: 'POINTS Workspace' });
+    fireEvent.click(screen.getByRole('button', { name: 'Juggler 1 left beat 1 empty' }));
+    fireEvent.keyDown(main, { key: '1' });
+    fireEvent.keyDown(main, { key: 'c', ctrlKey: true });
+    fireEvent.click(screen.getByRole('button', { name: 'Juggler 1 left beat 3 empty' }));
+    fireEvent.keyDown(main, { key: 'v', ctrlKey: true });
+    expect(screen.getByRole('button', { name: 'Juggler 1 left beat 3 LIFT A' })).toBeInTheDocument();
+    fireEvent.keyDown(main, { key: 'z', ctrlKey: true });
+    expect(screen.getByRole('button', { name: 'Juggler 1 left beat 3 empty' })).toBeInTheDocument();
+    fireEvent.keyDown(main, { key: 'z', ctrlKey: true, shiftKey: true });
+    expect(screen.getByRole('button', { name: 'Juggler 1 left beat 3 LIFT A' })).toBeInTheDocument();
+  });
+
+
+  it('sets table position targets by typing their labels', () => {
+    render(<App />);
+    const main = screen.getByRole('main', { name: 'POINTS Workspace' });
+    fireEvent.click(screen.getByRole('button', { name: 'Juggler 1 left beat 1 empty' }));
+    fireEvent.keyDown(main, { key: '1' });
+    fireEvent.keyDown(main, { key: 'B' });
+    expect(screen.getByRole('button', { name: 'Juggler 1 left beat 1 LIFT B' })).toBeInTheDocument();
+  });
+
 });

@@ -2,7 +2,7 @@
 
 ## Status
 
-Proposed for approval. This package audits and completes Packages 03 and 03B. It does not begin implementation until Oliver approves this plan.
+Approved by Oliver on 12 November 2026. Implementation is in progress on `work/03c-editor-completion`.
 
 ## Goal
 
@@ -140,6 +140,10 @@ Correct every confirmed failure within this package's ownership. If the audit fi
 
 Do not silently invent behaviour for unresolved requirements. Keep blocked items explicit and propose a decision where necessary.
 
+### 7. POINTS colour direction
+
+Use the POINTS website turquoise `#90d0d5` as the application page background. Keep working panels and editing surfaces neutral and readable. Use `#6bc3c5` as the accent colour where appropriate. This supersedes the earlier blue page background in Package 03B.
+
 ## Explicit exclusions
 
 - Side by side editor and renderer workspace, panel resizing, swapping and hiding. Package 07.
@@ -200,4 +204,4 @@ Package 07 owns the overall workspace shell. This package may reorganise the edi
 
 ## Approval
 
-Awaiting Oliver's approval. Implementation must not begin before approval.
+Approved by Oliver on 12 November 2026. Implementation began on `work/03c-editor-completion`.
