@@ -229,6 +229,32 @@ describe('object state simulation', () => {
     expect(simulateSequence(sequence).validation.isValid).toBe(true);
   });
 
+  it('requires EMPTY hands to have free fingers but allows a balanced object', () => {
+    const heldSequence: Sequence = {
+      ...representativeSoloSequence,
+      initialState: {
+        placements: [{
+          ballId: asBallId('ball-1'),
+          location: { kind: 'hand-held', performerId, hand: 'right' },
+        }],
+      },
+      notation: [entry('empty-held', 'right', { type: 'EMPTY' })],
+    };
+    const balancedSequence: Sequence = {
+      ...representativeSoloSequence,
+      initialState: {
+        placements: [{
+          ballId: asBallId('ball-1'),
+          location: { kind: 'hand-back', positionId: rightBack, performerId, hand: 'right' },
+        }],
+      },
+      notation: [entry('empty-balanced', 'right', { type: 'EMPTY' })],
+    };
+
+    expect(validateSequence(heldSequence).issues.map((item) => item.code)).toContain('empty-hand-occupied');
+    expect(validateSequence(balancedSequence).isValid).toBe(true);
+  });
+
   it('rejects an invalid initial distribution', () => {
     expect(validateSequence(invalidInitialStateSequence).isValid).toBe(false);
     expect(validateSequence(invalidInitialStateSequence).issues.map((item) => item.code)).toContain('initial-position-capacity');
