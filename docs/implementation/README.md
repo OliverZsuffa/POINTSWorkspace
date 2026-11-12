@@ -19,6 +19,8 @@ The implementation is divided into bounded work packages so separate agents can 
 | 07 | Workspace shell and PWA | Application layout, responsive shell, panel management and offline support | 01 | Awaiting approval |
 | 08 | Integration and quality assurance | Cross package integration, end to end tests and release readiness | 01 to 07 | Awaiting approval |
 
+The Package 03C requirement by requirement audit is tracked in [`03C-feature-verification.md`](03C-feature-verification.md). Its current statuses distinguish automated evidence from manual visual verification.
+
 ## Parallel execution strategy
 
 Work package 01 must establish and document the shared domain model and public interfaces before feature agents begin implementation. Work package 02 then implements the state simulation and validation contract. Once those interfaces are stable, work packages 03, 04, 05, 06 and 07 can proceed in parallel.
