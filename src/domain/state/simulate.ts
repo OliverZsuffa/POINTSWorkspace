@@ -126,7 +126,8 @@ function makeSnapshot(
   at: TimelinePosition,
   phase: 'before' | 'after',
 ): ObjectStateSnapshot {
-  const hands: Record<string, { left: HandObjectState; right: HandObjectState }> = {};
+  type MutableHandState = { heldBallId: BallId | null; balancedBallId: BallId | null };
+  const hands: Record<string, { left: MutableHandState; right: MutableHandState }> = {};
   for (const performer of sequence.performers) {
     hands[performer.id] = {
       left: { heldBallId: null, balancedBallId: null },
