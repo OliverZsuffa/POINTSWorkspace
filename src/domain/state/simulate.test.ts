@@ -76,7 +76,9 @@ describe('object state simulation', () => {
     })] };
 
     expect(validateSequence(tap).issues.map((item) => item.code)).toContain('tap-with-held-ball');
-    expect(validateSequence(bounce).isValid).toBe(true);
+    const bounceResult = simulateSequence(bounce);
+    expect(bounceResult.validation.isValid).toBe(true);
+    expect(bounceResult.snapshots[1]?.handStates[performerId]?.right.heldBallId).toBe('ball-1');
   });
 
   it('allows a balanced object while the fingers perform SPECIAL', () => {
