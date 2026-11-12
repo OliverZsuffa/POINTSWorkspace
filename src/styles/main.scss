@@ -130,3 +130,66 @@ button:disabled { cursor: default; opacity: .35; }
 
 .ball-segment { display: block; width: 100%; height: 100%; }
 .notation-cell.occupied { border-left-color: transparent; }
+
+
+/* Package 03B: compact, square notation grid and blue interaction palette. */
+:root {
+  --points-primary: #d9e6fb;
+  --points-secondary: #7fa5e8;
+  --points-deep: #3569bd;
+  --surface: #ffffff;
+  --text-primary: #172033;
+  --border-subtle: #dce4f0;
+}
+.app-root { background: #f5f7fb; color: #172033; }
+.topbar, .settings-panel, .editor-toolbar, .validation-panel, .state-panel { background: #fff; }
+.brand-mark { background: #3569bd; color: #fff; }
+.tool { background: #edf2fb; color: #263b5b; }
+.tool.active { border-color: #3569bd; background: #dce8fb; color: #214f9c; }
+.tool:focus-visible, .notation-cell:focus-visible, .initial-position:focus-visible { outline: 2px solid #3569bd; outline-offset: 1px; }
+.target-control { color: #465b7c; }
+.target-control select, .target-control input { border-color: #cbd8eb; color: #172033; }
+.editor-scroll { padding: 12px 16px 20px; overflow-x: auto; }
+.notation-grid { width: max-content; min-width: 0; max-width: none; }
+.grid-head { min-height: 42px; }
+.grid-head .row-label { min-height: 42px; }
+.beat-head { min-width: 42px; min-height: 42px; background: #f8faff; border-left-color: #e0e7f2; }
+.beat-head small { color: #71809a; }
+.performer-block { margin-top: 10px; }
+.performer-heading { padding: 0 8px 4px; color: #263b5b; font-size: 11px; }
+.hand-row { min-height: 42px; border-top: 1px solid #e0e7f2; }
+.hand-row .row-label { min-height: 42px; padding-left: 12px; color: #52627b; }
+.notation-cell {
+  width: 42px;
+  min-width: 42px;
+  height: 42px;
+  min-height: 42px;
+  aspect-ratio: 1 / 1;
+  padding: 0;
+  border: 0;
+  border-left: 1px solid #e0e7f2;
+  border-radius: 0;
+  overflow: visible;
+  background: #fff;
+  display: block;
+}
+.notation-cell:hover { background: #f0f5ff; }
+.notation-cell.selected { outline: 2px solid #3569bd; outline-offset: -2px; background: #e4edfc; z-index: 2; }
+.notation-cell.occupied { border-left-color: transparent; }
+.notation-cell.invalid { background: #ffe8e6; box-shadow: inset 0 0 0 1px #d75d54; }
+.ball-segment { position: absolute; inset: 0; display: block; width: 100%; height: 100%; overflow: visible; }
+.notation-cell .special-symbol { position: relative; z-index: 1; display: block; padding: 0 2px; font-size: 10px; line-height: 42px; text-align: center; }
+.zip-tool { min-width: 62px; width: 62px; }
+.zip-tool-preview { display: flex; align-items: center; justify-content: center; gap: 0; }
+.zip-tool-preview .notation-symbol { width: 27px; height: 27px; flex: 0 0 27px; }
+.state-beat-label { color: #52627b; font-size: 10px; font-weight: 600; }
+.initial-position.has-ball { border-color: #3569bd; background: #e8f0fd; }
+.has-ball .ball-indicator { border-color: #3569bd; background: #7fa5e8; }
+.initial-position:hover:not(:disabled) { border-color: #3569bd; background: #f0f5ff; }
+.add-beat { color: #3569bd; }
+@media (max-width: 700px) {
+  .editor-scroll { padding: 10px 8px 16px; }
+  .hand-row { min-height: 42px; }
+  .notation-cell { width: 42px; min-width: 42px; height: 42px; }
+  .editor-toolbar { padding: 8px; }
+}
