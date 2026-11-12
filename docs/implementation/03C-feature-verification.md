@@ -43,7 +43,7 @@ Status meanings:
 | 03.24 | Validation markings and error navigation | Invalid target marking and exact subdivision cell navigation test | Partial | Verify every validator issue type and multi entry navigation |
 | 03.25 | Object state overview from simulator snapshots | Snapshot derived state panel and selected beat test | Pass | Verify invalid beat and initial state edge cases |
 | 03.26 | Responsive desktop, tablet and phone operation | Playwright layout and cell geometry checks at six viewports; screenshots visually reviewed | Pass | Full feature parity is tracked separately under 03.32 |
-| 03.27 | Touch Select, Draw, Move and Erase | Touch mode implementation and interaction tests | Pass | Manual touch device verification |
+| 03.27 | Touch Select, Draw and Move | Touch mode implementation and interaction tests | Pass | Manual touch device verification |
 | 03.28 | Square notation cells and SVG edge geometry | Playwright confirms 42 by 42 pixel cells and 100 by 100 SVG viewBox at six viewports | Partial | Inspect every action's edge combination and selected state geometry |
 | 03.29 | Labels, targets, subscripts and symbol legibility | 38 unit symbol text size assertion, duplicate identifier tests and six viewport screenshots | Partial | Verify long target labels and all subscript variants at final cell size |
 | 03.30 | Editor controls arranged beside notation | Six viewport screenshots reviewed; mobile control to grid spacing corrected | Pass | Full interaction coverage remains under 03.32 |
