@@ -310,7 +310,7 @@ describe('sequence editor', () => {
     await user.click(screen.getByRole('button', { name: 'Juggler 1 left beat 1 empty' }));
     await user.click(screen.getByRole('button', { name: 'CLAP' }));
     const right = screen.getByRole('button', { name: 'Juggler 1 right beat 1 Clap' });
-    fireEvent.doubleClick(right);
+    fireEvent.contextMenu(right);
     expect(prompt).toHaveBeenCalled();
     expect(screen.getByRole('button', { name: 'Juggler 1 left beat 1 Clap twice' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Juggler 1 right beat 1 Clap twice' })).toBeInTheDocument();
