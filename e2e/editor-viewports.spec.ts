@@ -27,7 +27,7 @@ for (const viewport of viewports) {
     expect(bounds!.height).toBe(expectedCellSize);
 
     const background = await main.evaluate((element) => getComputedStyle(element).backgroundColor);
-    expect(background).toBe('rgb(144, 208, 213)');
+    expect(background).toBe('rgb(243, 245, 248)');
 
     await cell.click();
     await page.getByRole('button', { name: 'LIFT' }).click();
