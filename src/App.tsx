@@ -137,7 +137,7 @@ function ActionSymbol({ action, sequence, hand }: { action: NotationAction; sequ
   let subscript = '';
   let circledTarget = false;
   switch (action.type) {
-    case 'HOLD': path = 'M7 9H41 M7 39H41'; target = 'HOLD'; break;
+    case 'HOLD': path = 'M7 9H41 M7 39H41'; break;
     case 'LIFT':
       path = 'M7 9H41 M7 9V39 M7 39H41';
       if (action.target.kind === 'position') target = positionName(sequence, action.target.positionId);
@@ -163,7 +163,6 @@ function ActionSymbol({ action, sequence, hand }: { action: NotationAction; sequ
       path = action.role === 'source'
         ? hand === 'left' ? 'M7 9H41 M41 9V39' : 'M7 39H41 M41 9V39'
         : hand === 'left' ? 'M7 9H41 M7 9V39' : 'M7 39H41 M7 9V39';
-      target = 'ZIP';
       break;
   }
   return (
@@ -186,27 +185,27 @@ function NotationMark({ action, sequence, hand }: { action: NotationAction; sequ
   let circledTarget = false;
   switch (action.type) {
     case 'LIFT':
-      path = 'M0 2H100 M0 2V98 M0 98H100';
+      path = 'M0 19H100 M0 19V81 M0 81H100';
       if (action.target.kind === 'position') label = positionName(sequence, action.target.positionId);
       else if (action.target.kind === 'circle-position') { label = action.target.position; subscript = circleSubscript(action.target); }
       else { label = 'X'; subscript = sequence.performers.find((person) => person.id === action.target.performerId)?.identifier ?? '?'; }
       break;
-    case 'HOLD': path = 'M0 2H100 M0 98H100'; label = 'HOLD'; break;
+    case 'HOLD': path = 'M0 19H100 M0 81H100'; label = 'HOLD'; break;
     case 'LEAVE':
-      path = 'M0 2H100 M100 2V98 M0 98H100';
+      path = 'M0 19H100 M100 19V81 M0 81H100';
       if (action.target.kind === 'position') label = positionName(sequence, action.target.positionId);
       else if (action.target.kind === 'circle-position') { label = action.target.position; subscript = circleSubscript(action.target); }
       else { label = action.target.hand === 'left' ? 'L' : 'R'; circledTarget = true; subscript = sequence.performers.find((person) => person.id === action.target.performerId)?.identifier ?? '?'; }
       break;
     case 'BOUNCE':
-      path = 'M0 2H100 M0 98H100';
+      path = 'M0 19H100 M0 81H100';
       if (action.target.kind === 'position') label = positionName(sequence, action.target.positionId);
       else { label = action.target.position; subscript = circleSubscript(action.target); }
       break;
     case 'ZIP':
       path = action.role === 'source'
-        ? hand === 'left' ? 'M0 2H100 M100 2V98' : 'M0 98H100 M100 2V98'
-        : hand === 'left' ? 'M0 2H100 M0 2V98' : 'M0 98H100 M0 2V98';
+        ? hand === 'left' ? 'M0 2H100 M100 2V98' : 'M0 81H100 M100 19V81'
+        : hand === 'left' ? 'M0 2H100 M0 2V98' : 'M0 81H100 M0 19V81';
       label = 'ZIP';
       break;
   }
