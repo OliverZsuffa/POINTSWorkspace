@@ -64,7 +64,7 @@ The Sequence Editor is the main workspace for creating and modifying a POINTS se
 General sequence settings appear above the notation table. They remain editable after sequence creation. The user can change sequence properties at any point while editing.
 
 The settings include, at minimum:
-- Time signature.
+- Time signature, defaulting to 4/4.
 - Number of beats.
 - Number of jugglers.
 - Number and names of positions available to each juggler.
@@ -80,7 +80,7 @@ The complete set of supported sequence properties and their valid values must be
 
 The notation table appears below the general settings.
 
-Each juggler has a clearly separated section. Each juggler has an individual row for the left hand and an individual row for the right hand. This follows the structure of the Godot prototype.
+Each juggler has a clearly separated section with an individual row for the left hand and an individual row for the right hand, following the Godot prototype. Juggler labels initially use simple identifiers such as Juggler 1 and Juggler 2. Each juggler can have additional positions beyond the standard positions, and position definitions and names are editable.
 
 The table contains a time column structure shared by the juggler hand rows. Each cell represents the action of one hand at one point in time.
 
@@ -99,7 +99,13 @@ The notation table must support the complete POINTS notation described in `docs/
 
 The notation specification is the source of truth for the meaning and constraints of these elements. The detailed editing interface for each element still needs to be specified.
 
-### 1.3 Beats, subdivisions, and bars
+### 1.3 Initial state and object state overview
+
+The initial object distribution is editable. Users can see the available positions for each juggler and indicate which positions initially contain an object. This includes table positions and hand positions.
+
+The editor must also provide an overview of object state at every beat for every juggler. It must show which positions are occupied by balls and which hand holds each ball. It updates as the sequence changes. Its exact visual presentation and placement remain open.
+
+### 1.4 Beats, subdivisions, and bars
 
 When a sequence is created with a given beat count, the table initially displays those beats as separate columns. For example, a sequence with eight beats initially displays beats 1 through 8.
 
@@ -107,9 +113,13 @@ The user can add a subdivision between any two existing columns. A small plus co
 
 Subdivisions are not restricted to a single predefined level. The user can add further subdivisions wherever needed.
 
-The time signature determines bar boundaries. The table must make the end of each bar visually distinct, using a thicker border or equivalent clear visual separator. For example, in 3/4 time, the boundary after every third quarter note must be visually identifiable. The exact visual treatment of subdivisions within a bar remains to be specified.
+The numerator of the time signature determines the number of beats in each bar. The denominator does not otherwise change the editor's beat structure. The default time signature is 4/4. The table must make each bar boundary visually distinct, using a thicker border or equivalent separator. For example, in 3/4 time, the boundary after every third beat must be identifiable.
 
-### 1.4 Editing interactions
+A subdivision always splits an existing interval in half. Labels follow conventional musical counting: beat numbers for quarter note beats, `&` for eighth note subdivisions, and `e` and `a` for sixteenth note subdivisions. Labels beyond sixteenth notes remain to be defined.
+
+Users can remove beats and subdivisions, move individual time positions, and select multiple positions to move them together. Exact gestures remain open.
+
+### 1.5 Editing interactions
 
 Notation elements can be entered and modified through a combination of:
 - Direct manipulation, including the drag interaction from the Godot prototype.
@@ -117,11 +127,19 @@ Notation elements can be entered and modified through a combination of:
 - Contextual menus.
 - Keyboard shortcuts.
 
-Keyboard shortcuts are a core part of the editor. A tutorial or help reference must explain the available shortcuts. The exact shortcut assignments and the complete interaction rules are still open.
+Keyboard shortcuts are a core part of the editor. A dedicated help section must explain them. A permanent shortcut overlay is not required.
 
-The editing interaction for selecting an existing notation element and changing its properties has not yet been decided. It should be chosen to integrate naturally with creating notation, without adding unnecessary interface complexity.
+The Godot interaction model is the starting point for the web editor, subject to usability testing. Retain the existing click, drag, modifier key, and right click interactions where practical. Dragging must construct the ball rectangle notation, including LIFT, HOLD, LEAVE, and ZIP actions, rather than merely stamping the same symbol into every traversed cell. The exact web gestures require testing.
 
-### 1.5 Validation and errors
+Action entry and target editing should prioritise speed and minimal interaction friction. The exact menu and input sequence remains open. Targets may be typed, but input must be restricted to legal targets for the selected action and context.
+
+For circle passing, the relative performer distance should be entered numerically, with direction represented separately. For individual passing, the other performer must be selected from the existing juggler list.
+
+ZIP is paired. Creating one side automatically creates the corresponding source or receiving symbol in the other hand row at the same beat. Both symbols remain linked and are validated as one transfer.
+
+SPECIAL actions support free text. They can be assigned to one hand or linked across both hands for coordinated actions such as a clap.
+
+### 1.6 Validation and errors
 
 The editor must identify illegal or inconsistent notation.
 
@@ -133,9 +151,9 @@ Validation must cover the rules defined by POINTS notation. Examples include:
 - A transfer whose source and receiving actions do not match.
 - Inconsistent object states across time or between hands.
 
-The exact validation rules, severity levels, and error presentation are still to be specified.
+The exact validation rules and severity levels remain to be specified. Selecting a general error should navigate to the affected cell or time position where possible.
 
-### 1.6 Export and sharing
+### 1.7 Export and sharing
 
 Once a sequence is complete, the user should be able to export it as an image.
 
@@ -145,7 +163,7 @@ The export should support both:
 
 Each sequence should also have a compact textual code that encodes the complete pattern. The code should be short enough to share easily. Another user should be able to paste the code into POINTS Workspace and reconstruct the complete sequence.
 
-The actual encoding format and import interaction have not yet been designed.
+The actual encoding format and import interaction have not yet been designed. A conventional manual save action is not required for each sequence. Each sequence is automatically represented by its compact code. The application may cache the most recent code locally and reconstruct the sequence from it when reopened. Exact persistence and recovery behaviour remains open.
 
 ## 2. Sequence Renderer
 
