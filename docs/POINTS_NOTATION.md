@@ -29,7 +29,7 @@ How positions are assigned to performers in passing depends on the passing syste
 
 A pattern is organised into beats. Each performer has a sequence for each hand. Every cell specifies that hand's action at that point in time.
 
-The time signature must be given, for example $3/4$ or $4/4$. Beats can be subdivided using conventional music counting:
+The time signature must be given, for example $\frac{3}{4}$ or $\frac{4}{4}$. Beats can be subdivided using conventional music counting:
 
 | Subdivision | Count |
 |---|---|
@@ -60,23 +60,21 @@ A rectangle represents one ball over time while it is held by a hand. LIFT opens
 
 The three symbols below combine to form one rectangle spanning three beats:
 
-| Beat 1 | Beat 2 | Beat 3 |
-|---|---|---|
-| ![LIFT](images/icons/lift.svg) | ![HOLD](images/icons/hold.svg) | ![LEAVE](images/icons/leave.svg) |
-| LIFT | HOLD | LEAVE |
+![A three beat ball rectangle formed by LIFT, HOLD and LEAVE](images/ball-rectangle.svg)
+
+ZIP can move this rectangle from one hand sequence to the other. The rectangle ends in the source hand and continues in the receiving hand at the same beat. The next section shows how this works.
 
 TAP is independent of a ball rectangle because it is performed with an empty hand. EMPTY has no action symbol.
 
 ## 6. ZIP
 
-ZIP transfers an object between the two hands of the same performer. It combines a source action and a receiving action at the same beat. Its direction determines which hand sends and which receives.
+ZIP transfers an object between the two hands of the same performer. It always consists of two symbols in the same beat: one in the hand giving the object and one in the hand receiving it.
 
-| ZIP action | Symbol |
-|---|---|
-| Source left | ![ZIP source left](images/icons/zip-source-left.svg) |
-| Source right | ![ZIP source right](images/icons/zip-source-right.svg) |
-| Receive left | ![ZIP receive left](images/icons/zip-receive-left.svg) |
-| Receive right | ![ZIP receive right](images/icons/zip-receive-right.svg) |
+The symbols connect the ball rectangle to the appropriate edge of each hand sequence. This makes the rectangle switch from one hand lane to the other. The example shows a transfer from the upper lane to the lower lane:
+
+![ZIP transfer from the upper hand lane to the lower hand lane](images/zip-transfer.svg)
+
+The source symbol closes the rectangle in the first hand. The receiving symbol opens it in the other hand at exactly the same beat. For the reverse transfer, the source and receiving symbols are mirrored: the rectangle leaves through the lower edge of the source cell and continues from the upper edge of the receiving cell. The two symbols must always be used together.
 
 ## 7. Passing
 
