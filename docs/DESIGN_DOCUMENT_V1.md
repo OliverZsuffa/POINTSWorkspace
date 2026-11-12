@@ -24,15 +24,15 @@ In short, the workspace supports a connected workflow: create or generate a sequ
 
 ### Workspace layout
 
-The main workspace should use a split layout, with the Sequence Editor on the left and the Sequence Renderer on the right. Both panels should occupy approximately half of the available workspace.
+The default desktop layout should use a side by side split, with the Sequence Editor on the left and the Sequence Renderer on the right. Both panels should initially occupy approximately half of the available workspace.
 
-The two panels should be movable or rearrangeable, allowing the user to change their positions within the workspace rather than being restricted to one fixed arrangement.
+The split should be resizable by dragging the divider between the panels. Users should also be able to change the panels' arrangement, including swapping their positions. The panels remain within the workspace. They must not detach into floating or pop out windows.
 
 The Sequence Generator should be accessible below the two main panels when needed.
 
 ### Mobile support
 
-The application must be fully usable on mobile devices as well as desktop computers. The layout should adapt to smaller screens while preserving access to all functionality. Mobile support is a core requirement, and the mobile experience should be reliable and free of layout or interaction bugs.
+The application must be fully usable on mobile devices as well as desktop computers. The layout should adapt to smaller screens while preserving access to all functionality. Mobile support is a core requirement, not a reduced or secondary version of the application. All features and interactions must remain usable on mobile, and the mobile experience must be thoroughly tested for layout, input, and interaction issues.
 
 ## 1. Sequence Editor
 
