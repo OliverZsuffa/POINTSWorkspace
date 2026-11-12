@@ -10,6 +10,7 @@ describe('sequence editor', () => {
     expect(screen.getByRole('main', { name: 'POINTS Workspace' })).toBeInTheDocument();
     expect(screen.getByRole('region', { name: 'Notation editor' })).toBeInTheDocument();
     expect(screen.getByText('Validation')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Juggler 1 left beat 1 empty' }));
     expect(screen.getByRole('button', { name: 'LIFT' })).toBeInTheDocument();
   });
 
@@ -206,6 +207,7 @@ describe('sequence editor', () => {
 
   it('shows both halves of the ZIP toolbar symbol', () => {
     render(<App />);
+    fireEvent.click(screen.getByRole('button', { name: 'Juggler 1 left beat 1 empty' }));
     const zip = screen.getByRole('button', { name: 'ZIP' });
     expect(zip.querySelectorAll('.zip-tool-preview .notation-symbol')).toHaveLength(2);
   });
@@ -369,7 +371,9 @@ describe('sequence editor', () => {
     render(<App />);
     const draw = (startName: string, endName: string) => {
       fireEvent.mouseDown(screen.getByRole('button', { name: startName }), { shiftKey: true });
-      fireEvent.mouseUp(screen.getByRole('button', { name: endName }));
+      const end = screen.getByRole('button', { name: endName });
+      fireEvent.mouseUp(end);
+      fireEvent.click(end);
     };
     draw('Juggler 1 left beat 1 empty', 'Juggler 1 left beat 2 empty');
     draw('Juggler 1 left beat 4 empty', 'Juggler 1 left beat 5 empty');
