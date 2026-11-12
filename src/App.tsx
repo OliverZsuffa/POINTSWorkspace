@@ -344,8 +344,9 @@ export default function App() {
   }, [resizingPanels, panelsSwapped]);
 
   useEffect(() => {
+    if (resizingPanels) return;
     window.dispatchEvent(new Event('resize'));
-  }, [activeWorkspaceTab, editorShare, panelsSwapped, showEditor, showRenderer]);
+  }, [activeWorkspaceTab, editorShare, panelsSwapped, showEditor, showRenderer, resizingPanels]);
 
   const editorPerformers = sequence.sequenceType === 'circle-passing' ? sequence.performers.slice(0, 1) : sequence.performers;
   const editorPositions = sequence.positions.filter((position) =>
