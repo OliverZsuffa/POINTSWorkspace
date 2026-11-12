@@ -11,7 +11,7 @@ These are proposed plans, not approval to start implementation. Each package rem
 | ID | Work package | Responsibility | Depends on |
 |---|---|---|---|
 | 01 | Foundation and domain model | Project scaffold, shared types, sequence model and interfaces | None |
-| 02 | Object state and validation | Simultaneous beat processing, state transitions and validity checks | 01 |
+| 02 | Object state and validation | Simultaneous beat processing, state transitions and validity checks | 01 | **Implemented, pending CI** |
 | 03 | Sequence editor | Notation grid, editing interactions, settings and undo | 01, 02 |
 | 04 | Sequence renderer | 3D scene, animation, playback and editor synchronisation | 01, 02 |
 | 05 | Sequence generator | Constraint search and candidate generation | 01, 02 |
