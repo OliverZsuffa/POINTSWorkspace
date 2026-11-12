@@ -1072,6 +1072,19 @@ export default function App() {
       : { kind: 'circle-position' as const, position: action.target.position, direction: 'left' as const, distance: 1 };
     commit({ ...sequence, notation: sequence.notation.map((item) => item.id === entry.id ? { ...item, action: { ...action, target } as NotationAction } : item) });
   };
+  const editSpecial = (entry: NotationEntry, cell: EditorCell) => {
+    if (entry.action.type !== 'SPECIAL') return;
+    const text = window.prompt('SPECIAL', entry.action.text);
+    if (text === null) return;
+    const linkId = entry.action.linkId;
+    commit({ ...sequence, notation: sequence.notation.map((item) =>
+      item.action.type === 'SPECIAL' && (item.id === entry.id || (linkId !== undefined && item.action.linkId === linkId))
+        ? { ...item, action: { ...item.action, text } }
+        : item,
+    ) });
+    selectCell(cell);
+  };
+
   const selectedEntry = selected
     ? entryAt(selected.performerId, selected.hand, selected.beatId, selected.offset ?? rational(0))
     : undefined;
@@ -1316,8 +1329,8 @@ export default function App() {
                           if (dragStart || eraseStart || moveStart) return;
                           selectCell({ performerId: performer.id, hand, beatId: beat.id, offset: slot.offset, duration: slot.duration }, event.shiftKey);
                         }}
-                        onDoubleClick={() => entry && entry.action.type === 'SPECIAL' && addAction('SPECIAL')}
-                        onContextMenu={(event) => { if (entry?.action.type === 'SPECIAL') { event.preventDefault(); selectCell({ performerId: performer.id, hand, beatId: beat.id, offset: slot.offset, duration: slot.duration }); addAction('SPECIAL'); } }}
+                        onDoubleClick={() => entry && entry.action.type === 'SPECIAL' && editSpecial(entry, { performerId: performer.id, hand, beatId: beat.id, offset: slot.offset, duration: slot.duration })}
+                        onContextMenu={(event) => { if (entry?.action.type === 'SPECIAL') { event.preventDefault(); editSpecial(entry, { performerId: performer.id, hand, beatId: beat.id, offset: slot.offset, duration: slot.duration }); } }}
                         aria-label={performer.name + ' ' + hand + ' beat ' + (beatIndex + 1) + (compareRational(slot.offset, rational(0)) === 0 ? '' : ' ' + slot.label) + (entry ? ' ' + actionLabel(entry.action, sequence) : ' empty')}
                         title={errors.join(' ')}
                       >
