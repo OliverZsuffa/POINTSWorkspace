@@ -21,6 +21,7 @@ import type {
 import { rational } from './domain/time/rational';
 import { DEFAULT_TIME_SIGNATURE } from './domain/time/time-signature';
 import { simulateSequence } from './domain/state';
+import { getBallRectangleEntries } from './features/editor/rectangles';
 
 let nextId = 1;
 const id = (prefix: string) => prefix + '-' + (++nextId).toString(36);
@@ -282,6 +283,7 @@ export default function App() {
   const [selectedCells, setSelectedCells] = useState<EditorCell[]>([]);
   const [clipboard, setClipboard] = useState<ClipboardItem[]>([]);
   const [eraseStart, setEraseStart] = useState<EditorCell | null>(null);
+  const [moveStart, setMoveStart] = useState<EditorCell | null>(null);
   const [activeAction, setActiveAction] = useState<ActionName>('LIFT');
   const [history, setHistory] = useState<Sequence[]>([]);
   const [future, setFuture] = useState<Sequence[]>([]);
@@ -309,7 +311,7 @@ export default function App() {
       : [cell]);
   };
 
-  const clearSelection = () => { setSelected(null); setSelectedCells([]); setDragStart(null); setEraseStart(null); };
+  const clearSelection = () => { setSelected(null); setSelectedCells([]); setDragStart(null); setEraseStart(null); setMoveStart(null); };
 
   const commit = (next: Sequence) => {
     setHistory((items) => [...items.slice(-99), sequence]);
@@ -515,6 +517,45 @@ export default function App() {
   const removeSelected = () => {
     const cells = selectedCells.length ? selectedCells : selected ? [selected] : [];
     removeCells(cells);
+  };
+
+  const moveRectangle = (first: EditorCell, last: EditorCell) => {
+    if (first.performerId !== last.performerId || first.hand !== last.hand) {
+      window.alert('Move a rectangle within the same hand row.');
+      return;
+    }
+    const source = entryAt(first.performerId, first.hand, first.beatId);
+    if (!source) return;
+    const sourceIndex = sequence.beats.findIndex((beat) => beat.id === first.beatId);
+    const targetIndex = sequence.beats.findIndex((beat) => beat.id === last.beatId);
+    const offset = targetIndex - sourceIndex;
+    if (offset === 0) return;
+    const rectangle = getBallRectangleEntries(sequence, simulation, source);
+    if (!rectangle.length) return;
+    const movingIds = new Set(rectangle.map((entry) => entry.id));
+    const destinations = rectangle.map((entry) => {
+      const currentIndex = sequence.beats.findIndex((beat) => beat.id === entry.time.beatId);
+      return { entry, beat: sequence.beats[currentIndex + offset] };
+    });
+    if (destinations.some((item) => !item.beat)) {
+      window.alert('The complete rectangle would extend beyond the sequence.');
+      return;
+    }
+    const conflict = destinations.some(({ entry, beat }) => sequence.notation.some((other) =>
+      !movingIds.has(other.id) && other.performerId === entry.performerId && other.hand === entry.hand &&
+      other.time.beatId === beat!.id &&
+      other.time.offset.numerator === entry.time.offset.numerator &&
+      other.time.offset.denominator === entry.time.offset.denominator,
+    ));
+    if (conflict) {
+      window.alert('Move cancelled because the destination contains notation.');
+      return;
+    }
+    const beatByEntry = new Map(destinations.map(({ entry, beat }) => [entry.id, beat!.id]));
+    commit({ ...sequence, notation: sequence.notation.map((entry) => {
+      const beatId = beatByEntry.get(entry.id);
+      return beatId ? { ...entry, time: { ...entry.time, beatId } } : entry;
+    }) });
   };
 
   const eraseRectangle = (first: EditorCell, last: EditorCell) => {
@@ -1202,17 +1243,18 @@ export default function App() {
                             event.preventDefault();
                             selectCell(cell);
                             setDragStart(cell);
+                          } else if (entry) {
+                            setMoveStart(cell);
                           }
                         }}
                         onMouseUp={() => {
                           const cell = { performerId: performer.id, hand, beatId: beat.id };
                           if (eraseStart) { eraseRectangle(eraseStart, cell); setEraseStart(null); return; }
-                          if (!dragStart) return;
-                          drawRectangle(dragStart, cell);
-                          setDragStart(null);
+                          if (dragStart) { drawRectangle(dragStart, cell); setDragStart(null); return; }
+                          if (moveStart) { moveRectangle(moveStart, cell); setMoveStart(null); }
                         }}
                         onClick={(event) => {
-                          if (dragStart || eraseStart) return;
+                          if (dragStart || eraseStart || moveStart) return;
                           selectCell({ performerId: performer.id, hand, beatId: beat.id }, event.shiftKey);
                         }}
                         onDoubleClick={() => entry && entry.action.type === 'SPECIAL' && addAction('SPECIAL')}
