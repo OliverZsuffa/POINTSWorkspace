@@ -651,7 +651,7 @@ export default function App() {
         performerId: performer.id, hand, beatId, offset: slot.offset, duration: slot.duration,
       })),
     ));
-    if (cells[0]) { setSelected(cells[0]); setSelectedCells(cells); setPassRecipientId(''); setPassRecipientHand('left'); }
+    if (cells[0]) { setSelected(cells[0]); setSelectedCells(cells); setPassRecipientId(''); setPassRecipientHand('left'); setShowActionMenu(false); }
   };
 
   const subdivideInterval = (beatId: string, offset: Rational, duration: Rational) => {
@@ -730,6 +730,7 @@ export default function App() {
     beats.splice(index + 1, 0, beat);
     commit({ ...sequence, beats });
     selectCell({ performerId: sequence.performers[0]!.id, hand: 'left', beatId: beat.id });
+    setShowActionMenu(true);
   };
   const addBeat = () => insertBeatAfter();
   const moveBeat = (beatId: string, direction: -1 | 1) => {
