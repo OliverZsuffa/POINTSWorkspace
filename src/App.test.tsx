@@ -557,6 +557,8 @@ describe('sequence editor', () => {
     expect(screen.getByRole('button', { name: 'Juggler 1 left beat 3 LIFT A' })).toBeInTheDocument();
     fireEvent.keyDown(main, { key: 'z', ctrlKey: true });
     expect(screen.getByRole('button', { name: 'Juggler 1 left beat 3 empty' })).toBeInTheDocument();
+    fireEvent.keyDown(main, { key: 'z', ctrlKey: true, shiftKey: true });
+    expect(screen.getByRole('button', { name: 'Juggler 1 left beat 3 LIFT A' })).toBeInTheDocument();
   });
 
 
