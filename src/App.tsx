@@ -512,6 +512,7 @@ export default function App() {
   const removeSelected = () => {
     const cells = selectedCells.length ? selectedCells : selected ? [selected] : [];
     removeCells(cells);
+    if (cells.length) { setSelectedCells(selected ? [selected] : []); setShowActionMenu(true); }
   };
 
   const moveRectangle = (first: EditorCell, last: EditorCell) => {
