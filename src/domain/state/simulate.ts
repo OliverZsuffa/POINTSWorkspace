@@ -5,6 +5,7 @@ import type {
   NotationEntry,
   ObjectLocation,
   ObjectStateSnapshot,
+  PositionDefinition,
   Sequence,
   SimulationResult,
   TimelinePosition,
@@ -45,11 +46,9 @@ function problem(
   };
 }
 
-function resolvePosition(sequence: Sequence, performerId: PerformerId, target: Target): PositionId | undefined {
+function resolvePosition(sequence: Sequence, performerId: PerformerId, target: Target): PositionDefinition | undefined {
   if (target.kind === 'position') {
-    return sequence.positions.some((position) => position.kind === 'table' && position.id === target.positionId)
-      ? target.positionId
-      : undefined;
+    return sequence.positions.find((position) => position.id === target.positionId);
   }
   if (target.kind !== 'circle-position' || sequence.sequenceType !== 'circle-passing') return undefined;
   const index = sequence.performers.findIndex((performer) => performer.id === performerId);
@@ -63,7 +62,13 @@ function resolvePosition(sequence: Sequence, performerId: PerformerId, target: T
     position.name === target.position &&
     position.owner.kind === 'performer' &&
     position.owner.performerId === targetPerformer.id,
-  )?.id;
+  );
+}
+
+function positionLocation(position: PositionDefinition): ObjectLocation {
+  return position.kind === 'table'
+    ? { kind: 'position', positionId: position.id }
+    : { kind: 'hand-back', positionId: position.id, performerId: position.performerId, hand: position.hand };
 }
 
 function initialState(sequence: Sequence): { state: State; issues: ValidationIssue[] } {
@@ -262,15 +267,15 @@ function evaluateBeat(sequence: Sequence, entries: readonly NotationEntry[], sta
           issues.push(problem('unpaired-individual-pass', 'Individual passing LIFT needs a matching LEAVE.', [entry]));
           break;
         }
-        const positionId = resolvePosition(sequence, entry.performerId, action.target);
-        if (!positionId) issues.push(problem('unknown-lift-target', 'LIFT target is not a valid table position.', [entry]));
-        else if (ballInHand) issues.push(problem('lift-hand-occupied', 'LIFT requires free fingers.', [entry], [positionId]));
+        const targetPosition = resolvePosition(sequence, entry.performerId, action.target);
+        if (!targetPosition) issues.push(problem('unknown-lift-target', 'LIFT target is not a defined position.', [entry]));
+        else if (ballInHand) issues.push(problem('lift-hand-occupied', 'LIFT requires free fingers.', [entry], [targetPosition.id]));
         else {
-          const ballId = findBall(state, { kind: 'position', positionId });
-          if (!ballId) issues.push(problem('lift-from-empty-position', 'LIFT target is empty.', [entry], [positionId]));
-          else if (accessedPositions.has(positionId)) issues.push(problem('conflicting-position-actions', 'A position cannot be used by multiple actions in one beat.', [entry], [positionId]));
+          const ballId = findBall(state, positionLocation(targetPosition));
+          if (!ballId) issues.push(problem('lift-from-empty-position', 'LIFT target is empty.', [entry], [targetPosition.id]));
+          else if (accessedPositions.has(targetPosition.id)) issues.push(problem('conflicting-position-actions', 'A position cannot be used by multiple actions in one beat.', [entry], [targetPosition.id]));
           else {
-            accessedPositions.add(positionId);
+            accessedPositions.add(targetPosition.id);
             transfer(ballId, { kind: 'hand-held', performerId: entry.performerId, hand: entry.hand }, [entry]);
           }
         }
@@ -281,14 +286,14 @@ function evaluateBeat(sequence: Sequence, entries: readonly NotationEntry[], sta
           issues.push(problem('unpaired-individual-pass', 'Individual passing LEAVE needs a matching LIFT.', [entry]));
           break;
         }
-        const positionId = resolvePosition(sequence, entry.performerId, action.target);
-        if (!positionId) issues.push(problem('unknown-leave-target', 'LEAVE target is not a valid table position.', [entry]));
-        else if (!ballInHand) issues.push(problem('leave-without-ball', 'LEAVE requires an object held in the hand.', [entry], [positionId]));
-        else if (findBall(state, { kind: 'position', positionId })) issues.push(problem('leave-to-occupied-position', 'LEAVE target is occupied.', [entry], [positionId]));
-        else if (accessedPositions.has(positionId)) issues.push(problem('conflicting-position-actions', 'A position cannot be used by multiple actions in one beat.', [entry], [positionId]));
+        const targetPosition = resolvePosition(sequence, entry.performerId, action.target);
+        if (!targetPosition) issues.push(problem('unknown-leave-target', 'LEAVE target is not a defined position.', [entry]));
+        else if (!ballInHand) issues.push(problem('leave-without-ball', 'LEAVE requires an object held in the hand.', [entry], [targetPosition.id]));
+        else if (findBall(state, positionLocation(targetPosition))) issues.push(problem('leave-to-occupied-position', 'LEAVE target is occupied.', [entry], [targetPosition.id]));
+        else if (accessedPositions.has(targetPosition.id)) issues.push(problem('conflicting-position-actions', 'A position cannot be used by multiple actions in one beat.', [entry], [targetPosition.id]));
         else {
-          accessedPositions.add(positionId);
-          transfer(ballInHand, { kind: 'position', positionId }, [entry]);
+          accessedPositions.add(targetPosition.id);
+          transfer(ballInHand, positionLocation(targetPosition), [entry]);
         }
         break;
       }
