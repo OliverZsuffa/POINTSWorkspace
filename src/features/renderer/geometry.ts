@@ -172,8 +172,12 @@ export function getTableFootprint(sequence: Sequence): { width: number; depth: n
     return { width: diameter, depth: diameter, round: true, sideCount: polygonSideCount };
   }
   if (sequence.tableLayout.type === 'rectangle') {
-    const width = Math.max(3.2, sequence.tableLayout.longSideSeatCount * 1.15);
-    const depth = Math.max(2.4, sequence.tableLayout.shortSideSeatCount * 1.15);
+    const maxOwnedPositions = Math.max(1, ...sequence.performers.map((performer) =>
+      sequence.positions.filter((position) => position.kind === 'table' && position.owner.kind === 'performer' && position.owner.performerId === performer.id).length,
+    ));
+    const positionSpan = (maxOwnedPositions - 1) * 0.72 + 0.8;
+    const width = Math.max(3.2, sequence.tableLayout.longSideSeatCount * 1.15, positionSpan);
+    const depth = Math.max(2.4, sequence.tableLayout.shortSideSeatCount * 1.15, positionSpan);
     return { width, depth, round: false };
   }
   return { width: 3.6, depth: 2.5, round: false };
