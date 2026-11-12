@@ -177,20 +177,20 @@ The code is generated automatically and can be copied explicitly at any time. Pa
 
 There is one current working sequence rather than a collection of named sequences. Multiple saved sequences, editable sequence names, and a duplicate sequence management feature are not required. The most recent working sequence is restored when the application is reopened, including when it is incomplete or invalid.
 
-The distinction between a code that cannot be parsed and a sequence that can be imported but fails notation validation still needs to be specified. A structurally invalid imported sequence should be made available in the editor and clearly marked as invalid, rather than silently treated as valid. If an imported code contains features the current application does not recognise, the application should import the parts it understands and report the unsupported parts. Sequence codes do not need an explicit format version.
+A code that cannot be parsed or is otherwise invalid as an import must be rejected. The current sequence remains untouched. The application must not partially import an unreadable or unsupported code. A successfully parsed sequence is then checked by the normal notation validator. Import replaces the entire current sequence structure, including its beat count, jugglers, positions, and other settings. The import control is accessible from the main editor. Pasting a code initiates loading immediately; confirmation is required only when existing work would be overwritten. Sequence codes do not need an explicit format version.
 
 ### 1.8 Image export
 
 The user can export the sequence as one continuous image or as multiple image segments. The user chooses where the image is split.
 
-The export includes all sequence information by default. Before exporting, the user can open an options window to include or exclude individual parts of the output. The object state at the start and end of the sequence can be included when selected.
+The export includes all sequence information by default. Before exporting, the user can open an options window to include or exclude individual parts of the output. The sequence code is an optional export element. If the object state overview is enabled for export, show the initial state and, only when it differs, the final state. Do not include intermediate object states.
 
 The export uses a cleaner presentation than the live editor, while retaining meaningful notation colours such as red error markings and yellow linked SPECIAL markings. The user can choose black or white text and background, or a transparent background. Image resolution and scale are selected automatically to produce a good result. The notation keeps a fixed cell size, so long sequences produce wider images rather than shrinking all notation to fit a fixed width. Sequence settings and performer names are included by default. The exact export options interface remains to be designed.
 
 
 ### 1.9 Curated sequence presets
 
-The repository should contain a manually maintained curated collection of sequence presets. Each entry consists of a sequence code, a preset name, and author or authors. The application should provide a way for users to browse these presets and load one into the current workspace. The list is maintained by editing repository data, not through an in-app contribution or editing interface. The exact presentation and organisation of the preset collection remain to be designed.
+The repository should contain a manually maintained curated collection of sequence presets. Each entry consists of a sequence code, a preset name, one or more authors, and optional categories or tags. The application presents the presets as a searchable list showing each preset's name and author or authors. Selecting an entry loads it into the current workspace without a separate notation preview. If existing work would be overwritten, the usual confirmation is required. The preset list is maintained by editing repository data, not through an in-app contribution or editing interface.
 
 ## 2. Sequence Renderer
 
@@ -288,7 +288,7 @@ The user can specify:
 - Whether the sequence must loop cleanly, must not loop cleanly, or either is acceptable.
 - Sequence type: solo, circle passing, or individual passing.
 
-The user can require or forbid particular actions. Requirements can specify that an action occurs at least once or occurs an exact number of times. The generator must support both inclusion and exclusion conditions. Action requirements apply anywhere in the sequence; restricting them to particular beats or bars is not required. ZIP counts refer to complete transfers, not individual ZIP symbols. For example, two ZIP transfers correspond to four ZIP symbols. The generator should provide a dedicated field for the required number of passes in the generated sequence. The exact definition and counting rules for a pass remain to be clarified.
+The user can require or forbid particular actions. Requirements can specify that an action occurs at least once or occurs an exact number of times. The generator must support both inclusion and exclusion conditions. Action requirements apply anywhere in the sequence; restricting them to particular beats or bars is not required. ZIP counts refer to complete transfers, not individual ZIP symbols. For example, two ZIP transfers correspond to four ZIP symbols. The generator should provide a dedicated field for the required number of passes in the generated sequence. A pass occurrence is counted when a performer receives an object from another performer, represented by the receiving action using X, or places an object into a position belonging to another performer. The user specifies an exact number of these occurrences. Passing patterns require at least two jugglers.
 
 The user can require that every juggler performs at least one specified action.
 
