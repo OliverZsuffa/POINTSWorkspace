@@ -294,7 +294,7 @@ describe('sequence editor', () => {
     fireEvent.mouseDown(start, { shiftKey: true });
     fireEvent.mouseUp(end);
     const hold = screen.getByRole('button', { name: 'Juggler 1 left beat 2 HOLD' });
-    const destination = screen.getByRole('button', { name: 'Juggler 1 left beat 4 empty' });
+    const destination = screen.getByRole('button', { name: 'Juggler 1 left beat 3 LEAVE A' });
     fireEvent.mouseDown(hold);
     fireEvent.mouseUp(destination);
     expect(screen.getByRole('button', { name: 'Juggler 1 left beat 2 LIFT A' })).toBeInTheDocument();
