@@ -90,7 +90,7 @@ The notation table appears below the general settings.
 
 Each juggler has a clearly separated section with an individual row for the left hand and an individual row for the right hand, following the Godot prototype. Juggler labels initially use simple identifiers such as Juggler 1 and Juggler 2. Each juggler can have additional positions beyond the standard positions, and position definitions and names are editable.
 
-The table contains a time column structure shared by the juggler hand rows. Each cell represents the action of one hand at one point in time.
+The table contains a time column structure shared by the juggler hand rows. Each cell represents the action of one hand at one point in time. Clicking a beat or subdivision label selects that time position across all juggler hand rows.
 
 The notation table must support the complete POINTS notation described in `docs/POINTS_NOTATION.md`, including:
 - HOLD
@@ -147,13 +147,15 @@ Keyboard shortcuts are a core part of the editor. A dedicated help section must 
 
 The Godot interaction model is the starting point for the web editor, subject to usability testing. Retain the existing click, drag, modifier key, and right click interactions where practical. Dragging must construct the ball rectangle notation, including LIFT, HOLD, LEAVE, and ZIP actions, rather than merely stamping the same symbol into every traversed cell.
 
-The default interaction should minimise friction. A cell click should provide direct access to editing, while keyboard navigation and selection remain available. The exact distinction between selecting a cell and opening its action menu remains a design choice to resolve through prototyping. Selecting multiple cells and applying one action to all selected cells is supported. Arrow keys move the selection between cells, and Shift plus arrow keys extends the selection. The behaviour of double click and Enter remains undecided.
+The default interaction should minimise friction. Clicking an existing notation cell opens its properties for editing rather than immediately replacing the action. The exact presentation of the editing controls remains to be designed. Selecting multiple cells and applying one action to all selected cells is supported. Arrow keys move the selection between cells, and Shift plus arrow keys extends the selection. Clicking an empty area of the editor clears the selection. The behaviour of double click and Enter remains undecided.
 
-Dragging notation starts with a LIFT at the starting cell and ends with a LEAVE at the ending cell. The drag can and must cross hand lanes when needed to construct linked actions such as ZIP. The editor previews the notation during the drag. Drawing over existing notation must not overwrite it. If the proposed drawing conflicts with existing notation, the existing notation is preserved and the new operation is prevented. A complete drag operation is one undoable edit, including any linked symbols it creates.
+Dragging notation starts with a LIFT at the starting cell and ends with a LEAVE at the ending cell. The drag can and must cross hand lanes when needed to construct linked actions such as ZIP. The editor previews the notation during the drag. Drawing over existing notation must not overwrite it. If the proposed drawing conflicts with existing notation, the existing notation is preserved and the new operation is prevented. A complete drag operation is one undoable edit, including any linked symbols it creates. Existing notation can also be dragged to a different position in the timeline.
 
 Action menus show only actions that are valid for the current state. All available valid actions should be directly accessible rather than hidden in submenus. Menus close after an action is chosen. They do not remember the last used action or target. The exact menu placement remains undecided.
 
-Keyboard input is a primary editing method. Actions should have single key shortcuts where practical. After choosing an action, the user can type its target immediately to complete the entry. Escape cancels the current operation and clears the selection. Backspace deletes the selected notation. Arrow key navigation and Shift selection extension are supported. The exact shortcut mapping remains to be documented.
+Keyboard input is a primary editing method. Actions should have single key shortcuts where practical. After choosing an action, the user can type its target immediately to complete the entry. Typing a new target while an existing action is selected replaces that action's target. Escape cancels the current operation and clears the selection. Backspace deletes the selected notation. Arrow key navigation and Shift selection extension are supported. Ctrl+C and Ctrl+V copy and paste selected notation, including multiple cells and linked actions. The exact shortcut mapping remains to be documented.
+
+Existing SPECIAL symbols can be opened directly for text editing.
 
 Targets may be typed, but input must be restricted to legal targets for the selected action and context.
 
@@ -177,7 +179,9 @@ Validation must cover the rules defined by POINTS notation. Examples include:
 
 The exact validation rules and severity levels remain to be specified. Selecting a general error should navigate to the affected cell or time position where possible. SPECIAL actions must be rejected when the relevant hand is not empty.
 
-The editor does not prevent every invalid action from being entered. If an action is invalid in the current object state, the user may still enter it and the normal validation system marks the error. When an edit makes a linked action inconsistent, both affected cells are marked invalid rather than silently rewriting one side. ZIP symbols are a paired operation: deleting either side deletes the corresponding other side as well. Deleting one cell of a linked SPECIAL action does not automatically delete the other cell. The remaining cell is retained; its exact status and behaviour as a standalone SPECIAL action should be confirmed during further design.
+The editor does not prevent every invalid action from being entered. If an action is invalid in the current object state, the user may still enter it and the normal validation system marks the error. When an edit makes a linked action inconsistent, both affected cells are marked invalid rather than silently rewriting one side. ZIP symbols are a paired operation: deleting either side deletes the corresponding other side as well. Deleting one cell of a linked SPECIAL action does not automatically delete the other cell. The remaining cell is retained and treated as a standalone SPECIAL action.
+
+Deleting selected notation, including multiple selected cells, is supported through Backspace. Linked notation follows the deletion rules above. Undo is sufficient protection against accidental destructive changes; confirmation dialogs are not required for editing operations such as deleting notation, beats, or jugglers.
 
 ### 1.7 Sequence codes, import, and persistence
 
