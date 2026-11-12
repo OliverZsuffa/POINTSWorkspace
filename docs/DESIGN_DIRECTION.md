@@ -21,7 +21,7 @@ Use this project as the reference for the interface's overall feel and presentat
 
 The intention is to adopt its visual language, not copy its juggling notation logic or product structure.
 
-### Brand colour reference: POINTS website
+### Brand colour reference and editor palette
 
 Repository: https://github.com/pointscs/pointscs.github.io  
 Website: https://pointscs.github.io/
@@ -36,7 +36,7 @@ Use the Workspace editor's agreed blue palette. This supersedes the original tur
 | Light text / neutral | `azure` / white |
 | Dark text | `#161616` to `#222222` |
 
-These values are taken from the website's stylesheet. The final interface should use the POINTS palette consistently for backgrounds, accents, interactive states, and supporting surfaces.
+These are the agreed Workspace editor colours. Use them consistently for backgrounds, accents, interactive states and supporting surfaces.
 
 ## Combined direction
 
