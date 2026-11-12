@@ -97,12 +97,12 @@ function updatePositionTarget(entry: NotationEntry, positionId: ReturnType<typeo
 
 function passRecipientTarget(entry: NotationEntry) {
   const action = entry.action;
-  return action.type === 'LEAVE' && action.target.kind === 'pass-recipient-hand' ? action.target : undefined;
+  return action.type === 'LEAVE' && 'hand' in action.target ? action.target : undefined;
 }
 
 function passSourceTarget(entry: NotationEntry) {
   const action = entry.action;
-  return action.type === 'LIFT' && action.target.kind === 'pass-source' ? action.target : undefined;
+  return action.type === 'LIFT' && 'performerId' in action.target ? action.target : undefined;
 }
 
 function positionName(sequence: Sequence, positionId: string): string {
@@ -115,11 +115,11 @@ function actionLabel(action: NotationAction, sequence: Sequence): string {
     case 'LIFT':
       if (action.target.kind === 'position') return 'LIFT ' + positionName(sequence, action.target.positionId);
       if (action.target.kind === 'circle-position') return 'LIFT ' + action.target.position + circleSubscript(action.target);
-      return 'LIFT X' + (sequence.performers.find((person) => person.id === action.target.performerId)?.identifier ?? '?');
+      return 'LIFT X' + ('performerId' in action.target ? sequence.performers.find((person) => person.id === action.target.performerId)?.identifier ?? '?' : '?');
     case 'LEAVE':
       if (action.target.kind === 'position') return 'LEAVE ' + positionName(sequence, action.target.positionId);
       if (action.target.kind === 'circle-position') return 'LEAVE ' + action.target.position + circleSubscript(action.target);
-      return 'LEAVE ' + (action.target.hand === 'left' ? 'L' : 'R') + (sequence.performers.find((person) => person.id === action.target.performerId)?.identifier ?? '?');
+      return 'LEAVE ' + ('hand' in action.target && action.target.hand === 'left' ? 'L' : 'R') + ('performerId' in action.target ? sequence.performers.find((person) => person.id === action.target.performerId)?.identifier ?? '?' : '?');
     case 'TAP':
     case 'BOUNCE':
       return action.target.kind === 'position'
@@ -157,6 +157,14 @@ function makeAction(
 }
 
 
+function objectLocationKey(location: ObjectLocation): string {
+  switch (location.kind) {
+    case 'position': return 'p:' + location.positionId;
+    case 'hand-held': return 'h:' + location.performerId + ':' + location.hand;
+    case 'hand-back': return 'b:' + location.positionId;
+  }
+}
+
 function sameLocation(a: ObjectLocation, b: ObjectLocation): boolean {
   if (a.kind !== b.kind) return false;
   if (a.kind === 'position' && b.kind === 'position') return a.positionId === b.positionId;
@@ -183,13 +191,13 @@ function ActionSymbol({ action, sequence, hand }: { action: NotationAction; sequ
       path = 'M7 9H41 M7 9V39 M7 39H41';
       if (action.target.kind === 'position') target = positionName(sequence, action.target.positionId);
       else if (action.target.kind === 'circle-position') { target = action.target.position; subscript = circleSubscript(action.target); }
-      else if (action.target.kind === 'pass-source') { target = 'X'; subscript = sequence.performers.find((person) => person.id === action.target.performerId)?.identifier ?? '?'; }
+      else if ('performerId' in action.target) { target = 'X'; subscript = sequence.performers.find((person) => person.id === action.target.performerId)?.identifier ?? '?'; }
       break;
     case 'LEAVE':
       path = 'M7 9H41 M41 9V39 M7 39H41';
       if (action.target.kind === 'position') target = positionName(sequence, action.target.positionId);
       else if (action.target.kind === 'circle-position') { target = action.target.position; subscript = circleSubscript(action.target); }
-      else if (action.target.kind === 'pass-recipient-hand') { target = action.target.hand === 'left' ? 'L' : 'R'; circledTarget = true; subscript = sequence.performers.find((person) => person.id === action.target.performerId)?.identifier ?? '?'; }
+      else if ('hand' in action.target) { target = action.target.hand === 'left' ? 'L' : 'R'; circledTarget = true; subscript = sequence.performers.find((person) => person.id === action.target.performerId)?.identifier ?? '?'; }
       break;
     case 'BOUNCE':
       path = 'M7 9H41 M7 39H41';
@@ -229,14 +237,14 @@ function NotationMark({ action, sequence, hand }: { action: NotationAction; sequ
       path = 'M0 19H100 M0 19V81 M0 81H100';
       if (action.target.kind === 'position') label = positionName(sequence, action.target.positionId);
       else if (action.target.kind === 'circle-position') { label = action.target.position; subscript = circleSubscript(action.target); }
-      else if (action.target.kind === 'pass-source') { label = 'X'; subscript = sequence.performers.find((person) => person.id === action.target.performerId)?.identifier ?? '?'; }
+      else if ('performerId' in action.target) { label = 'X'; subscript = sequence.performers.find((person) => person.id === action.target.performerId)?.identifier ?? '?'; }
       break;
     case 'HOLD': path = 'M0 19H100 M0 81H100'; label = 'HOLD'; break;
     case 'LEAVE':
       path = 'M0 19H100 M100 19V81 M0 81H100';
       if (action.target.kind === 'position') label = positionName(sequence, action.target.positionId);
       else if (action.target.kind === 'circle-position') { label = action.target.position; subscript = circleSubscript(action.target); }
-      else if (action.target.kind === 'pass-recipient-hand') { label = action.target.hand === 'left' ? 'L' : 'R'; circledTarget = true; subscript = sequence.performers.find((person) => person.id === action.target.performerId)?.identifier ?? '?'; }
+      else if ('hand' in action.target) { label = action.target.hand === 'left' ? 'L' : 'R'; circledTarget = true; subscript = sequence.performers.find((person) => person.id === action.target.performerId)?.identifier ?? '?'; }
       break;
     case 'BOUNCE':
       path = 'M0 19H100 M0 81H100';
@@ -523,13 +531,13 @@ export default function App() {
       commit({ ...sequence, balls: sequence.balls.slice(0, count), initialState: { placements: sequence.initialState.placements.filter((placement) => !removedIds.has(placement.ballId)) } });
       return;
     }
-    const occupied = new Set(sequence.initialState.placements.map((placement) => placement.location.kind === 'position' ? 'p:' + placement.location.positionId : placement.location.kind === 'hand-held' ? 'h:' + placement.location.performerId + ':' + placement.location.hand : 'b:' + placement.location.positionId));
+    const occupied = new Set(sequence.initialState.placements.map((placement) => objectLocationKey(placement.location)));
     const candidates: ObjectLocation[] = [
       ...sequence.positions.filter((position) => position.kind === 'table').map((position) => ({ kind: 'position' as const, positionId: position.id })),
       ...sequence.performers.flatMap((performer) => hands.map((hand) => ({ kind: 'hand-held' as const, performerId: performer.id, hand }))),
       ...sequence.positions.filter((position) => position.kind === 'hand-back').map((position) => ({ kind: 'hand-back' as const, positionId: position.id, performerId: position.performerId, hand: position.hand })),
     ];
-    const key = (location: ObjectLocation) => location.kind === 'position' ? 'p:' + location.positionId : location.kind === 'hand-held' ? 'h:' + location.performerId + ':' + location.hand : 'b:' + location.positionId;
+    const key = objectLocationKey;
     const added = Array.from({ length: count - sequence.balls.length }, () => ({ id: asBallId(id('new-ball')) }));
     const placements = [...sequence.initialState.placements];
     for (const ball of added) {
@@ -738,13 +746,13 @@ export default function App() {
     if (!linkId) return;
     const sender = sequence.notation.find((item) => {
       const action = item.action;
-      return action.type === 'LEAVE' && action.target.kind === 'pass-recipient-hand' && action.linkId === linkId;
+      return action.type === 'LEAVE' && 'hand' in action.target && action.linkId === linkId;
     });
     const receiver = sequence.notation.find((item) => {
       const action = item.action;
-      return action.type === 'LIFT' && action.target.kind === 'pass-source' && action.linkId === linkId;
+      return action.type === 'LIFT' && 'performerId' in action.target && action.linkId === linkId;
     });
-    if (!sender || sender.action.type !== 'LEAVE' || sender.action.target.kind !== 'pass-recipient-hand' || !receiver || receiver.action.type !== 'LIFT' || receiver.action.target.kind !== 'pass-source') return;
+    if (!sender || sender.action.type !== 'LEAVE' || !('hand' in sender.action.target) || !receiver || receiver.action.type !== 'LIFT' || !('performerId' in receiver.action.target)) return;
     const recipientId = entry.action.type === 'LIFT' ? receiver.performerId : targetPerformerId;
     const sourceId = entry.action.type === 'LEAVE' ? sender.performerId : targetPerformerId;
     const recipientHand = hand ?? sender.action.target.hand;
