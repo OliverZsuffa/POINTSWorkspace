@@ -102,7 +102,13 @@ export function getPerformerAnchor(
   const assignment = sequence.seatAssignments.find((item) => item.performerId === performer.id);
   const polygonSideCount = getPolygonSideCount(sequence);
   if (polygonSideCount === 0 && layout === 'line') {
-    return { x: (index - (count - 1) / 2) * 2.8, y: 0, z: 2.85 };
+    const footprint = getTableFootprint(sequence);
+    const seatPitch = getSeatPitch(sequence);
+    return {
+      x: (index - (count - 1) / 2) * seatPitch,
+      y: 0,
+      z: footprint.depth / 2 + 1.05,
+    };
   }
   if (polygonSideCount > 0) {
     const edgeIndex = assignment?.seat.kind === 'polygon-edge' ? assignment.seat.edgeIndex : index;
