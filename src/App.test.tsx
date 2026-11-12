@@ -463,4 +463,19 @@ describe('sequence editor', () => {
     expect(screen.getByRole('button', { name: 'Juggler 1 left beat 1 empty' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Juggler 1 left beat 2 empty' })).toBeInTheDocument();
   });
+
+  it('deletes both sides of an individual passing pair together', async () => {
+    const user = userEvent.setup();
+    render(<App />);
+    await user.click(screen.getByRole('button', { name: 'Settings' }));
+    await user.click(screen.getByRole('button', { name: 'Add performer' }));
+    await user.selectOptions(screen.getByLabelText('Type'), 'individual-passing');
+    await user.click(screen.getByRole('button', { name: 'Juggler 1 left beat 1 empty' }));
+    await user.click(screen.getByRole('button', { name: 'PASS' }));
+    const receiver = screen.getByRole('button', { name: /Juggler 2 left beat 1 LIFT X/ });
+    await user.click(receiver);
+    await user.click(screen.getByRole('button', { name: 'Delete' }));
+    expect(screen.getByRole('button', { name: 'Juggler 1 left beat 1 empty' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Juggler 2 left beat 1 empty' })).toBeInTheDocument();
+  });
 });
