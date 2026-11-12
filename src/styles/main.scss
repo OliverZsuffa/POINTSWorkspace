@@ -578,7 +578,7 @@ html, body, #root { min-height: 100%; background: #90d0d5; }
 }
 
 @media (min-width: 701px) and (max-width: 1100px) {
-  :root { --notation-cell-size: 48px; }
+  :root { --notation-cell-size: 52px; }
 }
 @media (max-width: 1100px) {
   .workspace-tabs {
@@ -663,3 +663,10 @@ html, body, #root { min-height: 100%; background: #90d0d5; }
 @media (max-width: 700px) {
   .update-banner { align-items: flex-start; font-size: 10px; }
 }
+
+
+.heading-label { font-size: 11px; }
+.beat-head { font-size: 14px; }
+.beat-head small { font-size: 10px; }
+.performer-heading { font-size: 12px; }
+.hand-row .row-label { font-size: 13px; }
