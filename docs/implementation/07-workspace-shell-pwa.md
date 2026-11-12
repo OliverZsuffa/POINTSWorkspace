@@ -215,7 +215,7 @@ The final generator interaction details remain subject to Package 05 approval.
 5. The editor, renderer and generator application code must be available offline. Generator computation itself must not depend on a network service.
 6. Do not cache or overwrite user sequence data through the service worker. Sequence persistence belongs to Package 06.
 7. Use an atomic asset update strategy. A user must not receive a mixed set of incompatible application assets.
-8. An update must not unexpectedly discard or overwrite in memory work. Define how the user is informed that an update is ready and when it becomes active.
+8. An update must not unexpectedly discard or overwrite in memory work. A new service worker waits until all existing POINTS tabs are closed before activation. Show a compact update ready notice, but never force a reload or call skipWaiting while a tab is open.
 9. Handle first installation, first successful load, offline reload, update available, update activation and failed asset retrieval.
 10. Do not claim that the app is offline ready before the required assets have been cached successfully.
 11. Verify installability and offline behaviour in supported Chromium based browsers and at least one additional supported browser where practical.
