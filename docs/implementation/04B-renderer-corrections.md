@@ -50,11 +50,11 @@ Correct the outstanding visual and interaction defects in the existing Package 0
 
 ## Verification
 
-- [x] Geometry regression tests added for spacing, table footprint, hand reach and camera pan direction.
-- [ ] Formatting and linting.
-- [ ] Strict TypeScript check.
-- [ ] Full unit and component test suite.
-- [ ] Production build.
+- [x] Geometry regression tests added for spacing, table footprint, hand reach, camera pan direction and shared passing meeting points.
+- [x] Formatting and linting.
+- [x] Strict TypeScript check.
+- [x] Full unit and component test suite.
+- [x] Production build.
 - [ ] Manual visual review of rotated camera panning.
 - [ ] Manual visual review with increasing performer counts.
 - [ ] Manual visual review of table positions and resting objects.
