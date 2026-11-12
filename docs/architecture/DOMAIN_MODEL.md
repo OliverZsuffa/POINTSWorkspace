@@ -36,7 +36,7 @@ The editor may rearrange the visual presentation of the timeline, but it must pr
 
 ## Performers and positions
 
-Performers have stable IDs and display names. Individual passing may additionally assign a lowercase performer identifier.
+Performers have stable IDs and display names. Individual passing may additionally assign a lowercase performer identifier. In circle passing, A, B and C without a subscript refer to the acting performer's own positions. A direction and distance subscript identifies another performer.
 
 Table positions are either owned by one performer or shared. Position names must be unique within their owner namespace. This allows two performers to each have a position named A while preventing duplicate names within the same performer. Shared positions occupy one shared namespace.
 
