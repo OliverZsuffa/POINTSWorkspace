@@ -48,10 +48,12 @@ describe('sequence editor', () => {
     await user.click(screen.getByRole('button', { name: 'Juggler 1 left beat 1 empty' }));
     await user.click(screen.getByRole('button', { name: 'CLAP' }));
     expect(screen.getByRole('button', { name: 'Juggler 1 right beat 1 Clap' })).toBeInTheDocument();
+    expect(screen.getAllByLabelText('Linked SPECIAL')).toHaveLength(2);
 
     await user.click(screen.getByRole('button', { name: 'Delete' }));
 
     expect(screen.getByRole('button', { name: 'Juggler 1 right beat 1 Clap' })).toBeInTheDocument();
+    expect(screen.queryByLabelText('Linked SPECIAL')).not.toBeInTheDocument();
     expect(screen.getByText('Sequence valid')).toBeInTheDocument();
   });
 
