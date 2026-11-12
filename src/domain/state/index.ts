@@ -1,0 +1,1 @@
+export { simulateSequence } from './simulate';
