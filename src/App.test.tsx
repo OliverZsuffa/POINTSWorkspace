@@ -112,4 +112,25 @@ describe('sequence editor', () => {
     expect(screen.getByRole('region', { name: 'Sequence settings' })).toBeInTheDocument();
     expect(screen.getByRole('region', { name: 'Initial positions' })).toBeInTheDocument();
   });
+
+  it('starts with two balls at A and C', () => {
+    render(<App />);
+    expect(screen.getByRole('button', { name: 'A, occupied' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'C, occupied' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'B, empty' })).toBeInTheDocument();
+    expect(screen.getByText('2 / 2')).toBeInTheDocument();
+  });
+
+  it('shows object state after the selected beat', async () => {
+    const user = userEvent.setup();
+    render(<App />);
+    await user.click(screen.getByRole('button', { name: 'Juggler 1 left beat 1 empty' }));
+    await user.click(screen.getByRole('button', { name: 'LIFT' }));
+    await user.click(screen.getByRole('button', { name: /Object state/ }));
+    expect(screen.getByText('After beat 1')).toBeInTheDocument();
+    expect(screen.getByText('Juggler 1 left')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Juggler 1 left beat 2 empty' }));
+    expect(screen.getByText('After beat 2')).toBeInTheDocument();
+    expect(screen.getByText('Juggler 1 left')).toBeInTheDocument();
+  });
 });
