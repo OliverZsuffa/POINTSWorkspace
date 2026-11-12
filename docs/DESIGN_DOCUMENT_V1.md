@@ -189,6 +189,8 @@ The Sequence Renderer visualises the current sequence as an animation in a three
 
 The renderer occupies the main area of its panel. The scene itself is the primary content. Playback and scene controls are placed in a compact bar or sidebar within the panel.
 
+The default camera is a top down view. The user can pan the camera, but camera preset switching and automatic performer following are not required. Performers remain stationary in their assigned seats.
+
 The interface should not cover the scene with unnecessary text or descriptions.
 
 ### 2.2 Scene and arrangement
@@ -199,21 +201,23 @@ The renderer shows jugglers sitting or standing around a table, performing the s
 
 The renderer must animate hand actions individually enough to communicate what is happening. LIFT, LEAVE, BOUNCE, and TAP must have visually distinct actions appropriate to their notation. BOUNCE shows a hand tapping a position with an object it continues to hold. TAP shows an empty hand tapping a position. The renderer should make it clear when an object is held with the fingers and when it is balanced on top of a hand at L or R.
 
-Objects must be visually distinguishable through colour. The renderer should show the movement of objects and the actions of jugglers clearly. Object trajectories are calculated automatically. Custom trajectory editing and manual trajectory height or shape controls are not required at this stage.
+All objects use the same spherical shape. The renderer assigns distinguishable colours automatically, but the user can override the colour of individual objects. Objects do not need visible rotation. No additional visual indicator is required when an object is balanced on a hand.
 
-The table and juggler arrangement depend on the sequence type.
+Object trajectories are calculated automatically. A transfer between hands should be animated as a coordinated handoff: the source hand moves the ball toward the receiving hand, and the receiving hand moves to take it. It should not simply look like an unexplained teleport or an arbitrary thrown arc. Custom trajectory editing and manual trajectory height or shape controls are not required at this stage.
+
+The table and juggler arrangement depend on the sequence type. The program initially assigns performers to seats automatically. The user can override these assignments by changing individual seat positions. A manual change takes precedence over automatic placement.
 
 **Circle juggling and circle passing**
 
-The user can choose a polygonal table. A juggler is seated at each edge. The number of edges determines the number of seats.
+The user can choose a polygonal table. A juggler is seated at each edge. The number of edges determines the number of seats. Polygonal tables have one seat per edge.
 
 **Solo patterns**
 
-A solo pattern is visualised with one juggler at a table.
+A solo pattern is visualised with one juggler at a small table represented as a 1 by 1 layout.
 
 **Rectangular table and individual passing patterns**
 
-The user can choose a rectangular table and specify the number of seats on each side. Jugglers are assigned to individual seats. This provides a structured alternative to the polygonal table for individual passing patterns. Free positioning and rotation of each juggler in the scene are not currently required.
+The user can choose a rectangular table and specify the number of seats for each of its two side dimensions. Opposite sides use the corresponding configured seat count. Jugglers are assigned to individual seats. Seats may remain empty, but every juggler must be assigned a seat. This provides a structured alternative to the polygonal table for individual passing patterns. Free positioning and rotation of each juggler in the scene are not currently required.
 
 ### 2.3 Playback and scene controls
 
@@ -221,11 +225,13 @@ The renderer must support:
 - Play and pause.
 - Scrubbing through the sequence manually.
 - Stepping forwards and backwards by exactly one beat.
-- Playing exactly one cycle.
-- Repeating the sequence indefinitely.
-- Setting playback tempo in beats per minute (BPM).
+- Playing one run through the sequence.
+- Repeating the sequence continuously.
+- Setting playback tempo in beats per minute (BPM), stored as part of the sequence.
 
-In step mode, moving from one beat state to the next is animated over 0.5 seconds, after which playback stops at the new beat. In continuous playback, the animation runs smoothly without pauses at beat boundaries. The duration of each beat is determined by the BPM, and subdivisions take proportionally less time. For example, a half beat takes half the duration of a full beat.
+In step mode, moving from one beat state to the next is animated over 0.5 seconds, after which playback stops at the new beat. In continuous playback, the animation runs smoothly without pauses at beat boundaries. The duration of each beat is determined by the BPM, and subdivisions take proportionally less time. For example, a half beat takes half the duration of a full beat. The proposed default tempo is 120 BPM, subject to confirmation.
+
+When continuous repetition is enabled, a sequence whose final object state matches its initial object state can loop seamlessly. If the states do not match, the renderer jumps back to the initial state between runs. The user can choose between one run through and continuous repetition.
 - Camera rotation.
 - Zoom.
 - Panning with the mouse.
@@ -238,7 +244,9 @@ Selecting a table position in the renderer should visibly mark that position. Th
 
 The current playback position should be indicated in the Sequence Editor, so the user can see which point in the notation is currently being animated. A corresponding current beat or subdivision indicator inside the renderer is not required at this stage.
 
-Changes made in the Sequence Editor update the renderer immediately, including during playback.
+Changes made in the Sequence Editor update the renderer immediately, including during playback. Selecting a notation cell should highlight the corresponding hand or object in the renderer. Selecting an object or hand in the renderer should highlight the corresponding notation cell in the editor. During playback, the editor indicates both the current beat and the exact subdivision.
+
+Manual scrubbing snaps to beat or subdivision positions. Showing arbitrary intermediate animation frames while scrubbing is not required.
 
 ## 3. Sequence Generator
 
