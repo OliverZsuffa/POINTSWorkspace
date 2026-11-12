@@ -559,4 +559,14 @@ describe('sequence editor', () => {
     expect(screen.getByRole('button', { name: 'Juggler 1 left beat 3 empty' })).toBeInTheDocument();
   });
 
+
+  it('sets table position targets by typing their labels', () => {
+    render(<App />);
+    const main = screen.getByRole('main', { name: 'POINTS Workspace' });
+    fireEvent.click(screen.getByRole('button', { name: 'Juggler 1 left beat 1 empty' }));
+    fireEvent.keyDown(main, { key: '1' });
+    fireEvent.keyDown(main, { key: 'B' });
+    expect(screen.getByRole('button', { name: 'Juggler 1 left beat 1 LIFT B' })).toBeInTheDocument();
+  });
+
 });
