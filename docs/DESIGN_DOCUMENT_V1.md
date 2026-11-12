@@ -44,6 +44,10 @@ On phones, the Editor and Renderer are accessed through separate tabs. Tablets u
 
 The editor must be minimal. The notation and the work area are the focus.
 
+The application must use progressive disclosure. Present basic and frequently used features first. Keep advanced options available but hidden until the user needs them or explicitly enables them. Do not confront users with every available option at once. This principle applies throughout the application, not only to the editor.
+
+Consistency is a global interaction requirement. Reuse components wherever possible. Menus and controls should behave consistently across the application. If two components look alike, they should work alike. Users should not need to learn different interaction rules for visually equivalent controls.
+
 Do not add decorative descriptions, unnecessary explanatory text, generic placeholder copy, filler labels, or AI generated sounding text. Controls should be compact and placed where they are needed. The interface should communicate through its structure, notation, icons, and direct interaction.
 
 The visual and interaction design should take inspiration from:
@@ -72,7 +76,11 @@ The settings include, at minimum:
 - Sequence type, including solo, circle passing, and individual passing.
 - Other structural and notation properties defined by POINTS notation.
 
-Changing a setting must update the sequence editor and renderer to reflect the new sequence structure. The exact behaviour when a change would invalidate existing notation remains to be specified.
+Adding a juggler creates a new juggler section with empty left and right hand rows. Removing a juggler does not silently delete or rewrite passing references to that juggler. Such references become invalid and are shown through the normal validation system.
+
+Adding a position makes it immediately available as a target wherever that position is valid. The initial state editor should reuse the same components and interaction patterns as other relevant position editing controls wherever possible.
+
+Changing a setting must update the sequence editor and renderer to reflect the new sequence structure. The exact behaviour for other changes that would invalidate existing notation remains to be specified.
 
 The complete set of supported sequence properties and their valid values must be derived from the POINTS notation specification in `docs/POINTS_NOTATION.md`. The design must not silently omit a notation feature.
 
@@ -103,21 +111,29 @@ The notation specification is the source of truth for the meaning and constraint
 
 The initial object distribution is editable. Users can see the available positions for each juggler and indicate which positions initially contain an object. This includes table positions and hand positions.
 
-The editor must also provide an overview of object state at every beat for every juggler. It must show which positions are occupied by balls and which hand holds each ball. It updates as the sequence changes. Its exact visual presentation and placement remain open.
+The editor must also provide an overview of object state at every beat for every juggler. It must show which positions are occupied by balls and which hand holds each ball. It updates as the sequence changes. The overview is hidden by default to avoid clutter. It can be revealed in the context of a beat, for example by hovering over that beat. Clicking a beat in the overview moves the renderer to that exact beat.
+
+Object state is evaluated at the beat itself. Movement and transfers happen between beats, so the overview must show the state at the selected beat rather than an intermediate point during movement.
+
+A hand can simultaneously have an object balanced on top of it at its L or R position and another object held with its fingers after a LIFT action. Both object states must be represented. The L and R positions are distinct from an object held by the hand.
 
 ### 1.4 Beats, subdivisions, and bars
 
 When a sequence is created with a given beat count, the table initially displays those beats as separate columns. For example, a sequence with eight beats initially displays beats 1 through 8.
 
-The user can add a subdivision between any two existing columns. A small plus control appears between adjacent columns. Activating it inserts an intermediate time position at that location, following the interaction model of inserting a column in a spreadsheet.
+The user can insert a new beat between existing columns. A small plus control appears between adjacent columns. Activating it inserts a full beat by default, following the interaction model of inserting a column in a spreadsheet. The inserted beat can then be subdivided when a shorter interval is needed.
 
-Subdivisions are not restricted to a single predefined level. The user can add further subdivisions wherever needed.
+Subdivisions are not restricted to a single predefined level. The user can add further subdivisions wherever needed. Each subdivision splits its selected interval in half.
 
 The numerator of the time signature determines the number of beats in each bar. The denominator does not otherwise change the editor's beat structure. The default time signature is 4/4. The table must make each bar boundary visually distinct, using a thicker border or equivalent separator. For example, in 3/4 time, the boundary after every third beat must be identifiable.
 
 A subdivision always splits an existing interval in half. Labels follow conventional musical counting: beat numbers for quarter note beats, `&` for eighth note subdivisions, and `e` and `a` for sixteenth note subdivisions. Labels beyond sixteenth notes remain to be defined.
 
-Users can remove beats and subdivisions, move individual time positions, and select multiple positions to move them together. Exact gestures remain open.
+Users can remove beats and subdivisions, move individual time positions, and select multiple positions to move them together. Multiple selection can include nonadjacent positions. When a time position is moved, the notation values in its column move with it across all juggler hand rows.
+
+Moving a subdivision is also supported, provided it is placed in a logically valid position within the timeline. The visual distinction between main beats and subdivision columns remains to be designed.
+
+Reducing the total beat count removes beats only from the end of the sequence. A beat can be removed by reducing the count only when all its cells are empty. Nonempty beats at the end must not be silently discarded. Increasing the beat count adds empty beats at the end.
 
 ### 1.5 Editing interactions
 
@@ -127,7 +143,7 @@ Notation elements can be entered and modified through a combination of:
 - Contextual menus.
 - Keyboard shortcuts.
 
-Keyboard shortcuts are a core part of the editor. A dedicated help section must explain them. A permanent shortcut overlay is not required.
+Keyboard shortcuts are a core part of the editor. A dedicated help section must explain them. A permanent shortcut overlay is not required. Undo and redo apply to changes made in the Sequence Editor only. They do not undo renderer settings or generator settings.
 
 The Godot interaction model is the starting point for the web editor, subject to usability testing. Retain the existing click, drag, modifier key, and right click interactions where practical. Dragging must construct the ball rectangle notation, including LIFT, HOLD, LEAVE, and ZIP actions, rather than merely stamping the same symbol into every traversed cell. The exact web gestures require testing.
 
@@ -137,7 +153,7 @@ For circle passing, the relative performer distance should be entered numericall
 
 ZIP is paired. Creating one side automatically creates the corresponding source or receiving symbol in the other hand row at the same beat. Both symbols remain linked and are validated as one transfer.
 
-SPECIAL actions support free text. They can be assigned to one hand or linked across both hands for coordinated actions such as a clap.
+SPECIAL actions support free text. They can be assigned to one hand or linked across both hands for coordinated actions such as a clap. A linked SPECIAL action uses identical text in both linked cells. Linked SPECIAL cells are visually connected and use a yellow highlight. Since coordinated clap cells occur in the same beat, no directional arrows are needed. A SPECIAL action can only be assigned when the relevant hand is empty. No additional object state effects are currently required beyond this condition.
 
 ### 1.6 Validation and errors
 
@@ -151,7 +167,7 @@ Validation must cover the rules defined by POINTS notation. Examples include:
 - A transfer whose source and receiving actions do not match.
 - Inconsistent object states across time or between hands.
 
-The exact validation rules and severity levels remain to be specified. Selecting a general error should navigate to the affected cell or time position where possible.
+The exact validation rules and severity levels remain to be specified. Selecting a general error should navigate to the affected cell or time position where possible. SPECIAL actions must be rejected when the relevant hand is not empty.
 
 ### 1.7 Export and sharing
 
@@ -163,7 +179,7 @@ The export should support both:
 
 Each sequence should also have a compact textual code that encodes the complete pattern. The code should be short enough to share easily. Another user should be able to paste the code into POINTS Workspace and reconstruct the complete sequence.
 
-The actual encoding format and import interaction have not yet been designed. A conventional manual save action is not required for each sequence. Each sequence is automatically represented by its compact code. The application may cache the most recent code locally and reconstruct the sequence from it when reopened. Exact persistence and recovery behaviour remains open.
+The actual encoding format and import interaction have not yet been designed. The sequence code must be available to copy explicitly at any time, even though it is generated automatically. A conventional manual save action is not required for each sequence. The application must restore the most recent sequence when reopened, including sequences that are incomplete or currently invalid. The exact local storage and recovery mechanism remains open.
 
 ## 2. Sequence Renderer
 
