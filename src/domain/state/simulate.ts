@@ -322,18 +322,46 @@ export function simulateSequence(sequence: Sequence): SimulationResult {
   }
 
   const beatIds = new Set(sequence.beats.map((beat) => beat.id));
+  const performerIds = new Set(sequence.performers.map((performer) => performer.id));
+  const positionIds = new Set(sequence.positions.map((position) => position.id));
   const entriesByBeat = new Map<string, NotationEntry[]>();
   const allEntryIds = new Set<ActionEntryId>();
+  const structuralIssues: ValidationIssue[] = [];
+
+  if (beatIds.size !== sequence.beats.length) structuralIssues.push(problem('duplicate-beat-id', 'Beat identifiers must be unique.'));
+  if (performerIds.size !== sequence.performers.length) structuralIssues.push(problem('duplicate-performer-id', 'Performer identifiers must be unique.'));
+  if (positionIds.size !== sequence.positions.length) structuralIssues.push(problem('duplicate-position-id', 'Position identifiers must be unique.'));
+
+  for (const position of sequence.positions) {
+    if (position.kind === 'table' && position.owner.kind === 'performer' && !performerIds.has(position.owner.performerId)) {
+      structuralIssues.push(problem('unknown-position-owner', 'A table position belongs to an unknown performer.', [], [position.id]));
+    }
+  }
+
   for (const entry of sequence.notation) {
-    if (allEntryIds.has(entry.id)) issues.push(problem('duplicate-entry-id', 'Notation entry ID "' + entry.id + '" is duplicated.', [entry]));
+    if (allEntryIds.has(entry.id)) structuralIssues.push(problem('duplicate-entry-id', 'Notation entry ID "' + entry.id + '" is duplicated.', [entry]));
     allEntryIds.add(entry.id);
     if (!beatIds.has(entry.time.beatId)) {
-      issues.push(problem('unknown-action-beat', 'Action references unknown beat "' + entry.time.beatId + '".', [entry]));
+      structuralIssues.push(problem('unknown-action-beat', 'Action references unknown beat "' + entry.time.beatId + '".', [entry]));
       continue;
     }
+    if (
+      !Number.isSafeInteger(entry.time.offset.numerator) ||
+      !Number.isSafeInteger(entry.time.offset.denominator) ||
+      entry.time.offset.denominator <= 0 ||
+      entry.time.offset.numerator < 0 ||
+      entry.time.offset.numerator >= entry.time.offset.denominator
+    ) structuralIssues.push(problem('invalid-action-offset', 'Action offset must be within its main beat.', [entry]));
+
     const group = entriesByBeat.get(entry.time.beatId) ?? [];
     group.push(entry);
     entriesByBeat.set(entry.time.beatId, group);
+  }
+
+  if (structuralIssues.length) {
+    issues.push(...structuralIssues);
+    snapshots.push(makeSnapshot(sequence, state, { beatId: firstBeat.id, offset: rational(0) }, 'before'));
+    return { snapshots, validation: { isValid: false, issues } };
   }
 
   for (const beat of sequence.beats) {
