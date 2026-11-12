@@ -494,9 +494,7 @@ export default function App() {
     commit({ ...sequence, notation });
   };
 
-  const removeSelected = () => {
-    const cells = selectedCells.length ? selectedCells : selected ? [selected] : [];
-    if (!cells.length) return;
+  const removeCells = (cells: readonly EditorCell[]) => {
     const entries = cells.map((cell) => entryAt(cell.performerId, cell.hand, cell.beatId)).filter((entry): entry is NotationEntry => Boolean(entry));
     if (!entries.length) return;
     const removeIds = new Set(entries.map((entry) => entry.id));
@@ -512,6 +510,28 @@ export default function App() {
         : entry);
     }
     commit({ ...sequence, notation });
+  };
+
+  const removeSelected = () => {
+    const cells = selectedCells.length ? selectedCells : selected ? [selected] : [];
+    removeCells(cells);
+  };
+
+  const eraseRectangle = (first: EditorCell, last: EditorCell) => {
+    const rows = sequence.performers.flatMap((performer) => hands.map((hand) => ({ performerId: performer.id, hand })));
+    const firstRow = rows.findIndex((row) => row.performerId === first.performerId && row.hand === first.hand);
+    const lastRow = rows.findIndex((row) => row.performerId === last.performerId && row.hand === last.hand);
+    const firstBeat = sequence.beats.findIndex((beat) => beat.id === first.beatId);
+    const lastBeat = sequence.beats.findIndex((beat) => beat.id === last.beatId);
+    const cells: EditorCell[] = [];
+    for (let row = Math.min(firstRow, lastRow); row <= Math.max(firstRow, lastRow); row += 1) {
+      for (let beat = Math.min(firstBeat, lastBeat); beat <= Math.max(firstBeat, lastBeat); beat += 1) {
+        const targetRow = rows[row];
+        const targetBeat = sequence.beats[beat];
+        if (targetRow && targetBeat) cells.push({ ...targetRow, beatId: targetBeat.id });
+      }
+    }
+    removeCells(cells);
   };
 
   const copySelected = () => {
@@ -1138,11 +1158,11 @@ export default function App() {
         )}
       </section>
 
-      <section className="editor-scroll" aria-label="Notation editor">
+      <section className="editor-scroll" aria-label="Notation editor" onClick={(event) => { if (event.target === event.currentTarget) clearSelection(); }}>
         <div className="notation-grid">
           <div className="grid-head" style={{ gridTemplateColumns: `82px repeat(${sequence.beats.length}, 42px) 18px` }}>
             <div className="row-label heading-label">PERFORMER</div>
-            {sequence.beats.map((beat, index) => <div className="beat-head" key={beat.id}><span>{index + 1}</span><small>{Math.floor(index / sequence.timeSignature.beatGrouping.length) + 1}.{(index % sequence.timeSignature.beatGrouping.length) + 1}</small></div>)}
+            {sequence.beats.map((beat, index) => <button type="button" className="beat-head" key={beat.id} onClick={() => selectBeat(beat.id)} aria-label={'Select beat ' + (index + 1)}><span>{index + 1}</span><small>{Math.floor(index / sequence.timeSignature.beatGrouping.length) + 1}.{(index % sequence.timeSignature.beatGrouping.length) + 1}</small></button>)}
             <button type="button" className="add-beat" onClick={addBeat} aria-label="Add beat">+</button>
           </div>
           {sequence.performers.map((performer) => (
@@ -1153,7 +1173,7 @@ export default function App() {
                   <div className="row-label">{hand === 'left' ? 'L' : 'R'}</div>
                   {sequence.beats.map((beat, index) => {
                     const entry = entryAt(performer.id, hand, beat.id);
-                    const selectedCell = selected?.performerId === performer.id && selected.hand === hand && selected.beatId === beat.id;
+                    const selectedCell = selectedCells.some((cell) => cell.performerId === performer.id && cell.hand === hand && cell.beatId === beat.id);
                     const errors = entry ? issuesByEntry.get(entry.id) ?? [] : [];
                     return (
                       <button
@@ -1164,16 +1184,25 @@ export default function App() {
                           if (!event.shiftKey) return;
                           event.preventDefault();
                           const cell = { performerId: performer.id, hand, beatId: beat.id };
-                          setSelected(cell);
+                          selectCell(cell);
                           setDragStart(cell);
                         }}
+                        onMouseDown={(event) => {
+                          if (!event.ctrlKey) return;
+                          event.preventDefault();
+                          const cell = { performerId: performer.id, hand, beatId: beat.id };
+                          setEraseStart(cell);
+                        }}
                         onMouseUp={() => {
+                          const cell = { performerId: performer.id, hand, beatId: beat.id };
+                          if (eraseStart) { eraseRectangle(eraseStart, cell); setEraseStart(null); return; }
                           if (!dragStart) return;
-                          drawRectangle(dragStart, { performerId: performer.id, hand, beatId: beat.id });
+                          drawRectangle(dragStart, cell);
                           setDragStart(null);
                         }}
-                        onClick={() => {
-                          if (!dragStart) setSelected({ performerId: performer.id, hand, beatId: beat.id });
+                        onClick={(event) => {
+                          if (dragStart || eraseStart) return;
+                          selectCell({ performerId: performer.id, hand, beatId: beat.id }, event.shiftKey);
                         }}
                         onDoubleClick={() => entry && entry.action.type === 'SPECIAL' && addAction('SPECIAL')}
                         aria-label={performer.name + ' ' + hand + ' beat ' + (index + 1) + (entry ? ' ' + actionLabel(entry.action, sequence) : ' empty')}
