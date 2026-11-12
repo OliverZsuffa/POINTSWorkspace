@@ -10,12 +10,12 @@ The implementation is divided into bounded work packages so separate agents can 
 |---|---|---|---|
 | 01 | Foundation and domain model | Project scaffold, shared types, sequence model and interfaces | None | Implemented and merged to main |
 | 02 | Object state and validation | Simultaneous beat processing, state transitions and validity checks | 01 | Implemented, pending CI |
-| 03 | Sequence editor | Notation grid, editing interactions, settings and undo | 01, 02 |
-| 04 | Sequence renderer | 3D scene, animation, playback and editor synchronisation | 01, 02 |
-| 05 | Sequence generator | Constraint search and candidate generation | 01, 02 |
-| 06 | Data, persistence and export | Sequence codes, import, local persistence, presets and image export | 01, 02 |
-| 07 | Workspace shell and PWA | Application layout, responsive shell, panel management and offline support | 01 |
-| 08 | Integration and quality assurance | Cross package integration, end to end tests and release readiness | 01 to 07 |
+| 03 | Sequence editor | Notation grid, editing interactions, settings and undo | 01, 02  Awaiting approval |
+| 04 | Sequence renderer | 3D scene, animation, playback and editor synchronisation | 01, 02  Awaiting approval |
+| 05 | Sequence generator | Constraint search and candidate generation | 01, 02  Awaiting approval |
+| 06 | Data, persistence and export | Sequence codes, import, local persistence, presets and image export | 01, 02  Awaiting approval |
+| 07 | Workspace shell and PWA | Application layout, responsive shell, panel management and offline support | 01  Awaiting approval |
+| 08 | Integration and quality assurance | Cross package integration, end to end tests and release readiness | 01 to 07  Awaiting approval |
 
 ## Parallel execution strategy
 
