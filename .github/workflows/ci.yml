@@ -50,3 +50,20 @@ jobs:
 
       - name: Build production bundle
         run: npm run build
+
+      - name: Install browser test tooling
+        run: npm install --no-save --no-audit --no-fund @playwright/test
+
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Verify editor at desktop, tablet and phone viewports
+        run: npx playwright test
+
+      - name: Upload viewport screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: 03c-viewport-review
+          path: test-results/*.png
+          if-no-files-found: ignore

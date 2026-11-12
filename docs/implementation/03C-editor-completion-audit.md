@@ -2,7 +2,7 @@
 
 ## Status
 
-Approved by Oliver on 12 November 2026. Implementation merged into `main` through PR #9. Automated verification passes. Manual visual verification remains outstanding.
+Approved by Oliver on 12 November 2026. The first implementation pass merged through PR #9. The final correction and verification pass is in PR #10. Automated verification passes, and six viewport screenshots have been visually reviewed. The matrix retains Partial for requirements whose full edge case coverage is not yet established.
 
 ## Goal
 
@@ -166,10 +166,10 @@ Use the POINTS website turquoise `#90d0d5` as the application page background. K
 
 ## Verification and acceptance criteria
 
-- [ ] Every included requirement from Packages 03 and 03B appears in the verification matrix.
-- [ ] Every requirement has a recorded result and evidence or an explicit blocker.
-- [ ] No requirement is marked Pass based only on the existence of a UI control or source function.
-- [ ] All confirmed in scope failures are corrected.
+- [x] Every included requirement from Packages 03 and 03B appears in the verification matrix.
+- [x] Every requirement has a recorded result and evidence or an explicit blocker.
+- [x] No requirement is marked Pass based only on the existence of a UI control or source function.
+- [x] All confirmed in scope failures are corrected.
 - [ ] Every notation action can be entered, edited and rendered correctly.
 - [ ] All target editing workflows work for solo, circle passing and individual passing as applicable.
 - [ ] Selection and multi selection work with mouse, keyboard and touch equivalents.
@@ -180,11 +180,11 @@ Use the POINTS website turquoise `#90d0d5` as the application page background. K
 - [ ] Object state overview always reflects simulator snapshots for the selected beat.
 - [ ] Notation cells and symbols are square and visually correct at all required viewport sizes.
 - [ ] Action names, targets and subscripts are legible without relying on hover.
-- [ ] Editing controls are grouped around the notation grid and remain usable on narrow screens.
-- [ ] Keyboard shortcuts are documented and the help view lists only working shortcuts.
+- [x] Editing controls are grouped around the notation grid and remain usable on narrow screens.
+- [x] Keyboard shortcuts are documented and the help view lists only working shortcuts.
 - [ ] No editing capability is removed on tablet or phone.
-- [ ] Prettier, ESLint, strict TypeScript, all automated tests and production build pass.
-- [ ] Manual visual review is recorded for desktop, tablet and phone.
+- [x] Prettier, ESLint, strict TypeScript, all automated tests and production build pass.
+- [x] Manual visual review is recorded for desktop, tablet and phone.
 
 ## Dependencies and ownership
 
@@ -198,10 +198,10 @@ Package 07 owns the overall workspace shell. This package may reorganise the edi
 
 1. Exact single key mappings for notation actions were not agreed. Propose them for review and document the final mappings.
 2. Some visual requirements may need adjustment after inspecting the existing SVG assets at actual cell size.
-3. Manual visual verification requires a running browser build. Automated tests alone cannot establish visual quality.
+3. Visual verification was completed using browser screenshots at six viewport sizes. Further physical device testing may reveal touch behaviour not represented by browser emulation.
 4. Compound meter limitations remain outside this package.
 5. The original plan includes some interactions whose detailed gesture behaviour may not be fully specified. Record gaps rather than guessing.
 
 ## Approval
 
-Approved by Oliver on 12 November 2026. Implementation merged into `main` through PR #9. Automated verification passed. Manual visual review at desktop, tablet and phone remains pending.
+Approved by Oliver on 12 November 2026. First implementation pass merged through PR #9. Final corrections and verification are prepared in PR #10. CI run #43282862600 passed formatting, lint, strict TypeScript, 90 unit and component tests, production build and six browser viewport checks. Screenshot review covered 1440x900, 1280x800, 1024x768, 768x1024, 390x844 and 320x700. The verification matrix retains Partial where exhaustive interaction coverage remains incomplete.

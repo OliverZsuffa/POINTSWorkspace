@@ -1495,7 +1495,19 @@ export default function App() {
           {simulation.validation.issues.length === 0 ? <p className="no-issues">Sequence valid</p> : <ul>{simulation.validation.issues.map((issue, index) => (
             <li key={issue.code + index}><span>{issue.description}</span>{issue.affectedEntries[0] && <button type="button" onClick={() => {
               const entry = sequence.notation.find((item) => item.id === issue.affectedEntries[0]);
-              if (entry) selectCell({ performerId: entry.performerId, hand: entry.hand, beatId: entry.time.beatId });
+              if (entry) {
+                const slot = timelineSlots.find((item) =>
+                  item.beatId === entry.time.beatId &&
+                  compareRational(item.offset, entry.time.offset) === 0,
+                );
+                selectCell({
+                  performerId: entry.performerId,
+                  hand: entry.hand,
+                  beatId: entry.time.beatId,
+                  offset: entry.time.offset,
+                  duration: slot?.duration,
+                });
+              }
             }}>Go to</button>}</li>
           ))}</ul>}
         </div>
