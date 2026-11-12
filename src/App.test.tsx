@@ -253,16 +253,16 @@ describe('sequence editor', () => {
     expect(screen.getByRole('button', { name: 'Juggler 1 left beat 2 empty' })).toBeInTheDocument();
   });
 
-  it('copies and pastes notation with the keyboard', async () => {
+  it('copies and pastes notation with the explicit editor controls', async () => {
     const user = userEvent.setup();
     render(<App />);
     const first = screen.getByRole('button', { name: 'Juggler 1 left beat 1 empty' });
     await user.click(first);
     await user.click(screen.getByRole('button', { name: 'LIFT' }));
-    fireEvent.keyDown(first, { key: 'c', ctrlKey: true });
+    await user.click(screen.getByRole('button', { name: 'Copy' }));
     const second = screen.getByRole('button', { name: 'Juggler 1 right beat 2 empty' });
     await user.click(second);
-    fireEvent.keyDown(second, { key: 'v', ctrlKey: true });
+    await user.click(screen.getByRole('button', { name: 'Paste' }));
     expect(screen.getByRole('button', { name: 'Juggler 1 right beat 2 LIFT A' })).toBeInTheDocument();
   });
 
