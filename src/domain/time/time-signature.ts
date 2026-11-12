@@ -1,4 +1,4 @@
-import { multiplyRational, rational, type Rational } from './rational';
+import { multiplyRational, rational, rationalToNumber, type Rational } from './rational';
 
 export type NoteDenominator = 1 | 2 | 4 | 8 | 16 | 32 | 64;
 
@@ -22,10 +22,11 @@ export function createTimeSignature(
   }
 
   if (
+    ![1, 2, 4, 8, 16, 32, 64].includes(denominator) ||
     beatGrouping.length === 0 ||
     beatGrouping.some((group) => !Number.isSafeInteger(group) || group < 1)
   ) {
-    throw new RangeError('A time signature needs positive integer beat groups.');
+    throw new RangeError('A time signature needs a valid denominator and positive beat groups.');
   }
 
   const groupedUnits = beatGrouping.reduce((total, group) => total + group, 0);
@@ -63,4 +64,34 @@ export function getBarDuration(signature: TimeSignature): Rational {
 
 export function getMainBeatsPerBar(signature: TimeSignature): number {
   return signature.beatGrouping.length;
+}
+
+/** BPM is quarter notes per minute, regardless of the time signature denominator. */
+export function getQuarterNoteDurationSeconds(bpm: number): number {
+  if (!Number.isFinite(bpm) || bpm <= 0) {
+    throw new RangeError('BPM must be a positive finite number.');
+  }
+
+  return 60 / bpm;
+}
+
+/** Returns the duration of a main beat at the supplied zero-based bar position. */
+export function getMainBeatDurationSeconds(
+  signature: TimeSignature,
+  mainBeatIndex: number,
+  bpm: number,
+): number {
+  if (!Number.isSafeInteger(mainBeatIndex) || mainBeatIndex < 0) {
+    throw new RangeError('The main beat index must be a non-negative integer.');
+  }
+
+  const beatDuration = getMainBeatDurations(signature)[
+    mainBeatIndex % signature.beatGrouping.length
+  ];
+
+  if (!beatDuration) {
+    throw new RangeError('The time signature does not define this main beat.');
+  }
+
+  return rationalToNumber(beatDuration) * getQuarterNoteDurationSeconds(bpm);
 }

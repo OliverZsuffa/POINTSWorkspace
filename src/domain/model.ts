@@ -264,12 +264,18 @@ export interface SequenceFragment {
   readonly notation: readonly NotationEntry[];
 }
 
-export interface ActionRequirement {
-  readonly actionType: ActionType;
-  readonly occurrence: 'at-least-once' | 'exact-count' | 'forbidden';
-  readonly count?: number;
-  readonly performerId?: PerformerId;
-}
+export type ActionRequirement =
+  | {
+      readonly actionType: ActionType;
+      readonly occurrence: 'at-least-once' | 'forbidden';
+      readonly performerId?: PerformerId;
+    }
+  | {
+      readonly actionType: ActionType;
+      readonly occurrence: 'exact-count';
+      readonly count: number;
+      readonly performerId?: PerformerId;
+    };
 
 export interface GeneratorConstraints {
   readonly looping: 'must-loop' | 'must-not-loop' | 'either';
@@ -286,6 +292,7 @@ export interface GeneratorRequest {
   readonly beatCount: number;
   readonly performerCount: number;
   readonly objectCount: number;
+  readonly availablePositions: readonly PositionDefinition[];
   readonly timeSignature: TimeSignature;
   readonly initialState: InitialState;
   readonly sourceSequence?: Sequence;

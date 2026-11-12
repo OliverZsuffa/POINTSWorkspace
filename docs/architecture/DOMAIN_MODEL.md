@@ -83,6 +83,8 @@ The shared contracts define the interfaces consumed by downstream packages:
 - SequenceGenerator
 - SequenceRendererInput
 
+The generator request includes the allowed sequence types, beat count, performer and object counts, available positions, time signature, initial state and constraints. Exact count action requirements require an explicit count at the type level.
+
 The sequence code encoding itself is intentionally not specified here. The codec interface is stable enough for feature development while leaving the format decision for the data package.
 
 ## Deliberately unresolved

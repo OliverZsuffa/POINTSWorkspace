@@ -3,8 +3,10 @@ import {
   createTimeSignature,
   DEFAULT_TIME_SIGNATURE,
   getBarDuration,
+  getMainBeatDurationSeconds,
   getMainBeatDurations,
   getMainBeatsPerBar,
+  getQuarterNoteDurationSeconds,
   SIX_EIGHT_TIME_SIGNATURE,
 } from './time-signature';
 
@@ -35,7 +37,17 @@ describe('musical time signatures', () => {
     });
   });
 
+  it('uses quarter note BPM to calculate simple and compound beat durations', () => {
+    expect(getQuarterNoteDurationSeconds(120)).toBe(0.5);
+    expect(getMainBeatDurationSeconds(DEFAULT_TIME_SIGNATURE, 0, 120)).toBe(0.5);
+    expect(getMainBeatDurationSeconds(SIX_EIGHT_TIME_SIGNATURE, 0, 120)).toBe(0.75);
+  });
+
   it('rejects groupings that do not fill the bar', () => {
     expect(() => createTimeSignature(6, 8, [3, 2])).toThrow(RangeError);
+  });
+
+  it('rejects invalid tempo values', () => {
+    expect(() => getQuarterNoteDurationSeconds(0)).toThrow(RangeError);
   });
 });
