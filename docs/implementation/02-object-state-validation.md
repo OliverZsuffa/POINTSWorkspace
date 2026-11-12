@@ -53,7 +53,7 @@ Circle passing resolves performer distance using the order of performers in the 
 
 The CI workflow must pass formatting, linting, strict TypeScript checks, automated tests and production build.
 
-The tests cover solo flow, individual passing, ZIP, circle passing and invalid circle distances, TAP versus BOUNCE, hand back LIFT and LEAVE, balanced objects during other actions, invalid initial distributions, atomic rejection of conflicting simultaneous actions and independence from notation array order.
+The tests cover solo flow, individual passing, ZIP, circle passing and invalid circle distances, TAP versus BOUNCE, EMPTY eligibility, hand back LIFT and LEAVE, balanced objects during other actions, invalid initial distributions, atomic rejection of conflicting simultaneous actions and independence from notation array order.
 
 ## Remaining limitations
 
