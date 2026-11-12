@@ -57,7 +57,7 @@ export function getHandPosition(
   if (!performer) return ZERO;
   const anchor = getPerformerAnchor(sequence, performer, layout);
   const facing = getPerformerFacing(sequence, performer, layout);
-  const right = { x: facing.z, y: 0, z: -facing.x };
+  const right = { x: -facing.z, y: 0, z: facing.x };
   const side = hand === 'left' ? -1 : 1;
   return add(add(anchor, scale(right, side * 0.58)), add(scale(facing, 0.28), { x: 0, y: 1.05, z: 0 }));
 }
@@ -82,7 +82,7 @@ export function getTablePositionPosition(
   if (!performer) return ZERO;
   const anchor = getPerformerAnchor(sequence, performer, layout);
   const facing = getPerformerFacing(sequence, performer, layout);
-  const right = { x: facing.z, y: 0, z: -facing.x };
+  const right = { x: -facing.z, y: 0, z: facing.x };
   return add(add(anchor, scale(facing, 1.9)), add(scale(right, positionOffset(position.name)), { x: 0, y: 0.16, z: 0 }));
 }
 

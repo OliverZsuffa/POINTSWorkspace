@@ -380,7 +380,7 @@ export default function SequenceRenderer({ sequence, simulation, onSelectHand }:
           if (performer) {
             const anchor = getPerformerAnchor(current.sequence, performer, current.layout);
             const facing = getPerformerFacing(current.sequence, performer, current.layout);
-            const right = { x: facing.z, y: 0, z: -facing.x };
+            const right = { x: -facing.z, y: 0, z: facing.x };
             const side = visual.hand === 'left' ? -1 : 1;
             const shoulder = vector({
               x: anchor.x + right.x * side * 0.22 + facing.x * 0.08,

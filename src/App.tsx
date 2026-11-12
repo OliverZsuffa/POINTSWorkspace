@@ -24,6 +24,7 @@ import { DEFAULT_TIME_SIGNATURE } from './domain/time/time-signature';
 import { simulateSequence } from './domain/state';
 import { getBallRectangleEntries } from './features/editor/rectangles';
 import { getTimelineSlots, splitSubdivision, type TimelineSlot } from './features/editor/timeline';
+import SequenceRenderer from './features/renderer/SequenceRenderer';
 
 let nextId = 1;
 const id = (prefix: string) => prefix + '-' + (++nextId).toString(36);
@@ -304,6 +305,7 @@ export default function App() {
   const [history, setHistory] = useState<Sequence[]>([]);
   const [future, setFuture] = useState<Sequence[]>([]);
   const [showSettings, setShowSettings] = useState(false);
+  const [showRenderer, setShowRenderer] = useState(false);
   const [showActionMenu, setShowActionMenu] = useState(false);
   const [showState, setShowState] = useState(false);
   const [dragStart, setDragStart] = useState<EditorCell | null>(null);
@@ -1164,6 +1166,7 @@ export default function App() {
         <div className="top-actions">
           <button type="button" onClick={undo} disabled={!history.length} title="Undo">↶</button>
           <button type="button" onClick={redo} disabled={!future.length} title="Redo">↷</button>
+          <button type="button" onClick={() => setShowRenderer((value) => !value)} aria-expanded={showRenderer}>Renderer</button>
           <button type="button" onClick={() => setShowSettings((value) => !value)} aria-expanded={showSettings}>Settings</button>
         </div>
       </header>
@@ -1319,6 +1322,15 @@ export default function App() {
           )}
         </div>
       </section>
+
+      {showRenderer && <SequenceRenderer
+        sequence={sequence}
+        simulation={simulation}
+        onSelectHand={(performerId, hand, beatId) => {
+          selectCell({ performerId, hand, beatId });
+          setShowActionMenu(false);
+        }}
+      />}
 
       <section className="editor-scroll" aria-label="Notation editor" onClick={(event) => { if (event.target === event.currentTarget) clearSelection(); }}>
         <div className="notation-grid">
