@@ -388,6 +388,9 @@ html, body, #root { min-height: 100%; background: #90d0d5; }
 
 
 /* Package 07: strict spreadsheet style notation cells. */
+.hand-row { min-height: 42px; }
+.hand-row .row-label { min-height: 42px; }
+.grid-head .beat-head { width: 42px; min-width: 42px; box-sizing: border-box; }
 .notation-cell {
   position: relative;
   display: block;
