@@ -280,6 +280,9 @@ export default function App() {
   const changeBpm = (value: number) => {
     if (Number.isFinite(value) && value > 0) commit({ ...sequence, bpm: value });
   };
+  const selectedEntry = selected
+    ? entryAt(selected.performerId, selected.hand, selected.beatId)
+    : undefined;
 
   return (
     <main className="app-root" aria-label="POINTS Workspace">
@@ -329,6 +332,15 @@ export default function App() {
           <button type="button" className="tool delete-tool" onClick={removeSelected} disabled={!selected || !entryAt(selected.performerId, selected.hand, selected.beatId)}>Delete</button>
         </div>
         <span className="selection-label">{selected ? sequence.performers.find((item) => item.id === selected.performerId)?.name + ' · ' + selected.hand + ' · beat ' + (sequence.beats.findIndex((beat) => beat.id === selected.beatId) + 1) : 'Select a cell'}</span>
+        {selectedEntry && ['LIFT', 'LEAVE', 'TAP', 'BOUNCE'].includes(selectedEntry.action.type) && selectedEntry.action.target.kind === 'position' && (
+          <label className="target-control">Target
+            <select value={selectedEntry.action.target.positionId} onChange={(event) => changeTarget(selectedEntry, event.target.value)}>
+              {sequence.positions.filter((position) => position.kind === 'table').map((position) => (
+                <option key={position.id} value={position.id}>{position.name}</option>
+              ))}
+            </select>
+          </label>
+        )}
       </section>
 
       <section className="editor-scroll" aria-label="Notation editor">
