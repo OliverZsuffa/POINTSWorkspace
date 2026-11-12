@@ -30,7 +30,6 @@ describe('sequence editor', () => {
     render(<App />);
 
     const start = screen.getByRole('button', { name: 'Juggler 1 left beat 1 empty' });
-    const middle = screen.getByRole('button', { name: 'Juggler 1 left beat 2 empty' });
     const end = screen.getByRole('button', { name: 'Juggler 1 left beat 3 empty' });
 
     fireEvent.mouseDown(start, { shiftKey: true });
