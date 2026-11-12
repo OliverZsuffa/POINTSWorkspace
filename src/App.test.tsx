@@ -400,4 +400,26 @@ describe('sequence editor', () => {
     expect(screen.getByRole('button', { name: 'Juggler 1 right beat 4 HOLD' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Juggler 1 right beat 5 LEAVE A' })).toBeInTheDocument();
   });
+
+  it('moves an individual pass together with both linked performer entries', async () => {
+    const user = userEvent.setup();
+    render(<App />);
+    await user.click(screen.getByRole('button', { name: 'Settings' }));
+    await user.click(screen.getByRole('button', { name: 'Add performer' }));
+    await user.selectOptions(screen.getByLabelText('Type'), 'individual-passing');
+    await user.click(screen.getByRole('button', { name: 'Juggler 1 left beat 1 empty' }));
+    await user.click(screen.getByRole('button', { name: 'LIFT' }));
+    await user.click(screen.getByRole('button', { name: 'Juggler 1 left beat 2 empty' }));
+    await user.click(screen.getByRole('button', { name: 'HOLD' }));
+    await user.click(screen.getByRole('button', { name: 'Juggler 1 left beat 3 empty' }));
+    await user.click(screen.getByRole('button', { name: 'PASS' }));
+    const hold = screen.getByRole('button', { name: 'Juggler 1 left beat 2 HOLD' });
+    const leave = screen.getByRole('button', { name: /Juggler 1 left beat 3 LEAVE/ });
+    fireEvent.mouseDown(hold);
+    fireEvent.mouseUp(leave);
+    expect(screen.getByRole('button', { name: 'Juggler 1 left beat 2 LIFT A' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Juggler 1 left beat 3 HOLD' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Juggler 1 left beat 4 LEAVE/ })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Juggler 2 left beat 4 LIFT X/ })).toBeInTheDocument();
+  });
 });
