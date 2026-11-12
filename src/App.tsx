@@ -650,15 +650,28 @@ export default function App() {
     commit({ ...sequence, balls: [...sequence.balls, ...added], initialState: { placements } });
   };
 
-  const addBeat = () => commit({
-    ...sequence,
-    beats: [...sequence.beats, { id: asBeatId(id('new-beat')), subdivisions: [] }],
-  });
+  const insertBeatAfter = (beatId?: string) => {
+    const index = beatId ? sequence.beats.findIndex((beat) => beat.id === beatId) : sequence.beats.length - 1;
+    if (index < 0) return;
+    const beat = { id: asBeatId(id('new-beat')), subdivisions: [] };
+    const beats = [...sequence.beats];
+    beats.splice(index + 1, 0, beat);
+    commit({ ...sequence, beats });
+    selectCell({ performerId: sequence.performers[0]!.id, hand: 'left', beatId: beat.id });
+  };
+  const addBeat = () => insertBeatAfter();
   const removeBeat = () => {
-    const last = sequence.beats[sequence.beats.length - 1];
-    if (!last || sequence.beats.length <= 1) return;
-    if (sequence.notation.some((entry) => entry.time.beatId === last.id)) return;
-    commit({ ...sequence, beats: sequence.beats.slice(0, -1) });
+    const target = selected?.beatId ? sequence.beats.find((beat) => beat.id === selected.beatId) : sequence.beats[sequence.beats.length - 1];
+    if (!target || sequence.beats.length <= 1) return;
+    if (sequence.notation.some((entry) => entry.time.beatId === target.id)) {
+      window.alert('A beat containing notation cannot be removed.');
+      return;
+    }
+    const index = sequence.beats.findIndex((beat) => beat.id === target.id);
+    const beats = sequence.beats.filter((beat) => beat.id !== target.id);
+    commit({ ...sequence, beats });
+    const nextBeat = beats[Math.min(index, beats.length - 1)]!;
+    if (selected) selectCell({ ...selected, beatId: nextBeat.id });
   };
   const addPerformer = () => {
     const performerId = asPerformerId(id('performer'));
@@ -1162,7 +1175,7 @@ export default function App() {
         <div className="notation-grid">
           <div className="grid-head" style={{ gridTemplateColumns: `82px repeat(${sequence.beats.length}, 42px) 18px` }}>
             <div className="row-label heading-label">PERFORMER</div>
-            {sequence.beats.map((beat, index) => <button type="button" className="beat-head" key={beat.id} onClick={() => selectBeat(beat.id)} aria-label={'Select beat ' + (index + 1)}><span>{index + 1}</span><small>{Math.floor(index / sequence.timeSignature.beatGrouping.length) + 1}.{(index % sequence.timeSignature.beatGrouping.length) + 1}</small></button>)}
+            {sequence.beats.map((beat, index) => <div className="beat-head" key={beat.id}><button type="button" className="beat-select" onClick={() => selectBeat(beat.id)} aria-label={'Select beat ' + (index + 1)}><span>{index + 1}</span><small>{Math.floor(index / sequence.timeSignature.beatGrouping.length) + 1}.{(index % sequence.timeSignature.beatGrouping.length) + 1}</small></button><button type="button" className="insert-beat" onClick={() => insertBeatAfter(beat.id)} aria-label={'Insert beat after ' + (index + 1)}>+</button></div>)}
             <button type="button" className="add-beat" onClick={addBeat} aria-label="Add beat">+</button>
           </div>
           {sequence.performers.map((performer) => (
