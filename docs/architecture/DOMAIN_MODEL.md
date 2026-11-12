@@ -65,7 +65,7 @@ Notation entries use a discriminated action union:
 - ZIP
 - SPECIAL
 
-LIFT and LEAVE can target a normal position, a circle passing relative position or the relevant individual passing hand reference. TAP and BOUNCE target a position. ZIP entries carry a shared link ID and a source or receiver role. Linked SPECIAL entries may share a link ID and must use the same text. A standalone SPECIAL has no link ID.
+LIFT and LEAVE can target a table position, a hand back position, a circle passing relative position or the relevant individual passing hand reference. LIFT from a hand back moves the balanced object into the acting hand. LEAVE to a hand back moves the held object onto that hand back if it is free. TAP and BOUNCE target a defined position. ZIP entries carry a shared link ID and a source or receiver role. Linked SPECIAL entries may share a link ID and must use the same text. A standalone SPECIAL has no link ID.
 
 The domain model records notation. The validation and simulation package determines whether the actions are legal in the current state. It provides a state snapshot immediately before and immediately after each main beat.
 
