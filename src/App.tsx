@@ -330,7 +330,7 @@ export default function App() {
       const bounds = workspace.getBoundingClientRect();
       if (bounds.width <= 0) return;
       const percentage = ((event.clientX - bounds.left) / bounds.width) * 100;
-      setEditorShare(Math.max(25, Math.min(75, percentage)));
+      setEditorShare(Math.max(25, Math.min(75, panelsSwapped ? 100 - percentage : percentage)));
     };
     const stop = () => setResizingPanels(false);
     window.addEventListener('pointermove', move);
@@ -341,7 +341,7 @@ export default function App() {
       window.removeEventListener('pointerup', stop);
       window.removeEventListener('pointercancel', stop);
     };
-  }, [resizingPanels]);
+  }, [resizingPanels, panelsSwapped]);
 
   const editorPerformers = sequence.sequenceType === 'circle-passing' ? sequence.performers.slice(0, 1) : sequence.performers;
   const editorPositions = sequence.positions.filter((position) =>
@@ -1569,7 +1569,11 @@ export default function App() {
 
       <section
         className={'workspace-panels' + (panelsSwapped && showEditor && showRenderer ? ' swapped' : '') + ' active-' + activeWorkspaceTab}
-        style={{ gridTemplateColumns: showEditor && showRenderer ? `${editorShare}% 8px ${100 - editorShare}%` : 'minmax(0, 1fr)' }}
+        style={{ gridTemplateColumns: showEditor && showRenderer
+          ? panelsSwapped
+            ? `calc(${100 - editorShare}% - 4px) 8px calc(${editorShare}% - 4px)`
+            : `calc(${editorShare}% - 4px) 8px calc(${100 - editorShare}% - 4px)`
+          : 'minmax(0, 1fr)' }}
       >
         {showEditor && <div className="editor-workspace-panel">
           <div className="workspace-panel-header">
