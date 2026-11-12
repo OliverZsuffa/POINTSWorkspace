@@ -348,9 +348,14 @@ export default function SequenceRenderer({ sequence, simulation, onSelectHand }:
         camera.updateMatrixWorld(true);
         const cameraRight = new THREE.Vector3().setFromMatrixColumn(camera.matrixWorld, 0).normalize();
         const cameraUp = new THREE.Vector3().setFromMatrixColumn(camera.matrixWorld, 1).normalize();
-        const panScale = radius * 0.0018;
-        target.addScaledVector(cameraRight, -dx * panScale);
-        target.addScaledVector(cameraUp, dy * panScale);
+        const offset = getCameraPanOffset(
+          { x: cameraRight.x, y: cameraRight.y, z: cameraRight.z },
+          { x: cameraUp.x, y: cameraUp.y, z: cameraUp.z },
+          dx,
+          dy,
+          radius,
+        );
+        target.add(vector(offset));
       } else {
         theta -= dx * 0.008;
         phi += dy * 0.006;
@@ -440,9 +445,8 @@ export default function SequenceRenderer({ sequence, simulation, onSelectHand }:
               targetPoint = { x: (base.x + other.x) / 2, y: 1.15, z: (base.z + other.z) / 2 };
             }
           }
-          const pulse = Math.sin(progressValue * Math.PI);
           const handPoint = targetPoint
-            ? lerpPoint(base, targetPoint, pulse)
+            ? vector(getHandReachPosition(base, targetPoint, progressValue))
             : vector(base);
           visual.mesh.position.copy(handPoint);
           const performer = current.sequence.performers.find((item) => item.id === visual.performerId);
