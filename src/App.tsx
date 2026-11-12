@@ -310,6 +310,7 @@ export default function App() {
   const [showRenderer, setShowRenderer] = useState(false);
   const [showActionMenu, setShowActionMenu] = useState(false);
   const [showState, setShowState] = useState(false);
+  const [showShortcutHelp, setShowShortcutHelp] = useState(false);
   const [dragStart, setDragStart] = useState<EditorCell | null>(null);
   const [passRecipientId, setPassRecipientId] = useState('');
   const [passRecipientHand, setPassRecipientHand] = useState<Hand>('left');
@@ -410,14 +411,32 @@ export default function App() {
     selectCell(endCell);
   };
 
-  // Keyboard mappings are limited to the interactions approved in Package 03.
   const handleEditorKeyDown = (event: KeyboardEvent<HTMLElement>) => {
     if (event.target instanceof HTMLElement && ['INPUT', 'SELECT', 'TEXTAREA'].includes(event.target.tagName)) return;
-    if (event.key === 'Escape') { clearSelection(); return; }
+    const modifier = event.ctrlKey || event.metaKey;
+    if (modifier && event.key.toLowerCase() === 'c') { event.preventDefault(); copySelected(); return; }
+    if (modifier && event.key.toLowerCase() === 'v') { event.preventDefault(); pasteSelected(); return; }
+    if (modifier && event.key.toLowerCase() === 'z') { event.preventDefault(); event.shiftKey ? redo() : undo(); return; }
+    if (modifier && event.key.toLowerCase() === 'y') { event.preventDefault(); redo(); return; }
+    if (event.key === '?' || (event.shiftKey && event.key === '/')) { event.preventDefault(); setShowShortcutHelp(true); return; }
+    if (event.key === 'Escape') {
+      if (showShortcutHelp) setShowShortcutHelp(false);
+      else clearSelection();
+      return;
+    }
     if (!selected) return;
-    if (event.key === 'Backspace') {
+    if (event.key === 'Backspace' || event.key === 'Delete') {
       event.preventDefault();
       removeSelected();
+      return;
+    }
+    const actionShortcuts: Record<string, ActionName> = {
+      '1': 'LIFT', '2': 'HOLD', '3': 'LEAVE', '4': 'BOUNCE',
+      '5': 'TAP', '6': 'EMPTY', '7': 'ZIP', '8': 'SPECIAL',
+    };
+    if (!modifier && actionShortcuts[event.key]) {
+      event.preventDefault();
+      addAction(actionShortcuts[event.key]!);
       return;
     }
     if (!['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(event.key)) return;
@@ -1170,6 +1189,7 @@ export default function App() {
           <button type="button" onClick={redo} disabled={!future.length} title="Redo">↷</button>
           <button type="button" onClick={() => setShowRenderer((value) => !value)} aria-expanded={showRenderer}>Renderer</button>
           <button type="button" onClick={() => setShowSettings((value) => !value)} aria-expanded={showSettings}>Settings</button>
+          <button type="button" onClick={() => setShowShortcutHelp(true)} aria-label="Keyboard shortcuts" title="Keyboard shortcuts">?</button>
         </div>
       </header>
 
@@ -1270,6 +1290,16 @@ export default function App() {
         })}
       </section>
 
+      {showRenderer && <SequenceRenderer
+        sequence={sequence}
+        simulation={simulation}
+        onSelectHand={(performerId, hand, beatId) => {
+          selectCell({ performerId, hand, beatId });
+          setShowActionMenu(false);
+        }}
+      />}
+
+      <div className="editor-workspace">
       <section className="editor-toolbar" aria-label="Notation actions">
         <div className="action-tools">
           <button type="button" className={'tool mode-tool' + (touchMode === 'select' ? ' active' : '')} onClick={() => { setTouchMode(touchMode === 'select' ? null : 'select'); setDragStart(null); setMoveStart(null); setEraseStart(null); setShowActionMenu(false); }}>Select</button>
@@ -1325,18 +1355,9 @@ export default function App() {
         </div>
       </section>
 
-      {showRenderer && <SequenceRenderer
-        sequence={sequence}
-        simulation={simulation}
-        onSelectHand={(performerId, hand, beatId) => {
-          selectCell({ performerId, hand, beatId });
-          setShowActionMenu(false);
-        }}
-      />}
-
       <section className="editor-scroll" aria-label="Notation editor" onClick={(event) => { if (event.target === event.currentTarget) clearSelection(); }}>
         <div className="notation-grid">
-          <div className="grid-head" style={{ gridTemplateColumns: `82px repeat(${timelineSlots.length}, 52px) 18px` }}>
+          <div className="grid-head" style={{ gridTemplateColumns: `82px repeat(${timelineSlots.length}, 42px) 18px` }}>
             <div className="row-label heading-label">PERFORMER</div>
             {timelineSlots.map((slot, index) => {
               const beatIndex = sequence.beats.findIndex((beat) => beat.id === slot.beatId);
@@ -1360,7 +1381,7 @@ export default function App() {
             <div className="performer-block" key={performer.id}>
               <div className="performer-heading">{performer.name}<span>{performer.identifier ?? ''}</span></div>
               {hands.map((hand) => (
-                <div className="hand-row" key={hand} style={{ gridTemplateColumns: `82px repeat(${timelineSlots.length}, 52px) 18px` }}>
+                <div className="hand-row" key={hand} style={{ gridTemplateColumns: `82px repeat(${timelineSlots.length}, 42px) 18px` }}>
                   <div className="row-label">{hand === 'left' ? 'L' : 'R'}</div>
                   {timelineSlots.map((slot) => {
                     const beatIndex = sequence.beats.findIndex((beat) => beat.id === slot.beatId);
@@ -1439,6 +1460,8 @@ export default function App() {
         </div>
       </section>
 
+      </div>
+
       <section className="bottom-panels">
         <div className="validation-panel" role="region" aria-label="Validation">
           <div className="panel-heading"><strong>Validation</strong><span className={simulation.validation.isValid ? 'valid-count' : 'error-count'}>{simulation.validation.issues.length} {simulation.validation.issues.length === 1 ? 'issue' : 'issues'}</span></div>
@@ -1465,6 +1488,26 @@ export default function App() {
           </div>}
         </div>
       </section>
+    {showShortcutHelp && <div className="shortcut-overlay" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setShowShortcutHelp(false); }}>
+      <section className="shortcut-dialog" role="dialog" aria-modal="true" aria-labelledby="shortcut-title">
+        <div className="shortcut-heading"><h2 id="shortcut-title">Keyboard shortcuts</h2><button type="button" onClick={() => setShowShortcutHelp(false)} aria-label="Close keyboard shortcuts">×</button></div>
+        <div className="shortcut-list">
+          <div><kbd>← ↑ ↓ →</kbd><span>Move selection</span></div>
+          <div><kbd>Shift + arrows</kbd><span>Extend selection</span></div>
+          <div><kbd>1 to 8</kbd><span>Insert LIFT, HOLD, LEAVE, BOUNCE, TAP, EMPTY, ZIP or SPECIAL</span></div>
+          <div><kbd>Ctrl / ⌘ + C</kbd><span>Copy selected notation</span></div>
+          <div><kbd>Ctrl / ⌘ + V</kbd><span>Paste at selected cell</span></div>
+          <div><kbd>Ctrl / ⌘ + Z</kbd><span>Undo</span></div>
+          <div><kbd>Ctrl / ⌘ + Shift + Z</kbd><span>Redo</span></div>
+          <div><kbd>Ctrl / ⌘ + Y</kbd><span>Redo</span></div>
+          <div><kbd>Backspace / Delete</kbd><span>Delete selected notation</span></div>
+          <div><kbd>Escape</kbd><span>Clear selection or close this help</span></div>
+          <div><kbd>?</kbd><span>Show this reference</span></div>
+          <div><kbd>Shift + drag</kbd><span>Draw a ball rectangle</span></div>
+          <div><kbd>Ctrl + drag</kbd><span>Erase a ball rectangle</span></div>
+        </div>
+      </section>
+    </div>}
     </main>
   );
 }
