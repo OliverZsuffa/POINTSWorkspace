@@ -427,24 +427,40 @@ describe('sequence editor', () => {
 
   it('supports tap based drawing, moving and erasing for touch layouts', () => {
     const { container } = render(<App />);
-    const modes = container.querySelectorAll('.mode-tool');
-    fireEvent.click(modes[0]!);
+    const mode = (name: string) => Array.from(container.querySelectorAll('.mode-tool')).find((button) => button.textContent === name)!;
+    fireEvent.click(mode('Draw'));
     fireEvent.click(screen.getByRole('button', { name: 'Juggler 1 left beat 1 empty' }));
     fireEvent.click(screen.getByRole('button', { name: 'Juggler 1 left beat 3 empty' }));
     expect(screen.getByRole('button', { name: 'Juggler 1 left beat 1 LIFT A' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Juggler 1 left beat 3 LEAVE A' })).toBeInTheDocument();
 
-    fireEvent.click(modes[1]!);
+    fireEvent.click(mode('Move'));
     fireEvent.click(screen.getByRole('button', { name: 'Juggler 1 left beat 2 HOLD' }));
     fireEvent.click(screen.getByRole('button', { name: 'Juggler 1 left beat 3 LEAVE A' }));
     expect(screen.getByRole('button', { name: 'Juggler 1 left beat 2 LIFT A' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Juggler 1 left beat 3 HOLD' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Juggler 1 left beat 4 LEAVE A' })).toBeInTheDocument();
 
-    fireEvent.click(modes[2]!);
+    fireEvent.click(mode('Erase'));
     fireEvent.click(screen.getByRole('button', { name: 'Juggler 1 left beat 2 LIFT A' }));
     fireEvent.click(screen.getByRole('button', { name: 'Juggler 1 left beat 4 LEAVE A' }));
     expect(screen.getByRole('button', { name: 'Juggler 1 left beat 2 empty' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Juggler 1 left beat 4 empty' })).toBeInTheDocument();
+  });
+
+  it('supports multi selection by tapping cells on touch layouts', async () => {
+    const user = userEvent.setup();
+    const { container } = render(<App />);
+    await user.click(screen.getByRole('button', { name: 'Juggler 1 left beat 1 empty' }));
+    await user.click(screen.getByRole('button', { name: 'LIFT' }));
+    await user.click(screen.getByRole('button', { name: 'Juggler 1 left beat 2 empty' }));
+    await user.click(screen.getByRole('button', { name: 'LIFT' }));
+    const select = Array.from(container.querySelectorAll('.mode-tool')).find((button) => button.textContent === 'Select')!;
+    fireEvent.click(select);
+    fireEvent.click(screen.getByRole('button', { name: 'Juggler 1 left beat 1 LIFT A' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Juggler 1 left beat 2 LIFT A' }));
+    await user.click(screen.getByRole('button', { name: 'Delete' }));
+    expect(screen.getByRole('button', { name: 'Juggler 1 left beat 1 empty' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Juggler 1 left beat 2 empty' })).toBeInTheDocument();
   });
 });
