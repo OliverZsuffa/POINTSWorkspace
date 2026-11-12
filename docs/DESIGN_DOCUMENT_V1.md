@@ -288,7 +288,9 @@ The user can specify:
 - Whether the sequence must loop cleanly, must not loop cleanly, or either is acceptable.
 - Sequence type: solo, circle passing, or individual passing.
 
-The user can require or forbid particular actions. Requirements can specify that an action occurs at least once or occurs an exact number of times. The generator must support both inclusion and exclusion conditions.
+The user can require or forbid particular actions. Requirements can specify that an action occurs at least once or occurs an exact number of times. The generator must support both inclusion and exclusion conditions. Action requirements apply anywhere in the sequence; restricting them to particular beats or bars is not required. ZIP counts refer to complete transfers, not individual ZIP symbols. For example, two ZIP transfers correspond to four ZIP symbols. The generator should provide a dedicated field for the required number of passes in the generated sequence. The exact definition and counting rules for a pass remain to be clarified.
+
+The user can require that every juggler performs at least one specified action.
 
 The generator must also support short sequence codes as constraints. A supplied sequence code can require a particular subsequence to occur somewhere in the generated result, or forbid it.
 
