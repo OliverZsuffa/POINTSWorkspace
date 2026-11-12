@@ -10,7 +10,7 @@ The implementation is divided into bounded work packages so separate agents can 
 |---|---|---|---|
 | 01 | Foundation and domain model | Project scaffold, shared types, sequence model and interfaces | None | Implemented and merged to main |
 | 02 | Object state and validation | Simultaneous beat processing, state transitions and validity checks | 01 | Implemented and merged to main |
-| 03 | Sequence editor | Notation grid, editing interactions, settings and undo | 01, 02 | Awaiting approval |
+| 03 | Sequence editor | Notation grid, editing interactions, settings and undo | 01, 02 | In progress |
 | 04 | Sequence renderer | 3D scene, animation, playback and editor synchronisation | 01, 02 | Awaiting approval |
 | 05 | Sequence generator | Constraint search and candidate generation | 01, 02 | Awaiting approval |
 | 06 | Data, persistence and export | Sequence codes, import, local persistence, presets and image export | 01, 02 | Awaiting approval |
