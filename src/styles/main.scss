@@ -127,3 +127,6 @@ button:disabled { cursor: default; opacity: .35; }
   .initial-position.hand-back { min-width: 40px; }
   .tool { min-width: 40px; min-height: 40px; }
 }
+
+.ball-segment { display: block; width: 100%; height: 100%; }
+.notation-cell.occupied { border-left-color: transparent; }
