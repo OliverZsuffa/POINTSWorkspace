@@ -87,12 +87,11 @@ export function getPerformerAnchor(
   const index = sequence.performers.findIndex((item) => item.id === performer.id);
   const count = Math.max(1, sequence.performers.length);
 
-  if (layout === 'line') {
-    return { x: (index - (count - 1) / 2) * 2.8, y: 0, z: 2.85 };
-  }
-
   const assignment = sequence.seatAssignments.find((item) => item.performerId === performer.id);
   const polygonSideCount = getPolygonSideCount(sequence);
+  if (polygonSideCount === 0 && layout === 'line') {
+    return { x: (index - (count - 1) / 2) * 2.8, y: 0, z: 2.85 };
+  }
   if (polygonSideCount > 0) {
     const edgeIndex = assignment?.seat.kind === 'polygon-edge' ? assignment.seat.edgeIndex : index;
     const footprint = getTableFootprint(sequence);
@@ -103,8 +102,12 @@ export function getPerformerAnchor(
   }
 
   if (assignment?.seat.kind === 'rectangle-side' && sequence.tableLayout.type === 'rectangle') {
-    const width = Math.max(3.2, sequence.tableLayout.longSideSeatCount * 1.15);
-    const depth = Math.max(2.4, sequence.tableLayout.shortSideSeatCount * 1.15);
+    const maxOwnedPositions = Math.max(1, ...sequence.performers.map((performer) =>
+      sequence.positions.filter((position) => position.kind === 'table' && position.owner.kind === 'performer' && position.owner.performerId === performer.id).length,
+    ));
+    const positionSpan = (maxOwnedPositions - 1) * 0.72 + 0.8;
+    const width = Math.max(3.2, sequence.tableLayout.longSideSeatCount * 1.15, positionSpan);
+    const depth = Math.max(2.4, sequence.tableLayout.shortSideSeatCount * 1.15, positionSpan);
     const seat = assignment.seat;
     if (seat.side === 'long-a' || seat.side === 'long-b') {
       const countOnSide = Math.max(1, sequence.tableLayout.longSideSeatCount);
@@ -117,7 +120,7 @@ export function getPerformerAnchor(
   }
 
   const angle = (Math.PI / 2) + (index * Math.PI * 2) / count;
-  const radius = getPerformerSpacingRadius(count);
+  const radius = count === 1 ? 2.3 : getPerformerSpacingRadius(count);
   return { x: Math.cos(angle) * radius, y: 0, z: Math.sin(angle) * radius };
 }
 
@@ -208,7 +211,7 @@ export function getTablePositionPosition(
       const countOnSide = Math.max(1, sequence.tableLayout.longSideSeatCount);
       const seatX = countOnSide === 1 ? 0 : -width / 2 + (seat.seatIndex * width) / (countOnSide - 1);
       return {
-        x: Math.max(-width / 2 + 0.2, Math.min(width / 2 - 0.2, seatX + positionOffset(position.name))),
+        x: Math.max(-width / 2 + 0.2, Math.min(width / 2 - 0.2, seatX + getOwnedPositionOffset(sequence, position))),
         y: 0.19,
         z: (seat.side === 'long-a' ? -1 : 1) * (depth / 2 - inwardOffset),
       };
@@ -218,7 +221,7 @@ export function getTablePositionPosition(
     return {
       x: (seat.side === 'short-a' ? -1 : 1) * (width / 2 - inwardOffset),
       y: 0.19,
-      z: Math.max(-depth / 2 + 0.2, Math.min(depth / 2 - 0.2, seatZ + positionOffset(position.name))),
+      z: Math.max(-depth / 2 + 0.2, Math.min(depth / 2 - 0.2, seatZ + getOwnedPositionOffset(sequence, position))),
     };
   }
 
