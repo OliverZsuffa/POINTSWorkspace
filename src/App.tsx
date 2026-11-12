@@ -752,13 +752,16 @@ export default function App() {
       const action = item.action;
       return action.type === 'LIFT' && 'performerId' in action.target && action.linkId === linkId;
     });
-    if (!sender || sender.action.type !== 'LEAVE' || !('hand' in sender.action.target) || !receiver || receiver.action.type !== 'LIFT' || !('performerId' in receiver.action.target)) return;
+    if (!sender || !receiver) return;
+    const senderAction = sender.action;
+    const receiverAction = receiver.action;
+    if (senderAction.type !== 'LEAVE' || !('hand' in senderAction.target) || receiverAction.type !== 'LIFT' || !('performerId' in receiverAction.target)) return;
     const recipientId = entry.action.type === 'LIFT' ? receiver.performerId : targetPerformerId;
     const sourceId = entry.action.type === 'LEAVE' ? sender.performerId : targetPerformerId;
-    const recipientHand = hand ?? sender.action.target.hand;
+    const recipientHand = hand ?? senderAction.target.hand;
     commit({ ...sequence, notation: sequence.notation.map((item) => {
-      if (item.id === sender.id) return { ...item, performerId: asPerformerId(sourceId), action: { ...sender.action, target: { ...sender.action.target, performerId: asPerformerId(recipientId), hand: recipientHand } } };
-      if (item.id === receiver.id) return { ...item, performerId: asPerformerId(recipientId), hand: recipientHand, action: { ...receiver.action, target: { ...receiver.action.target, performerId: asPerformerId(sourceId) } } };
+      if (item.id === sender.id) return { ...item, performerId: asPerformerId(sourceId), action: { ...senderAction, target: { ...senderAction.target, performerId: asPerformerId(recipientId), hand: recipientHand } } };
+      if (item.id === receiver.id) return { ...item, performerId: asPerformerId(recipientId), hand: recipientHand, action: { ...receiverAction, target: { ...receiverAction.target, performerId: asPerformerId(sourceId) } } };
       return item;
     }) });
   };
