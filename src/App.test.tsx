@@ -100,7 +100,10 @@ describe('sequence editor', () => {
     await user.click(screen.getByRole('button', { name: 'Juggler 1 left beat 1 empty' }));
     await user.click(screen.getByRole('button', { name: 'LIFT' }));
 
-    expect(screen.getByRole('button', { name: 'Juggler 1 left beat 1 LIFT A' }).querySelector('svg.ball-segment')).toBeInTheDocument();
+    const symbol = screen.getByRole('button', { name: 'Juggler 1 left beat 1 LIFT A' }).querySelector('svg.ball-segment');
+    expect(symbol).toBeInTheDocument();
+    expect(symbol).toHaveAttribute('viewBox', '0 0 100 100');
+    expect(symbol?.querySelector('path')).toHaveAttribute('d', 'M0 19H100 M0 19V81 M0 81H100');
   });
 
   it('exposes sequence settings and initial object distribution', async () => {
