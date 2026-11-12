@@ -69,7 +69,7 @@ LIFT and LEAVE can target a table position, a hand back position, a circle passi
 
 The domain model records notation. The validation and simulation package determines whether the actions are legal in the current state. It provides a state snapshot immediately before and immediately after each main beat.
 
-All actions assigned to the same main beat are simultaneous. A hand has one finger held object and one separate back balanced object. TAP requires the fingers to be free. BOUNCE is the position tap performed while holding an object with the fingers. The held object remains in the hand. A balanced object on the back does not prevent TAP or BOUNCE. SPECIAL also requires free fingers, while allowing a balanced object on the back.
+All actions assigned to the same main beat are simultaneous. A hand has one finger held object and one separate back balanced object. TAP and EMPTY require the fingers to be free. BOUNCE is the position tap performed while holding an object with the fingers. The held object remains in the hand. A balanced object on the back does not prevent TAP or BOUNCE. SPECIAL also requires free fingers, while allowing a balanced object on the back.
 
 A ZIP source and receiver share a link ID and occur at the same timeline position. An individual pass is represented by a sender LEAVE targeting the receiving performer's hand and a receiver LIFT targeting the source performer. The validation layer checks that the two sides correspond. A hand cannot receive and send an object during the same beat.
 
