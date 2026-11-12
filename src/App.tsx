@@ -995,6 +995,10 @@ export default function App() {
   };
 
   const changeType = (type: SequenceType) => {
+    if (type === 'circle-passing' && sequence.performers.length < 3) {
+      window.alert('Circle passing requires at least three participants.');
+      return;
+    }
     let positions = sequence.positions;
     let individualPassingLayout = sequence.individualPassingLayout;
     if (type === 'circle-passing' || (type === 'individual-passing' && sequence.individualPassingLayout !== 'shared-positions')) {
@@ -1289,7 +1293,7 @@ export default function App() {
           <label>Type
             <select value={sequence.sequenceType} onChange={(event) => changeType(event.target.value as SequenceType)}>
               <option value="solo">Solo</option>
-              <option value="circle-passing">Circle passing</option>
+              <option value="circle-passing" disabled={sequence.performers.length < 3}>Circle passing</option>
               <option value="individual-passing">Individual passing</option>
             </select>
           </label>
@@ -1314,7 +1318,7 @@ export default function App() {
           </label>
           <div className="setting-control"><span>Balls</span><div className="stepper"><button type="button" onClick={() => changeBallCount(sequence.balls.length - 1)} disabled={sequence.balls.length <= 1}>−</button><output>{sequence.balls.length}</output><button type="button" onClick={() => changeBallCount(sequence.balls.length + 1)}>+</button></div></div>
           <div className="setting-control"><span>Beats</span><div className="stepper"><button type="button" onClick={removeBeat} disabled={sequence.beats.length <= 1 || sequence.notation.some((entry) => entry.time.beatId === sequence.beats[sequence.beats.length - 1]?.id)}>−</button><output>{sequence.beats.length}</output><button type="button" onClick={addBeat}>+</button></div></div>
-          <div className="performer-settings"><span>Performers</span>{sequence.performers.map((performer) => <div className="performer-chip" key={performer.id + performer.name + performer.identifier}><input className="performer-name" aria-label={'Performer name ' + performer.name} defaultValue={performer.name} onBlur={(event) => updatePerformer(performer.id, 'name', event.target.value)} /><input className="performer-identifier" aria-label={'Performer identifier ' + (performer.identifier ?? '')} defaultValue={performer.identifier ?? ''} maxLength={1} onBlur={(event) => updatePerformer(performer.id, 'identifier', event.target.value)} />{sequence.performers.length > 1 && <button type="button" className="remove-chip" onClick={() => removePerformer(performer.id)} aria-label={'Remove ' + performer.name}>×</button>}</div>)}<button type="button" onClick={addPerformer}>Add performer</button></div>
+          <div className="performer-settings"><span>Performers</span>{sequence.performers.map((performer) => <div className="performer-chip" key={performer.id + performer.name + performer.identifier}><input className="performer-name" aria-label={'Performer name ' + performer.name} defaultValue={performer.name} onBlur={(event) => updatePerformer(performer.id, 'name', event.target.value)} /><input className="performer-identifier" aria-label={'Performer identifier ' + (performer.identifier ?? '')} defaultValue={performer.identifier ?? ''} maxLength={1} onBlur={(event) => updatePerformer(performer.id, 'identifier', event.target.value)} />{sequence.performers.length > 1 && <button type="button" className="remove-chip" onClick={() => removePerformer(performer.id)} disabled={sequence.sequenceType === 'circle-passing' && sequence.performers.length <= 3} aria-label={'Remove ' + performer.name}>×</button>}</div>)}<button type="button" onClick={addPerformer}>Add performer</button></div>
           <div className="position-settings"><span>Positions</span>{sequence.positions.filter((position) => position.kind === 'table').map((position) => <div className="position-edit" key={position.id + position.name}><input aria-label={'Rename position ' + position.name} defaultValue={position.name} onBlur={(event) => renamePosition(position.id, event.target.value)} /><button type="button" onClick={() => removePosition(position.id)} aria-label={'Remove position ' + position.name}>×</button></div>)}<button type="button" onClick={addPosition}>Add position</button></div>
         </section>
       )}
