@@ -229,4 +229,61 @@ describe('sequence editor', () => {
     expect(alert).toHaveBeenCalled();
     alert.mockRestore();
   });
+
+  it('selects all performer rows when a beat label is clicked', async () => {
+    const user = userEvent.setup();
+    const { container } = render(<App />);
+    await user.click(screen.getByRole('button', { name: 'Select beat 2' }));
+    expect(container.querySelectorAll('.notation-cell.selected')).toHaveLength(2);
+  });
+
+  it('extends a selection with Shift and deletes all selected cells', async () => {
+    const user = userEvent.setup();
+    render(<App />);
+    const first = screen.getByRole('button', { name: 'Juggler 1 left beat 1 empty' });
+    await user.click(first);
+    await user.click(screen.getByRole('button', { name: 'LIFT' }));
+    const second = screen.getByRole('button', { name: 'Juggler 1 left beat 2 empty' });
+    fireEvent.keyDown(second, { key: 'ArrowRight', shiftKey: true });
+    await user.click(screen.getByRole('button', { name: 'HOLD' }));
+    fireEvent.keyDown(second, { key: 'Delete' });
+    expect(screen.getByRole('button', { name: 'Juggler 1 left beat 1 empty' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Juggler 1 left beat 2 empty' })).toBeInTheDocument();
+  });
+
+  it('copies and pastes notation with the keyboard', async () => {
+    const user = userEvent.setup();
+    render(<App />);
+    const first = screen.getByRole('button', { name: 'Juggler 1 left beat 1 empty' });
+    await user.click(first);
+    await user.click(screen.getByRole('button', { name: 'LIFT' }));
+    fireEvent.keyDown(first, { key: 'c', ctrlKey: true });
+    const second = screen.getByRole('button', { name: 'Juggler 1 right beat 2 empty' });
+    await user.click(second);
+    fireEvent.keyDown(second, { key: 'v', ctrlKey: true });
+    expect(screen.getByRole('button', { name: 'Juggler 1 right beat 2 LIFT A' })).toBeInTheDocument();
+  });
+
+  it('erases a rectangular selection with Ctrl and drag', async () => {
+    const user = userEvent.setup();
+    render(<App />);
+    await user.click(screen.getByRole('button', { name: 'Juggler 1 left beat 1 empty' }));
+    await user.click(screen.getByRole('button', { name: 'LIFT' }));
+    await user.click(screen.getByRole('button', { name: 'Juggler 1 left beat 2 empty' }));
+    await user.click(screen.getByRole('button', { name: 'HOLD' }));
+    const first = screen.getByRole('button', { name: 'Juggler 1 left beat 1 LIFT A' });
+    const second = screen.getByRole('button', { name: 'Juggler 1 left beat 2 HOLD' });
+    fireEvent.mouseDown(first, { ctrlKey: true });
+    fireEvent.mouseUp(second);
+    expect(screen.getByRole('button', { name: 'Juggler 1 left beat 1 empty' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Juggler 1 left beat 2 empty' })).toBeInTheDocument();
+  });
+
+  it('inserts a beat after the selected timeline column', async () => {
+    const user = userEvent.setup();
+    render(<App />);
+    await user.click(screen.getByRole('button', { name: 'Insert beat after 1' }));
+    expect(screen.getByRole('button', { name: 'Select beat 2' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Juggler 1 left beat 9 empty' })).toBeInTheDocument();
+  });
 });
