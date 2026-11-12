@@ -70,20 +70,22 @@ function getActionTargetPosition(
   const action = entry.action;
   if (action.type === 'LIFT' || action.type === 'LEAVE' || action.type === 'TAP' || action.type === 'BOUNCE') {
     if (action.target.kind === 'position') {
-      const position = sequence.positions.find((item) => item.id === action.target.positionId);
+      const positionId = action.target.positionId;
+      const position = sequence.positions.find((item) => item.id === positionId);
       return position ? getTablePositionPosition(sequence, position, layout) : undefined;
     }
     if (action.target.kind === 'circle-position') {
+      const circleTarget = action.target;
       const performerIndex = sequence.performers.findIndex((item) => item.id === entry.performerId);
-      const offset = action.target.direction
-        ? (action.target.direction === 'left' ? -1 : 1) * (action.target.distance ?? 1)
+      const offset = circleTarget.direction
+        ? (circleTarget.direction === 'left' ? -1 : 1) * (circleTarget.distance ?? 1)
         : 0;
       const targetIndex = (performerIndex + offset + sequence.performers.length) % sequence.performers.length;
       const targetPerformer = sequence.performers[targetIndex];
       const position = sequence.positions.find((item) =>
         item.kind === 'table' &&
-        item.name === action.target.position &&
-        (item.owner.kind === 'shared' || item.owner.performerId === targetPerformer?.id),
+        item.name === circleTarget.position &&
+        (item.owner.kind === 'shared' || (item.owner.kind === 'performer' && item.owner.performerId === targetPerformer?.id)),
       );
       return position ? getTablePositionPosition(sequence, position, layout) : undefined;
     }

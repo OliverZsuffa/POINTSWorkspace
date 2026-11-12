@@ -96,11 +96,13 @@ export function getTablePositionPosition(
   layout: SceneLayout,
 ): Point3 {
   if (position.kind !== 'table') return ZERO;
-  if (position.owner.kind === 'shared') {
+  const owner = position.owner;
+  if (owner.kind === 'shared') {
     return { x: positionOffset(position.name), y: 0.16, z: 0 };
   }
 
-  const performer = sequence.performers.find((item) => item.id === position.owner.performerId);
+  const performerId = owner.kind === 'performer' ? owner.performerId : undefined;
+  const performer = sequence.performers.find((item) => item.id === performerId);
   if (!performer) return ZERO;
   const anchor = getPerformerAnchor(sequence, performer, layout);
   const facing = getPerformerFacing(sequence, performer, layout);

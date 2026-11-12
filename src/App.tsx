@@ -121,8 +121,10 @@ function positionNotation(sequence: Sequence, positionId: string): { name: strin
   if (!position) return { name: '?' };
   if (position.kind !== 'table') return { name: position.name };
   const duplicates = sequence.positions.filter((item) => item.kind === 'table' && item.name === position.name);
-  if (duplicates.length < 2 || position.owner.kind !== 'performer') return { name: position.name };
-  const identifier = sequence.performers.find((person) => person.id === position.owner.performerId)?.identifier;
+  if (duplicates.length < 2) return { name: position.name };
+  if (position.owner.kind !== 'performer') return { name: position.name };
+  const performerId = position.owner.performerId;
+  const identifier = sequence.performers.find((person) => person.id === performerId)?.identifier;
   return identifier ? { name: position.name, subscript: identifier } : { name: position.name };
 }
 
