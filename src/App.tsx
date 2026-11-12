@@ -337,8 +337,6 @@ export default function App() {
     const endIndex = Math.max(firstIndex, lastIndex);
     const startCell = firstIndex <= lastIndex ? first : last;
     const endCell = firstIndex <= lastIndex ? last : first;
-    const startSlot = timelineSlots[startIndex]!;
-    const endSlot = timelineSlots[endIndex]!;
     const performerId = asPerformerId(startCell.performerId);
     const targetPosition = sequence.positions.find((position) => position.kind === 'table' && (position.owner.kind === 'shared' || position.owner.performerId === startCell.performerId))
       ?? sequence.positions.find((position) => position.kind === 'table');
