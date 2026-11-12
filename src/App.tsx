@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, type KeyboardEvent } from 'react';
 import {
   asActionEntryId,
   asBallId,
@@ -122,6 +122,7 @@ export default function App() {
   const [future, setFuture] = useState<Sequence[]>([]);
   const [showSettings, setShowSettings] = useState(false);
   const [showState, setShowState] = useState(false);
+  const [dragStart, setDragStart] = useState<{ performerId: string; hand: Hand; beatId: string } | null>(null);
 
   const simulation = useMemo(() => simulateSequence(sequence), [sequence]);
   const issuesByEntry = useMemo(() => {
@@ -145,6 +146,123 @@ export default function App() {
       entry.performerId === performerId && entry.hand === hand && entry.time.beatId === beatId &&
       entry.time.offset.numerator === 0,
     );
+
+  const drawRectangle = (
+    first: { performerId: string; hand: Hand; beatId: string },
+    last: { performerId: string; hand: Hand; beatId: string },
+  ) => {
+    if (first.performerId !== last.performerId) return;
+    let start = first;
+    let end = last;
+    let startIndex = sequence.beats.findIndex((beat) => beat.id === start.beatId);
+    let endIndex = sequence.beats.findIndex((beat) => beat.id === end.beatId);
+    if (startIndex < 0 || endIndex < 0 || startIndex === endIndex) return;
+    if (startIndex > endIndex) {
+      [start, end] = [end, start];
+      [startIndex, endIndex] = [endIndex, startIndex];
+    }
+    const performerId = asPerformerId(start.performerId);
+    const targetPosition = sequence.positions.find((position) => position.kind === 'table');
+    if (!targetPosition) return;
+    const affectedHands = start.hand === end.hand ? [start.hand] : [start.hand, end.hand];
+    for (let index = startIndex; index <= endIndex; index += 1) {
+      const beat = sequence.beats[index];
+      if (!beat) return;
+      for (const hand of affectedHands) {
+        if (entryAt(start.performerId, hand, beat.id)) return;
+      }
+    }
+
+    const entries: NotationEntry[] = [];
+    if (start.hand === end.hand) {
+      for (let index = startIndex; index <= endIndex; index += 1) {
+        const beat = sequence.beats[index]!;
+        const action: NotationAction = index === startIndex
+          ? { type: 'LIFT', target: { kind: 'position', positionId: targetPosition.id } }
+          : index === endIndex
+            ? { type: 'LEAVE', target: { kind: 'position', positionId: targetPosition.id } }
+            : { type: 'HOLD' };
+        entries.push({
+          id: asActionEntryId(id('entry')),
+          performerId,
+          hand: start.hand,
+          time: { beatId: beat.id, offset: rational(0) },
+          action,
+        });
+      }
+    } else {
+      if (endIndex - startIndex < 2) return;
+      const linkId = asLinkId(id('zip'));
+      for (let index = startIndex; index <= endIndex; index += 1) {
+        const beat = sequence.beats[index]!;
+        if (index === startIndex) {
+          entries.push({
+            id: asActionEntryId(id('entry')), performerId, hand: start.hand,
+            time: { beatId: beat.id, offset: rational(0) },
+            action: { type: 'LIFT', target: { kind: 'position', positionId: targetPosition.id } },
+          });
+        } else if (index === startIndex + 1) {
+          entries.push(
+            {
+              id: asActionEntryId(id('entry')), performerId, hand: start.hand,
+              time: { beatId: beat.id, offset: rational(0) },
+              action: { type: 'ZIP', role: 'source', linkId },
+            },
+            {
+              id: asActionEntryId(id('entry')), performerId, hand: end.hand,
+              time: { beatId: beat.id, offset: rational(0) },
+              action: { type: 'ZIP', role: 'receiver', linkId },
+            },
+          );
+        } else if (index === endIndex) {
+          entries.push({
+            id: asActionEntryId(id('entry')), performerId, hand: end.hand,
+            time: { beatId: beat.id, offset: rational(0) },
+            action: { type: 'LEAVE', target: { kind: 'position', positionId: targetPosition.id } },
+          });
+        } else {
+          entries.push({
+            id: asActionEntryId(id('entry')), performerId, hand: end.hand,
+            time: { beatId: beat.id, offset: rational(0) },
+            action: { type: 'HOLD' },
+          });
+        }
+      }
+    }
+    commit({ ...sequence, notation: [...sequence.notation, ...entries] });
+    setSelected(end);
+  };
+
+  const handleEditorKeyDown = (event: KeyboardEvent<HTMLElement>) => {
+    if (event.target instanceof HTMLElement && ['INPUT', 'SELECT', 'TEXTAREA'].includes(event.target.tagName)) return;
+    if (!selected) return;
+    if (event.key === 'Escape') {
+      setSelected(null);
+      setDragStart(null);
+      return;
+    }
+    if (event.key === 'Backspace' || event.key === 'Delete') {
+      event.preventDefault();
+      removeSelected();
+      return;
+    }
+    if (!['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(event.key)) return;
+    event.preventDefault();
+    const rows = sequence.performers.flatMap((performer) =>
+      hands.map((hand) => ({ performerId: performer.id, hand })),
+    );
+    const rowIndex = rows.findIndex((row) => row.performerId === selected.performerId && row.hand === selected.hand);
+    const beatIndex = sequence.beats.findIndex((beat) => beat.id === selected.beatId);
+    let nextRow = rowIndex;
+    let nextBeat = beatIndex;
+    if (event.key === 'ArrowLeft') nextBeat -= 1;
+    if (event.key === 'ArrowRight') nextBeat += 1;
+    if (event.key === 'ArrowUp') nextRow -= 1;
+    if (event.key === 'ArrowDown') nextRow += 1;
+    const row = rows[Math.max(0, Math.min(rows.length - 1, nextRow))];
+    const beat = sequence.beats[Math.max(0, Math.min(sequence.beats.length - 1, nextBeat))];
+    if (row && beat) setSelected({ performerId: row.performerId, hand: row.hand, beatId: beat.id });
+  };
 
   const addAction = (type: ActionName) => {
     if (!selected) return;
@@ -407,7 +525,7 @@ export default function App() {
   } : undefined;
 
   return (
-    <main className="app-root" aria-label="POINTS Workspace">
+    <main className="app-root" aria-label="POINTS Workspace" tabIndex={0} onKeyDown={handleEditorKeyDown}>
       <header className="topbar">
         <div className="brand"><span className="brand-mark">P</span><span>POINTS</span></div>
         <div className="top-actions">
@@ -518,7 +636,22 @@ export default function App() {
                         type="button"
                         key={beat.id}
                         className={'notation-cell' + (selectedCell ? ' selected' : '') + (errors.length ? ' invalid' : '') + (entry ? ' occupied' : '')}
-                        onClick={() => setSelected({ performerId: performer.id, hand, beatId: beat.id })}
+                        onPointerDown={(event) => {
+                          if (!event.shiftKey) return;
+                          event.preventDefault();
+                          const cell = { performerId: performer.id, hand, beatId: beat.id };
+                          setSelected(cell);
+                          setDragStart(cell);
+                        }}
+                        onPointerUp={() => {
+                          if (!dragStart) return;
+                          drawRectangle(dragStart, { performerId: performer.id, hand, beatId: beat.id });
+                          setDragStart(null);
+                        }}
+                        onPointerCancel={() => setDragStart(null)}
+                        onClick={() => {
+                          if (!dragStart) setSelected({ performerId: performer.id, hand, beatId: beat.id });
+                        }}
                         onDoubleClick={() => entry && entry.action.type === 'SPECIAL' && addAction('SPECIAL')}
                         aria-label={performer.name + ' ' + hand + ' beat ' + (index + 1) + (entry ? ' ' + actionLabel(entry.action, sequence) : ' empty')}
                         title={errors.join(' ')}
