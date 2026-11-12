@@ -3,15 +3,17 @@
   "private": true,
   "version": "0.1.0",
   "type": "module",
-  "engines": { "node": ">=20.0.0" },
+  "engines": {
+    "node": ">=20.0.0"
+  },
   "scripts": {
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
-    "format": "prettier --write "src/**/*.{ts,tsx,scss}" "*.{json,js,ts,html}" "docs/architecture/**/*.md"",
-    "format:check": "prettier --check "src/**/*.{ts,tsx,scss}" "*.{json,js,ts,html}" "docs/architecture/**/*.md"",
+    "format": "prettier --write 'src/**/*.{ts,tsx,scss}' '*.{json,js,ts,html}' 'docs/architecture/**/*.md'",
+    "format:check": "prettier --check 'src/**/*.{ts,tsx,scss}' '*.{json,js,ts,html}' 'docs/architecture/**/*.md'",
     "test": "vitest run",
     "test:watch": "vitest"
   },
