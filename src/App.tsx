@@ -1487,7 +1487,18 @@ export default function App() {
               </>
             )}
           </div>
-          <div className="position-settings"><span>Positions</span>{sequence.positions.filter((position) => position.kind === 'table').map((position) => <div className="position-edit" key={position.id + position.name}><input aria-label={'Rename position ' + position.name} defaultValue={position.name} onBlur={(event) => renamePosition(position.id, event.target.value)} /><button type="button" onClick={() => removePosition(position.id)} aria-label={'Remove position ' + position.name}>×</button></div>)}<button type="button" onClick={addPosition}>Add position</button></div>
+          <div className="position-settings">
+            <span>Positions</span>
+            {sequence.sequenceType === 'circle-passing' ? <span className="position-summary">A · B · C</span> : <>
+              {editorPositions.map((position) => (
+                <div className="position-edit" key={position.id + position.name}>
+                  <input aria-label={'Rename position ' + position.name} defaultValue={position.name} onBlur={(event) => renamePosition(position.id, event.target.value)} />
+                  <button type="button" onClick={() => removePosition(position.id)} aria-label={'Remove position ' + position.name}>×</button>
+                </div>
+              ))}
+              <button type="button" onClick={addPosition}>Add position</button>
+            </>}
+          </div>
         </section>
       )}
 
@@ -1630,8 +1641,8 @@ export default function App() {
 
       <section className="editor-scroll" aria-label="Notation editor" onClick={(event) => { if (event.target === event.currentTarget) clearSelection(); }}>
         <div className="notation-grid">
-          <div className="grid-head" style={{ gridTemplateColumns: `82px repeat(${timelineSlots.length}, 42px) 18px` }}>
-            <div className="row-label heading-label">PERFORMER</div>
+          <div className="grid-head" style={{ gridTemplateColumns: `82px repeat(${timelineSlots.length}, var(--notation-cell-size)) 18px` }}>
+            <div className="row-label heading-label">{sequence.sequenceType === 'circle-passing' ? 'PATTERN' : 'PERFORMER'}</div>
             {timelineSlots.map((slot, index) => {
               const beatIndex = sequence.beats.findIndex((beat) => beat.id === slot.beatId);
               const beat = sequence.beats[beatIndex]!;
@@ -1654,7 +1665,7 @@ export default function App() {
             <div className="performer-block" key={performer.id}>
               <div className="performer-heading">{sequence.sequenceType === 'circle-passing' ? 'Pattern' : performer.name}<span>{sequence.sequenceType === 'circle-passing' ? '' : performer.identifier ?? ''}</span></div>
               {hands.map((hand) => (
-                <div className="hand-row" key={hand} style={{ gridTemplateColumns: `82px repeat(${timelineSlots.length}, 42px) 18px` }}>
+                <div className="hand-row" key={hand} style={{ gridTemplateColumns: `82px repeat(${timelineSlots.length}, var(--notation-cell-size)) 18px` }}>
                   <div className="row-label">{hand === 'left' ? 'L' : 'R'}</div>
                   {timelineSlots.map((slot) => {
                     const beatIndex = sequence.beats.findIndex((beat) => beat.id === slot.beatId);
