@@ -123,15 +123,17 @@ describe('sequence editor', () => {
 
   it('shows object state after the selected beat', async () => {
     const user = userEvent.setup();
-    render(<App />);
+    const { container } = render(<App />);
     await user.click(screen.getByRole('button', { name: 'Juggler 1 left beat 1 empty' }));
     await user.click(screen.getByRole('button', { name: 'LIFT' }));
     await user.click(screen.getByRole('button', { name: /Object state/ }));
     expect(screen.getByText('After beat 1')).toBeInTheDocument();
     expect(screen.getByText('Juggler 1 left')).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Juggler 1 left beat 2 empty' }));
+    await user.click(screen.getByRole('button', { name: 'LEAVE' }));
     expect(screen.getByText('After beat 2')).toBeInTheDocument();
-    expect(screen.getByText('Juggler 1 left')).toBeInTheDocument();
+    expect(screen.queryByText('Juggler 1 left')).not.toBeInTheDocument();
+    expect(container.querySelector('.state-content')?.textContent).toContain('A');
   });
 
   it('adds two balls with a new performer', async () => {
@@ -163,8 +165,10 @@ describe('sequence editor', () => {
     await user.selectOptions(screen.getByLabelText('Pass to'), screen.getByRole('option', { name: /Juggler 2/ }));
     await user.selectOptions(screen.getByLabelText('Hand'), 'right');
     await user.click(screen.getByRole('button', { name: 'PASS' }));
-    expect(screen.getByRole('button', { name: /Juggler 1 left beat 1 LEAVE/ })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Juggler 2 right beat 1 LIFT/ })).toBeInTheDocument();
+    const leaveCell = screen.getByRole('button', { name: /Juggler 1 left beat 1 LEAVE/ });
+    const liftCell = screen.getByRole('button', { name: /Juggler 2 right beat 1 LIFT/ });
+    expect(leaveCell.querySelector('tspan')?.textContent).toBe('b');
+    expect(liftCell.querySelector('tspan')?.textContent).toBe('a');
     expect(screen.getByLabelText('Recipient')).toBeInTheDocument();
     expect(screen.getAllByLabelText('Hand')).toHaveLength(2);
   });
@@ -179,5 +183,25 @@ describe('sequence editor', () => {
     expect(screen.getByLabelText('Performer')).toHaveValue('self');
     expect(screen.queryByLabelText('Direction')).not.toBeInTheDocument();
     expect(screen.queryByLabelText('Distance')).not.toBeInTheDocument();
+  });
+
+  it('renders the direction as a subscript for another circle performer', async () => {
+    const user = userEvent.setup();
+    render(<App />);
+    await user.click(screen.getByRole('button', { name: 'Settings' }));
+    await user.click(screen.getByRole('button', { name: 'Add performer' }));
+    await user.selectOptions(screen.getByLabelText('Type'), 'circle-passing');
+    await user.click(screen.getByRole('button', { name: 'Juggler 1 left beat 1 empty' }));
+    await user.click(screen.getByRole('button', { name: 'LIFT' }));
+    await user.selectOptions(screen.getByLabelText('Performer'), 'other');
+    await user.selectOptions(screen.getByLabelText('Direction'), 'right');
+    const cell = screen.getByRole('button', { name: /Juggler 1 left beat 1 LIFT/ });
+    expect(cell.querySelector('tspan')?.textContent).toBe('R');
+  });
+
+  it('shows both halves of the ZIP toolbar symbol', () => {
+    render(<App />);
+    const zip = screen.getByRole('button', { name: 'ZIP' });
+    expect(zip.querySelectorAll('.zip-tool-preview .notation-symbol')).toHaveLength(2);
   });
 });
