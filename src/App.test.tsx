@@ -304,7 +304,7 @@ describe('sequence editor', () => {
     expect(screen.getByRole('button', { name: 'Juggler 1 right beat 2 LIFT A' })).toBeInTheDocument();
   });
 
-  it('erases a rectangular selection with Ctrl and drag', async () => {
+  it('adds cells to the selection with Ctrl click and deletes them with the Delete button', async () => {
     const user = userEvent.setup();
     render(<App />);
     await user.click(screen.getByRole('button', { name: 'Juggler 1 left beat 1 empty' }));
@@ -313,8 +313,11 @@ describe('sequence editor', () => {
     await user.click(screen.getByRole('button', { name: 'HOLD' }));
     const first = screen.getByRole('button', { name: 'Juggler 1 left beat 1 LIFT A' });
     const second = screen.getByRole('button', { name: 'Juggler 1 left beat 2 HOLD' });
-    fireEvent.mouseDown(first, { ctrlKey: true });
-    fireEvent.mouseUp(second);
+    fireEvent.click(first);
+    fireEvent.click(second, { ctrlKey: true });
+    expect(first).toHaveClass('selected');
+    expect(second).toHaveClass('selected');
+    await user.click(screen.getByRole('button', { name: 'Delete' }));
     expect(screen.getByRole('button', { name: 'Juggler 1 left beat 1 empty' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Juggler 1 left beat 2 empty' })).toBeInTheDocument();
   });
@@ -465,7 +468,7 @@ describe('sequence editor', () => {
     expect(screen.getByRole('button', { name: /Juggler 2 left beat 4 LIFT X/ })).toBeInTheDocument();
   });
 
-  it('supports tap based drawing, moving and erasing for touch layouts', () => {
+  it('supports tap based drawing, moving and button deletion for touch layouts', () => {
     const { container } = render(<App />);
     const mode = (name: string) => Array.from(container.querySelectorAll('.mode-tool')).find((button) => button.textContent === name)!;
     fireEvent.click(mode('Draw'));
@@ -481,9 +484,10 @@ describe('sequence editor', () => {
     expect(screen.getByRole('button', { name: 'Juggler 1 left beat 3 HOLD' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Juggler 1 left beat 4 LEAVE A' })).toBeInTheDocument();
 
-    fireEvent.click(mode('Erase'));
+    fireEvent.click(mode('Select'));
     fireEvent.click(screen.getByRole('button', { name: 'Juggler 1 left beat 2 LIFT A' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Juggler 1 left beat 4 LEAVE A' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Juggler 1 left beat 4 LEAVE A' }), { ctrlKey: true });
+    fireEvent.click(screen.getByRole('button', { name: 'Delete' }));
     expect(screen.getByRole('button', { name: 'Juggler 1 left beat 2 empty' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Juggler 1 left beat 4 empty' })).toBeInTheDocument();
   });
@@ -561,6 +565,46 @@ describe('sequence editor', () => {
     expect(screen.getByRole('button', { name: 'Juggler 1 left beat 3 LIFT A' })).toBeInTheDocument();
   });
 
+
+  it('converts HOLD to BOUNCE and an empty cell to TAP when typing a target', () => {
+    render(<App />);
+    const main = screen.getByRole('main', { name: 'POINTS Workspace' });
+    fireEvent.click(screen.getByRole('button', { name: 'Juggler 1 left beat 1 empty' }));
+    fireEvent.keyDown(main, { key: '2' });
+    fireEvent.keyDown(main, { key: 'B' });
+    expect(screen.getByRole('button', { name: 'Juggler 1 left beat 1 BOUNCE B' })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Juggler 1 left beat 2 empty' }));
+    fireEvent.keyDown(main, { key: 'C' });
+    expect(screen.getByRole('button', { name: 'Juggler 1 left beat 2 TAP C' })).toBeInTheDocument();
+  });
+
+  it('offers named L and R hand back targets for every performer', async () => {
+    const user = userEvent.setup();
+    render(<App />);
+    await user.click(screen.getByRole('button', { name: 'Settings' }));
+    await user.click(screen.getByRole('button', { name: 'Add performer' }));
+    await user.click(screen.getByRole('button', { name: 'Juggler 1 left beat 1 empty' }));
+    await user.click(screen.getByRole('button', { name: 'LIFT' }));
+    const target = screen.getByLabelText('Target');
+    const labels = Array.from((target as HTMLSelectElement).options).map((option) => option.textContent);
+    expect(labels).toContain('Juggler 1 · L');
+    expect(labels).toContain('Juggler 1 · R');
+    expect(labels).toContain('Juggler 2 · L');
+    expect(labels).toContain('Juggler 2 · R');
+  });
+
+  it('shows one authored notation pattern in circle passing mode', async () => {
+    const user = userEvent.setup();
+    const { container } = render(<App />);
+    await user.click(screen.getByRole('button', { name: 'Settings' }));
+    await user.click(screen.getByRole('button', { name: 'Add performer' }));
+    await user.click(screen.getByRole('button', { name: 'Add performer' }));
+    await user.selectOptions(screen.getByLabelText('Type'), 'circle-passing');
+    expect(container.querySelectorAll('.performer-block')).toHaveLength(1);
+    expect(screen.getByText('Juggler 1')).toBeInTheDocument();
+    expect(screen.queryByText('Juggler 2', { selector: '.performer-heading' })).not.toBeInTheDocument();
+  });
 
   it('sets table position targets by typing their labels', () => {
     render(<App />);
