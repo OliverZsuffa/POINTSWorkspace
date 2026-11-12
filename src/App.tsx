@@ -112,19 +112,21 @@ function positionName(sequence: Sequence, positionId: string): string {
 
 function actionLabel(action: NotationAction, sequence: Sequence): string {
   switch (action.type) {
-    case 'LIFT':
+    case 'LIFT': {
       if (action.target.kind === 'position') return 'LIFT ' + positionName(sequence, action.target.positionId);
       if (action.target.kind === 'circle-position') return 'LIFT ' + action.target.position + circleSubscript(action.target);
       const target = action.target;
-      const targetPerformerId = 'performerId' in target ? target.performerId : undefined;
+      const targetPerformerId = target.performerId;
       return 'LIFT X' + (sequence.performers.find((person) => person.id === targetPerformerId)?.identifier ?? '?');
-    case 'LEAVE':
+    }
+    case 'LEAVE': {
       if (action.target.kind === 'position') return 'LEAVE ' + positionName(sequence, action.target.positionId);
       if (action.target.kind === 'circle-position') return 'LEAVE ' + action.target.position + circleSubscript(action.target);
       const target = action.target;
-      const targetHand = 'hand' in target ? target.hand : 'right';
-      const targetPerformerId = 'performerId' in target ? target.performerId : undefined;
+      const targetHand = target.hand;
+      const targetPerformerId = target.performerId;
       return 'LEAVE ' + (targetHand === 'left' ? 'L' : 'R') + (sequence.performers.find((person) => person.id === targetPerformerId)?.identifier ?? '?');
+    }
     case 'TAP':
     case 'BOUNCE':
       return action.target.kind === 'position'
