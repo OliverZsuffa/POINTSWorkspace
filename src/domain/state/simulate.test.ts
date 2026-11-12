@@ -96,6 +96,75 @@ describe('object state simulation', () => {
     expect(result.snapshots[1]?.handStates[performerId]?.right.balancedBallId).toBe('ball-1');
   });
 
+  it('allows LIFT and LEAVE while an object is balanced on the same hand', () => {
+    const liftSequence: Sequence = {
+      ...representativeSoloSequence,
+      balls: [...representativeSoloSequence.balls, { id: asBallId('ball-2') }],
+      initialState: {
+        placements: [
+          { ballId: asBallId('ball-1'), location: { kind: 'position', positionId: positionA } },
+          { ballId: asBallId('ball-2'), location: { kind: 'hand-back', positionId: rightBack, performerId, hand: 'right' } },
+        ],
+      },
+      notation: [entry('lift-with-balanced', 'right', {
+        type: 'LIFT',
+        target: { kind: 'position', positionId: positionA },
+      })],
+    };
+    const leaveSequence: Sequence = {
+      ...representativeSoloSequence,
+      balls: [...representativeSoloSequence.balls, { id: asBallId('ball-2') }],
+      initialState: {
+        placements: [
+          { ballId: asBallId('ball-1'), location: { kind: 'hand-held', performerId, hand: 'right' } },
+          { ballId: asBallId('ball-2'), location: { kind: 'hand-back', positionId: rightBack, performerId, hand: 'right' } },
+        ],
+      },
+      notation: [entry('leave-with-balanced', 'right', {
+        type: 'LEAVE',
+        target: { kind: 'position', positionId: positionB },
+      })],
+    };
+
+    expect(simulateSequence(liftSequence).validation.isValid).toBe(true);
+    expect(simulateSequence(leaveSequence).validation.isValid).toBe(true);
+  });
+
+  it('resolves circle passing targets relative to the acting performer', () => {
+    const secondPerformer = representativeSoloSequence.performers[0]!.id === performerId
+      ? 'performer-2' as typeof performerId
+      : performerId;
+    const otherA = asPositionId('position-A-performer-2');
+    const sequence: Sequence = {
+      ...representativeSoloSequence,
+      sequenceType: 'circle-passing',
+      performers: [
+        ...representativeSoloSequence.performers,
+        { id: secondPerformer, name: 'Juggler 2' },
+      ],
+      positions: [
+        ...representativeSoloSequence.positions,
+        {
+          id: otherA,
+          kind: 'table',
+          name: 'A',
+          owner: { kind: 'performer', performerId: secondPerformer },
+        },
+      ],
+      initialState: {
+        placements: [{ ballId: asBallId('ball-1'), location: { kind: 'position', positionId: otherA } }],
+      },
+      notation: [entry('circle-lift', 'right', {
+        type: 'LIFT',
+        target: { kind: 'circle-position', position: 'A', direction: 'left', distance: 1 },
+      })],
+    };
+
+    const result = simulateSequence(sequence);
+    expect(result.validation.isValid).toBe(true);
+    expect(result.snapshots[1]?.handStates[performerId]?.right.heldBallId).toBe('ball-1');
+  });
+
   it('allows BOUNCE while a second object is balanced on the same hand', () => {
     const sequence: Sequence = {
       ...representativeSoloSequence,
