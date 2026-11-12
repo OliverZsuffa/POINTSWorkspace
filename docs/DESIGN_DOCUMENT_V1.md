@@ -218,7 +218,7 @@ The Sequence Renderer visualises the current sequence as an animation in a three
 
 The renderer occupies the main area of its panel. The scene itself is the primary content. Playback and scene controls are placed in a compact bar or sidebar within the panel.
 
-The default camera is a top down view. The user can pan, zoom, and rotate the camera. Camera preset switching and automatic performer following are not required. Performers remain stationary in their assigned seats.
+The default camera is a top down view. The user can pan, zoom, and rotate the camera. Zoom must support both mouse wheel and trackpad gestures. Camera preset switching and automatic performer following are not required. Performers remain stationary in their assigned seats. The entire table arrangement can be rotated as one unit, changing the orientation of all performers together.
 
 The interface should not cover the scene with unnecessary text or descriptions.
 
@@ -226,13 +226,13 @@ The interface should not cover the scene with unnecessary text or descriptions.
 
 The environment is pannable. With a mouse, the user can pan the scene.
 
-The renderer shows jugglers sitting or standing around a table, performing the selected pattern. The intended visual style and level of character detail should follow Juggling Lab, including its simplified stick figure like performers. Realistic anatomy, fingers, and joints are not required. Hands may stretch or elongate when needed to communicate an action. The movement and state of the objects must remain clear.
+The renderer shows jugglers sitting or standing around a visible table, performing the selected pattern. The table surface must be visible and use a single colour. The intended visual style and level of character detail should follow Juggling Lab, including its simplified stick figure like performers. Realistic anatomy, fingers, and joints are not required. Hands may stretch or elongate when needed to communicate an action. The movement and state of the objects must remain clear. Resting hand positions are defined relative to each performer's body, rather than by fixed positions in the scene. Hands may have distinguishable colours, but the user can choose to make their colours identical.
 
 The renderer must animate hand actions individually enough to communicate what is happening. LIFT, LEAVE, BOUNCE, and TAP must have visually distinct actions appropriate to their notation. BOUNCE means tapping a position while continuing to hold the object in the hand. The object remains in the hand and does not bounce or leave it. TAP shows an empty hand physically reaching and touching the specified position before returning. The renderer should make it clear when an object is held with the fingers and when it is balanced on top of a hand at L or R.
 
 After completing an action, a hand returns to its standard resting position. During a transfer between hands, the source and receiving hands move towards a shared intermediate meeting point, where the transfer takes place. An object left at a table position remains visibly there until another hand picks it up.
 
-All objects use the same spherical shape. The renderer assigns distinguishable colours automatically, but the user can override the colour of individual objects. Objects do not need visible rotation. No additional visual indicator is required when an object is balanced on a hand.
+All objects use the same spherical shape. Every ball has a unique colour. The user can override the colour of individual objects. Objects do not need visible rotation. No additional visual indicator is required when an object is balanced on a hand. Rendering and scene appearance settings, including object colours and hand colours, are separate from the sequence itself and are not stored in the sequence code.
 
 Object trajectories are calculated automatically. A transfer between hands should be animated as a coordinated handoff: the source hand moves the ball toward the receiving hand, and the receiving hand moves to take it. It should not simply look like an unexplained teleport or an arbitrary thrown arc. Custom trajectory editing and manual trajectory height or shape controls are not required at this stage.
 
@@ -269,13 +269,13 @@ When continuous repetition is enabled, a sequence whose final object state match
 - Changing object colours.
 - Changing juggler positioning.
 
-Controls should also have keyboard shortcuts where appropriate. The exact shortcut assignments remain open.
+Controls should also have keyboard shortcuts where appropriate. The exact shortcut assignments remain open. Editing the sequence stops playback.
 
 Selecting a table position in the renderer should visibly mark that position. The position labels are otherwise hidden to keep the scene uncluttered.
 
 The current playback position should be indicated in the Sequence Editor, so the user can see which point in the notation is currently being animated. A corresponding current beat or subdivision indicator inside the renderer is not required at this stage.
 
-Both hands and objects are animated simultaneously when their actions occur at the same time. If the sequence contains any validation errors, rendering and playback are disabled. The renderer does not attempt to animate an invalid sequence. Only hands are selectable in the renderer. Selecting a hand highlights its corresponding notation cell in the editor. Balls are not selectable.
+Both hands and objects are animated simultaneously when their actions occur at the same time. If the sequence contains any validation errors, rendering and playback stop and remain disabled. The renderer does not attempt to animate an invalid sequence and does not display a separate error message. Only hands are selectable in the renderer. Selecting a hand highlights its corresponding notation cell in the editor. Clicking the currently selected hand again deselects it. Balls are not selectable.
 
 Changes made in the Sequence Editor update the renderer immediately, including during playback. Selecting a notation cell should highlight the corresponding hand or object in the renderer. Selecting an object or hand in the renderer should highlight the corresponding notation cell in the editor. During playback, the editor indicates both the current beat and the exact subdivision.
 
