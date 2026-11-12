@@ -15,6 +15,7 @@ const positionA = asPositionId('position-A');
 const positionB = asPositionId('position-B');
 const positionC = asPositionId('position-C');
 const rightBack = asPositionId('position-right-back');
+const leftBack = asPositionId('position-left-back');
 
 function entry(
   id: string,
@@ -79,6 +80,42 @@ describe('object state simulation', () => {
     const bounceResult = simulateSequence(bounce);
     expect(bounceResult.validation.isValid).toBe(true);
     expect(bounceResult.snapshots[1]?.handStates[performerId]?.right.heldBallId).toBe('ball-1');
+  });
+
+  it('can LIFT from and LEAVE onto a hand back position', () => {
+    const liftFromBack: Sequence = {
+      ...representativeSoloSequence,
+      initialState: {
+        placements: [{
+          ballId: asBallId('ball-1'),
+          location: { kind: 'hand-back', positionId: rightBack, performerId, hand: 'right' },
+        }],
+      },
+      notation: [entry('lift-from-back', 'left', {
+        type: 'LIFT',
+        target: { kind: 'position', positionId: rightBack },
+      })],
+    };
+    const leaveToBack: Sequence = {
+      ...representativeSoloSequence,
+      initialState: {
+        placements: [{
+          ballId: asBallId('ball-1'),
+          location: { kind: 'hand-held', performerId, hand: 'right' },
+        }],
+      },
+      notation: [entry('leave-to-back', 'right', {
+        type: 'LEAVE',
+        target: { kind: 'position', positionId: leftBack },
+      })],
+    };
+
+    const lifted = simulateSequence(liftFromBack);
+    const left = simulateSequence(leaveToBack);
+    expect(lifted.validation.isValid).toBe(true);
+    expect(lifted.snapshots[1]?.handStates[performerId]?.left.heldBallId).toBe('ball-1');
+    expect(left.validation.isValid).toBe(true);
+    expect(left.snapshots[1]?.handStates[performerId]?.left.balancedBallId).toBe('ball-1');
   });
 
   it('allows a balanced object while the fingers perform SPECIAL', () => {
