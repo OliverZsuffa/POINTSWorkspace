@@ -133,4 +133,51 @@ describe('sequence editor', () => {
     expect(screen.getByText('After beat 2')).toBeInTheDocument();
     expect(screen.getByText('Juggler 1 left')).toBeInTheDocument();
   });
+
+  it('adds two balls with a new performer', async () => {
+    const user = userEvent.setup();
+    render(<App />);
+    await user.click(screen.getByRole('button', { name: 'Settings' }));
+    await user.click(screen.getByRole('button', { name: 'Add performer' }));
+    expect(screen.getByText('4 / 4')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Juggler 2 left beat 1 empty' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Juggler 2 right beat 1 empty' })).toBeInTheDocument();
+  });
+
+  it('allows LIFT and LEAVE to target the acting performer hand backs', async () => {
+    const user = userEvent.setup();
+    render(<App />);
+    await user.click(screen.getByRole('button', { name: 'Juggler 1 left beat 1 empty' }));
+    await user.click(screen.getByRole('button', { name: 'LIFT' }));
+    await user.selectOptions(screen.getByLabelText('Target'), 'back-right');
+    expect(screen.getByRole('button', { name: 'Juggler 1 left beat 1 LIFT R' })).toBeInTheDocument();
+  });
+
+  it('creates an individual pass using explicit performer and hand controls', async () => {
+    const user = userEvent.setup();
+    render(<App />);
+    await user.click(screen.getByRole('button', { name: 'Settings' }));
+    await user.click(screen.getByRole('button', { name: 'Add performer' }));
+    await user.selectOptions(screen.getByLabelText('Type'), 'individual-passing');
+    await user.click(screen.getByRole('button', { name: 'Juggler 1 left beat 1 empty' }));
+    await user.selectOptions(screen.getByLabelText('Pass to'), 'performer-2');
+    await user.selectOptions(screen.getByLabelText('Hand'), 'right');
+    await user.click(screen.getByRole('button', { name: 'PASS' }));
+    expect(screen.getByRole('button', { name: /Juggler 1 left beat 1 LEAVE/ })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Juggler 2 right beat 1 LIFT/ })).toBeInTheDocument();
+    expect(screen.getByLabelText('Recipient')).toBeInTheDocument();
+    expect(screen.getByLabelText('Hand')).toBeInTheDocument();
+  });
+
+  it('uses the acting performer as the default circle passing target', async () => {
+    const user = userEvent.setup();
+    render(<App />);
+    await user.click(screen.getByRole('button', { name: 'Settings' }));
+    await user.selectOptions(screen.getByLabelText('Type'), 'circle-passing');
+    await user.click(screen.getByRole('button', { name: 'Juggler 1 left beat 1 empty' }));
+    await user.click(screen.getByRole('button', { name: 'LIFT' }));
+    expect(screen.getByLabelText('Performer')).toHaveValue('self');
+    expect(screen.queryByLabelText('Direction')).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('Distance')).not.toBeInTheDocument();
+  });
 });
