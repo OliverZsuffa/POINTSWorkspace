@@ -176,7 +176,7 @@ describe('sequence editor', () => {
     expect(leaveCell.querySelector('tspan')?.textContent).toBe('b');
     expect(liftCell.querySelector('tspan')?.textContent).toBe('a');
     expect(screen.getByLabelText('Recipient')).toBeInTheDocument();
-    expect(screen.getAllByLabelText('Hand')).toHaveLength(2);
+    expect(screen.getAllByLabelText('Hand')).toHaveLength(1);
   });
 
   it('uses the acting performer as the default circle passing target', async () => {
