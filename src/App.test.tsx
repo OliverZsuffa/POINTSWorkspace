@@ -250,7 +250,7 @@ describe('sequence editor', () => {
     const second = screen.getByRole('button', { name: 'Juggler 1 left beat 2 empty' });
     fireEvent.keyDown(second, { key: 'ArrowRight', shiftKey: true });
     await user.click(screen.getByRole('button', { name: 'HOLD' }));
-    fireEvent.keyDown(second, { key: 'Delete' });
+    fireEvent.keyDown(second, { key: 'Backspace' });
     expect(screen.getByRole('button', { name: 'Juggler 1 left beat 1 empty' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Juggler 1 left beat 2 empty' })).toBeInTheDocument();
   });
