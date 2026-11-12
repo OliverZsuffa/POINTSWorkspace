@@ -2,17 +2,11 @@
 
 ## 1. Basic Concept
 
-POINTS is a notation system for table juggling. It describes the actions of one or more performers manipulating objects at defined positions over time. Its basic form is solo juggling. Passing can be added in two different ways.
+POINTS is a notation system for table juggling. It describes the actions of one or more performers manipulating objects at defined positions over time. Its basic form is solo juggling. Passing extends the notation to multiple performers.
 
-## 2. Performers and Positions
+## 2. Positions
 
-### 2.1 Performer Identifiers
-
-When a pattern involves multiple performers, each performer is assigned a lowercase letter, such as a, b or c. These letters identify performers, not table positions.
-
-### 2.2 Table Positions
-
-In solo juggling, a performer has three positions directly in front of them, arranged from left to right:
+In solo juggling, the table has three positions directly in front of the performer, arranged from left to right:
 
 | Position | Location |
 |---|---|
@@ -29,12 +23,7 @@ There are also two special hand positions:
 | L | The back of the respective left hand |
 | R | The back of the respective right hand |
 
-The way table positions are assigned depends on the passing system:
-
-- In solo juggling and circle passing, every performer has their own A, B and C positions.
-- In individual passing, performers can instead use one shared set of table positions, for example A, B, C and D. These positions belong to the shared playing area, not to an individual performer. Each performer still has their own left and right hands.
-
-This distinction matters: in circle passing, a position can refer to another performer's separate area. In individual passing, performers can work in the same shared area.
+In solo juggling, these positions belong to the performer. How positions are assigned in patterns with multiple performers depends on the passing system.
 
 ## 3. Time and Hands
 
@@ -72,7 +61,7 @@ ZIP represents a transfer of an object between the two hands of the same perform
 
 ## 6. Passing
 
-Passing extends POINTS to patterns involving multiple performers. The notation distinguishes between circle passing and individual passing.
+Passing extends POINTS to patterns involving multiple performers. There are two ways to notate passing: circle passing and individual passing.
 
 ### 6.1 Circle Passing
 
@@ -91,11 +80,11 @@ This form is called circle passing because all performers use the same sequence 
 
 ### 6.2 Individual Passing
 
-In individual passing, performers can use a shared set of table positions, such as A, B, C and D. Each performer has their own hand sequences, but the table positions are shared.
+In individual passing, performers have their own hand sequences and can interact directly with one another. Their table positions may remain separate, as in circle passing, or they may use a shared set of positions, such as A, B, C and D. A shared set is optional, not a requirement.
+
+Each performer is assigned a lowercase letter, such as a, b or c. These letters identify performers and are written as subscripts to indicate the other performer involved in a pass.
 
 A pass is written as a LEAVE action directed into another performer's hand. A circled hand position indicates that the object is passed into the hand, rather than placed onto the back of the hand. The receiving performer has a LIFT action at the same beat, with X as its target position. X indicates the hand that receives the ball.
-
-The lowercase performer identifiers are written as subscripts to identify the other performer involved in the transfer:
 
 - The LEAVE action uses the circled hand position with the receiving performer's identifier as a subscript.
 - The receiving LIFT action uses X with the sending performer's identifier as a subscript.
