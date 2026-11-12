@@ -12,7 +12,7 @@ const viewports = [
 for (const viewport of viewports) {
   test(`editor layout at ${viewport.name}`, async ({ page }) => {
     await page.setViewportSize({ width: viewport.width, height: viewport.height });
-    await page.goto('/');
+    await page.goto('./');
 
     const main = page.getByRole('main', { name: 'POINTS Workspace' });
     await expect(main).toBeVisible();
