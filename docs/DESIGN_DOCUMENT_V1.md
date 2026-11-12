@@ -94,6 +94,8 @@ Each juggler has a clearly separated section with an individual row for the left
 
 The table contains a time column structure shared by the juggler hand rows. Each cell represents the action of one hand at one point in time. Clicking a beat or subdivision label selects that time position across all juggler hand rows.
 
+All actions occur at the beginning of their assigned beat. Actions assigned to the same beat are evaluated simultaneously. A hand may hold at most one object with its fingers and balance at most one additional object on its back. A balanced object does not occupy the hand and does not prevent the hand from performing actions. Each position can contain exactly zero or one ball.
+
 The notation table must support the complete POINTS notation described in `docs/POINTS_NOTATION.md`, including:
 - HOLD
 - LIFT
@@ -115,9 +117,9 @@ The initial object distribution is editable. Users can see the available positio
 
 The editor must also provide an overview of object state at every beat for every juggler. It must show which positions are occupied by balls and which hand holds each ball. It updates as the sequence changes. The overview is hidden by default to avoid clutter. It can be revealed in the context of a beat, for example by hovering over that beat. Clicking a beat in the overview moves the renderer to that exact beat.
 
-Object state is evaluated at the beat itself. Movement and transfers happen between beats, so the overview must show the state at the selected beat rather than an intermediate point during movement.
+All actions assigned to a beat take effect simultaneously at the beginning of that beat. The resulting object state applies during the interval until the next beat. The overview must show the state resulting from the actions at the selected beat, not an intermediate animation state.
 
-A hand can simultaneously have an object balanced on top of it at its L or R position and another object held with its fingers after a LIFT action. Both object states must be represented. The L and R positions are distinct from an object held by the hand.
+A hand can hold one object with its fingers and simultaneously balance one additional object on its back at its L or R position. A balanced object does not occupy the hand's fingers and does not make the hand occupied for action eligibility. A hand therefore has two distinct object capacities: one finger held object and one back balanced object. Each position, including each hand back position, contains exactly zero or one ball.
 
 ### 1.4 Beats, subdivisions, and bars
 
@@ -165,9 +167,9 @@ Targets may be typed, but input must be restricted to legal targets for the sele
 
 For circle passing, the relative performer distance should be entered numerically, with direction represented separately. For individual passing, the other performer must be selected from the existing juggler list.
 
-ZIP is paired. Creating one side automatically creates the corresponding source or receiving symbol in the other hand row at the same beat. Both symbols remain linked and are validated as one transfer.
+ZIP is paired. Creating one side automatically creates the corresponding source or receiving symbol in the other hand row at the same beat. Both symbols remain linked and are validated as one transfer. Sending and receiving occur simultaneously at the beginning of the beat. A hand cannot receive one object and send another during the same beat.
 
-SPECIAL actions support free text. They can be assigned to one hand or linked across both hands for coordinated actions such as a clap. A linked SPECIAL action uses identical text in both linked cells. Linked SPECIAL cells are visually connected and use a yellow highlight. Since coordinated clap cells occur in the same beat, no directional arrows are needed. A SPECIAL action can only be assigned when the relevant hand is empty. No additional object state effects are currently required beyond this condition.
+SPECIAL actions support free text. They can be assigned to one hand or linked across both hands for coordinated actions such as a clap. A linked SPECIAL action uses identical text in both linked cells. Linked SPECIAL cells are visually connected and use a yellow highlight. Since coordinated clap cells occur in the same beat, no directional arrows are needed. A SPECIAL action requires the hand to have no object held with its fingers. An object balanced on the back of the hand is allowed. No additional object state effects are currently required beyond this condition.
 
 ### 1.6 Validation and errors
 
@@ -177,11 +179,11 @@ Invalid cells should be visually marked, for example with a red shaded backgroun
 
 Validation must cover the rules defined by POINTS notation. Examples include:
 - An action that is invalid in the current state.
-- Two objects being held by the same hand at the same time.
+- More than one object being held with the fingers of the same hand, or more than one ball occupying a position.
 - A transfer whose source and receiving actions do not match.
 - Inconsistent object states across time or between hands.
 
-The exact validation rules and severity levels remain to be specified. The renderer is disabled whenever the sequence contains any validation error. Selecting a general error should navigate to the affected cell or time position where possible. SPECIAL actions must be rejected when the relevant hand is not empty.
+The exact validation rules and severity levels remain to be specified. TAP requires a hand with no object held in its fingers. BOUNCE is the corresponding position tapping action performed while the hand holds one object with its fingers; that object remains held throughout. A balanced object on the back does not prevent either action. LIFT, LEAVE, TAP, BOUNCE, and SPECIAL are all compatible with an object balanced on the back, subject to their other requirements. The renderer is disabled whenever the sequence contains any validation error. Selecting a general error should navigate to the affected cell or time position where possible. SPECIAL actions must be rejected when the relevant hand is not empty.
 
 The editor does not prevent every invalid action from being entered. If an action is invalid in the current object state, the user may still enter it and the normal validation system marks the error. When an edit makes a linked action inconsistent, both affected cells are marked invalid rather than silently rewriting one side. ZIP symbols are a paired operation: deleting either side deletes the corresponding other side as well. Deleting one cell of a linked SPECIAL action does not automatically delete the other cell. The remaining cell is retained and treated as a standalone SPECIAL action.
 
