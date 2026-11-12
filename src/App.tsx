@@ -343,6 +343,10 @@ export default function App() {
     };
   }, [resizingPanels, panelsSwapped]);
 
+  useEffect(() => {
+    window.dispatchEvent(new Event('resize'));
+  }, [activeWorkspaceTab, editorShare, panelsSwapped, showEditor, showRenderer]);
+
   const editorPerformers = sequence.sequenceType === 'circle-passing' ? sequence.performers.slice(0, 1) : sequence.performers;
   const editorPositions = sequence.positions.filter((position) =>
     position.kind === 'table' && (sequence.sequenceType !== 'circle-passing' ||
