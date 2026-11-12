@@ -26,7 +26,7 @@ for (const viewport of viewports) {
     expect(bounds!.height).toBe(42);
 
     const background = await main.evaluate((element) => getComputedStyle(element).backgroundColor);
-    expect(background).toBe('rgb(245, 247, 251)');
+    expect(background).toBe('rgb(144, 208, 213)');
 
     await cell.click();
     await page.getByRole('button', { name: 'LIFT' }).click();
@@ -61,6 +61,7 @@ for (const viewport of viewports) {
 test('circle passing renderer layout with ten participants', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto('./');
+  await page.getByRole('button', { name: 'Settings' }).click();
   await page.getByRole('button', { name: 'Add performer' }).click();
   await page.getByRole('button', { name: 'Add performer' }).click();
   await page.getByLabel('Type').selectOption('circle-passing');
