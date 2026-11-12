@@ -1051,12 +1051,19 @@ export default function App() {
           }
           if ('target' in action) {
             const sourceTarget = action.target;
-            if (sourceTarget.kind === 'circle-position') {
-              const targetPosition = positions.find((position) => position.kind === 'table' &&
+            const matchingPosition = sourceTarget.kind === 'circle-position'
+              ? positions.find((position) => position.kind === 'table' &&
                 position.name === sourceTarget.position &&
-                position.owner.kind === 'performer' && position.owner.performerId === performer.id);
-              if (targetPosition) action = { ...action, target: { kind: 'position', positionId: targetPosition.id } } as NotationAction;
-            }
+                position.owner.kind === 'performer' && position.owner.performerId === performer.id)
+              : sourceTarget.kind === 'position'
+                ? (() => {
+                    const previousPosition = positions.find((position) => position.id === sourceTarget.positionId);
+                    return previousPosition?.kind === 'hand-back'
+                      ? positions.find((position) => position.kind === 'hand-back' && position.hand === previousPosition.hand && position.performerId === performer.id)
+                      : undefined;
+                  })()
+                : undefined;
+            if (matchingPosition) action = { ...action, target: { kind: 'position', positionId: matchingPosition.id } } as NotationAction;
           }
           return { ...entry, id: asActionEntryId('mode-' + entry.id + '-' + performer.id), performerId: performer.id, action };
         });
