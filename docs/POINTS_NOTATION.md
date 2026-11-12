@@ -51,17 +51,33 @@ The ampersand marks the midpoint between beats. The syllables $e$ and $a$ mark t
 | EMPTY | No action. |
 | SPECIAL | Perform an action not covered by the other types. |
 
+The symbols are formed from the borders of a cell. A target position is shown inside the cell where the action requires one.
+
+![POINTS action symbols](images/action-symbols.svg)
+
 SPECIAL can represent actions such as a clap. A clap requires both hands to be free during that beat.
 
-## 5. ZIP
+## 5. Ball Rectangles
+
+A rectangle represents one ball over time while it is held by a hand. It is opened by LIFT and closed by LEAVE. HOLD and BOUNCE can extend the rectangle between those actions. The rectangle remains straight and continuous across the beats. It does not trace a path between table positions.
+
+![A ball represented by a rectangle spanning three beats](images/ball-rectangle.svg)
+
+TAP is independent of a ball rectangle because it is performed with an empty hand. EMPTY has no symbol.
+
+## 6. ZIP
 
 ZIP transfers an object between the two hands of the same performer. It combines a source action and a receiving action at the same beat. Its direction determines which hand sends and which receives.
 
-## 6. Passing
+The four ZIP symbols are distinguished by which pair of cell borders is shown:
+
+![ZIP source and receiving symbols](images/zip-symbols.svg)
+
+## 7. Passing
 
 Passing extends POINTS to multiple performers. It can be written in two ways.
 
-### 6.1 Circle Passing
+### 7.1 Circle Passing
 
 Each performer has their own positions $A$, $B$ and $C$, and everyone follows the same sequence. A subscript identifies a position belonging to another performer:
 
@@ -76,7 +92,7 @@ The same applies to $B$ and $C$. The letter identifies the position; the subscri
 
 It is called circle passing because performers can, for example, sit in a circle and address their left and right neighbours.
 
-### 6.2 Individual Passing
+### 7.2 Individual Passing
 
 Performers have individual hand sequences and can pass directly to one another. Positions may be separate for each performer or shared on one common layout. A shared layout is optional.
 
@@ -90,8 +106,12 @@ The subscript on each action identifies the other performer. For example, a pass
 - In $a$'s right-hand row: LEAVE with circled $L$, subscript $b$.
 - In $b$'s left-hand row: LIFT with target $X$, subscript $a$.
 
+The sender's rectangle closes as the receiver's rectangle opens in the same beat:
+
+![Individual pass between two performers](images/individual-pass.svg)
+
 This can also describe a transfer that functions like a ZIP between performers. A transfer between the hands of one performer uses ZIP instead.
 
-## 7. Reading a Pattern
+## 8. Reading a Pattern
 
 Read each action in the context of its performer, hand, beat, target position and the current distribution of objects.
