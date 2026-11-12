@@ -1,31 +1,23 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="500" height="166" viewBox="0 0 500 166">
 <rect x="1" y="1" width="498" height="164" rx="8" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.5"/>
 <g font-family="Arial,sans-serif" fill="#263238">
-<text x="16" y="29" font-size="13" font-weight="bold">UPPER HAND</text>
-<text x="16" y="105" font-size="13" font-weight="bold">LOWER HAND</text>
+<text x="14" y="29" font-size="12" font-weight="bold">SOURCE HAND</text>
+<text x="14" y="105" font-size="12" font-weight="bold">RECEIVING HAND</text>
 <g font-size="11" text-anchor="middle">
 <text x="155" y="19">Beat 1</text><text x="221" y="19">Beat 2</text><text x="287" y="19">Beat 3</text><text x="353" y="19">Beat 4</text><text x="419" y="19">Beat 5</text>
-</g>
-<g font-size="11" text-anchor="middle">
-<text x="287" y="143">ZIP at beat 3</text>
+<text x="287" y="143">Same beat</text>
 </g>
 </g>
 <g fill="none" stroke="#263238" stroke-width="2.6" stroke-linecap="square" stroke-linejoin="miter">
-<!-- upper hand: LIFT, HOLD, ZIP source left -->
 <path d="M129 34H181 M129 34V76 M129 76H181"/>
 <path d="M195 34H247 M195 76H247"/>
 <path d="M261 34H313 M313 34V76"/>
-<!-- lower hand: ZIP receive right, HOLD, LEAVE -->
 <path d="M261 118H313 M261 76V118"/>
 <path d="M327 76H379 M327 118H379"/>
 <path d="M393 76H445 M445 76V118 M393 118H445"/>
 </g>
-<g font-family="Arial,sans-serif" font-size="13" fill="#263238" text-anchor="middle">
-<text x="155" y="57">A</text>
-<text x="419" y="98">B</text>
-</g>
-<g font-family="Arial,sans-serif" font-size="10" fill="#475569">
-<text x="16" y="48">LIFT</text><text x="16" y="61">HOLD</text><text x="16" y="74">ZIP source</text>
-<text x="16" y="124">ZIP receive</text><text x="16" y="137">HOLD</text><text x="16" y="150">LEAVE</text>
+<g font-family="Arial,sans-serif" font-size="12" fill="#263238" text-anchor="middle">
+<text x="155" y="57">A</text><text x="221" y="57">HOLD</text><text x="287" y="57">ZIP</text>
+<text x="287" y="98">ZIP</text><text x="353" y="98">HOLD</text><text x="419" y="98">B</text>
 </g>
 </svg>
