@@ -23,7 +23,7 @@ function normalize(point: Point3): Point3 {
   return { x: point.x / length, y: 0, z: point.z / length };
 }
 
-function positionOffset(name: string): number {
+export function getHandReachProgress(progress: number): number {\n  const clamped = Math.max(0, Math.min(1, progress));\n  return Math.sin(clamped * Math.PI);\n}\n\nexport function getHandReachPosition(base: Point3, target: Point3, progress: number): Point3 {\n  const amount = getHandReachProgress(progress);\n  return add(base, scale({ x: target.x - base.x, y: target.y - base.y, z: target.z - base.z }, amount));\n}\n\nexport function getCameraPanOffset(\n  cameraRight: Point3,\n  cameraUp: Point3,\n  deltaX: number,\n  deltaY: number,\n  radius: number,\n): Point3 {\n  const factor = Math.max(0, radius) * 0.0018;\n  return add(scale(cameraRight, -deltaX * factor), scale(cameraUp, deltaY * factor));\n}\n\nfunction positionOffset(name: string): number {
   if (name === 'A') return -0.95;
   if (name === 'C') return 0.95;
   return 0;
@@ -122,7 +122,7 @@ export function getTablePositionPosition(
   const owner = position.owner;
 
   if (owner.kind === 'shared') {
-    return { x: positionOffset(position.name), y: 0.14, z: 0 };
+    return { x: positionOffset(position.name), y: 0.19, z: 0 };
   }
 
   const performer = sequence.performers.find((item) => item.id === owner.performerId);
@@ -142,7 +142,7 @@ export function getTablePositionPosition(
 
   const edgePoint = scale(direction, Math.max(0, edgeDistance - inwardOffset));
   const tangent = { x: -direction.z, y: 0, z: direction.x };
-  return add(edgePoint, add(scale(tangent, positionOffset(position.name)), { x: 0, y: 0.14, z: 0 }));
+  return add(edgePoint, add(scale(tangent, positionOffset(position.name)), { x: 0, y: 0.19, z: 0 }));
 }
 
 export function getObjectPosition(
