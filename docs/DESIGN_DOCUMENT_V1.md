@@ -12,6 +12,16 @@ The application is built around three main components:
 
 This document records the initial product vision. It describes the intended capabilities and user experience at a high level. It is not an implementation specification, and details that have not yet been decided are left open.
 
+##  Overall workspace concept
+
+The editor, renderer, and generator are not separate applications. They are integrated parts of one uniform workspace, with sequences moving naturally between them.
+
+A sequence created or edited in the Sequence Editor is automatically reflected in the Sequence Renderer, so the user can see the pattern being built without having to export or manually transfer it.
+
+The Sequence Generator is another way to create sequences within the same workspace. When the user finds a generated sequence they like, they can bring it into the Sequence Editor and continue editing it. The resulting changes are then reflected in the renderer as well.
+
+In short, the workspace supports a connected workflow: create or generate a sequence, inspect it visually, and edit it further.
+
 ## 1. Sequence Editor
 
 The Sequence Editor is a visual editor for creating a POINTS sequence manually.
