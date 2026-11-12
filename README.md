@@ -19,7 +19,7 @@ See [Design Direction](docs/DESIGN_DIRECTION.md) for the agreed visual and techn
 - Vitest
 - React Testing Library
 
-The project scaffold and shared domain model are being developed on the implementation/01-foundation-domain-model branch.
+The initial project scaffold and shared domain model are available on the [implementation/01-foundation-domain-model branch](https://github.com/OliverZsuffa/POINTSWorkspace/tree/implementation/01-foundation-domain-model).
 
 ## Local development
 

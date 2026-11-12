@@ -36,10 +36,11 @@ Establish the application scaffold and shared framework independent data model u
 4. Defined branded IDs and shared sequence types.
 5. Defined explicit musical beat grouping and exact rational timeline positions.
 6. Defined performers, positions, ball identities, initial placements, notation actions, table layouts and seat assignments.
-7. Defined shared simulator, validator, codec, generator and renderer contracts.
-8. Added representative sequence fixtures and unit tests.
-9. Documented the shared model in docs/architecture/DOMAIN_MODEL.md.
-10. Added continuous integration checks for formatting, linting, type checking, tests and production build.
+7. Updated the POINTS notation specification with the agreed beat timing, hand capacity, balancing, TAP, BOUNCE, SPECIAL and transfer rules.
+8. Defined shared simulator, validator, codec, generator and renderer contracts.
+9. Added representative sequence fixtures and unit tests.
+10. Documented the shared model in docs/architecture/DOMAIN_MODEL.md.
+11. Added continuous integration checks for formatting, linting, type checking, tests and production build.
 
 ## Verification
 
@@ -51,7 +52,7 @@ Establish the application scaffold and shared framework independent data model u
 - [x] Domain logic has no React or renderer dependency
 - [x] Downstream packages can consume the shared contracts
 
-All checks passed in [GitHub Actions run 43239753618](https://github.com/OliverZsuffa/POINTSWorkspace/actions/runs/43239753618) against the completed implementation commit.
+All checks passed in [GitHub Actions run 43240109472](https://github.com/OliverZsuffa/POINTSWorkspace/actions/runs/43240109472) against the completed implementation commit.
 
 ## Dependencies
 
