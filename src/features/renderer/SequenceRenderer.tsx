@@ -12,6 +12,7 @@ import {
   getPerformerFacing,
   getTableFootprint,
   getTablePositionPosition,
+  isStationaryHandAction,
   type Point3,
   type SceneLayout,
 } from './geometry';
@@ -443,7 +444,7 @@ export default function SequenceRenderer({ sequence, simulation, onSelectHand }:
               const otherHand = visual.hand === 'left' ? 'right' : 'left';
               const other = getHandPosition(current.sequence, visual.performerId, otherHand, current.layout);
               targetPoint = { x: (base.x + other.x) / 2, y: 1.15, z: (base.z + other.z) / 2 };
-            } else if (action.type === 'HOLD' || action.type === 'EMPTY') {
+            } else if (isStationaryHandAction(action.type)) {
               targetPoint = undefined;
             }
           }
