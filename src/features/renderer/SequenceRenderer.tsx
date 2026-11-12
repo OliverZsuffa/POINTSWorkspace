@@ -485,11 +485,12 @@ export default function SequenceRenderer({ sequence, simulation, onSelectHand }:
         }
       }
 
-        for (const ball of current.sequence.balls) {
-          const before = snapshotLocation(current.simulation, beat.id, 'before', ball.id);
-          const after = snapshotLocation(current.simulation, beat.id, 'after', ball.id);
-          const mesh = balls.get(ball.id);
-          if (!before || !after || !mesh) continue;
+        if (beat) {
+          for (const ball of current.sequence.balls) {
+            const before = snapshotLocation(current.simulation, beat.id, 'before', ball.id);
+            const after = snapshotLocation(current.simulation, beat.id, 'after', ball.id);
+            const mesh = balls.get(ball.id);
+            if (!before || !after || !mesh) continue;
 
           if (before.kind === 'position' && after.kind === 'hand-held') {
             if (progressValue >= 0.5) {
@@ -508,6 +509,7 @@ export default function SequenceRenderer({ sequence, simulation, onSelectHand }:
           }
         }
 
+        }
       renderer.render(scene, camera);
     };
     animate();
