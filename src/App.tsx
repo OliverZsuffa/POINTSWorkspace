@@ -238,7 +238,7 @@ function ActionSymbol({ action, sequence, hand }: { action: NotationAction; sequ
 
 function NotationMark({ action, sequence, hand }: { action: NotationAction; sequence: Sequence; hand: Hand }) {
   if (action.type === 'EMPTY') return null;
-  if (action.type === 'SPECIAL') return <span className="special-symbol">{action.text || 'SPECIAL'}</span>;
+  if (action.type === 'SPECIAL') return <span className="special-symbol">{action.text || 'SPECIAL'}{action.linkId && <span className="special-link-indicator" aria-label="Linked SPECIAL">↔</span>}</span>;
   if (action.type === 'TAP') return <ActionSymbol action={action} sequence={sequence} hand={hand} />;
   let path = '';
   let label = '';
