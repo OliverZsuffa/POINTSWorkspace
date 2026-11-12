@@ -1,6 +1,6 @@
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import App from './App';
 
 describe('sequence editor', () => {
@@ -203,5 +203,27 @@ describe('sequence editor', () => {
     render(<App />);
     const zip = screen.getByRole('button', { name: 'ZIP' });
     expect(zip.querySelectorAll('.zip-tool-preview .notation-symbol')).toHaveLength(2);
+  });
+
+  it('changes ball count and rejects reducing a ball that is in use', async () => {
+    const user = userEvent.setup();
+    const { container } = render(<App />);
+    await user.click(screen.getByRole('button', { name: 'Settings' }));
+    const ballControl = () => Array.from(container.querySelectorAll('.setting-control')).find((element) => element.textContent?.includes('Balls'))!;
+    await user.click(ballControl().querySelectorAll('button')[1]!);
+    expect(screen.getByText('3 / 3')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'B, occupied' })).toBeInTheDocument();
+    await user.click(ballControl().querySelectorAll('button')[0]!);
+    expect(screen.getByText('2 / 2')).toBeInTheDocument();
+
+    await user.click(ballControl().querySelectorAll('button')[1]!);
+    await user.click(screen.getByRole('button', { name: 'Juggler 1 left beat 1 empty' }));
+    await user.click(screen.getByRole('button', { name: 'LIFT' }));
+    await user.selectOptions(screen.getByLabelText('Target'), 'position-B');
+    const alert = vi.spyOn(window, 'alert').mockImplementation(() => undefined);
+    await user.click(ballControl().querySelectorAll('button')[0]!);
+    expect(screen.getByText('3 / 3')).toBeInTheDocument();
+    expect(alert).toHaveBeenCalled();
+    alert.mockRestore();
   });
 });
