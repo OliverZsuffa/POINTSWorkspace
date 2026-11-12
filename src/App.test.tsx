@@ -110,8 +110,8 @@ describe('sequence editor', () => {
     const symbol = screen.getByRole('button', { name: 'Juggler 1 left beat 1 LIFT A' }).querySelector('svg.ball-segment');
     expect(symbol).toBeInTheDocument();
     expect(symbol).toHaveAttribute('viewBox', '0 0 100 100');
-    expect(symbol?.querySelector('path')).toHaveAttribute('d', 'M0 19H100 M0 19V81 M0 81H100');
-    expect(symbol?.querySelector('text')).toHaveAttribute('font-size', '38');
+    expect(symbol?.querySelector('path')).toHaveAttribute('d', 'M0 0H100 M0 0V100 M0 100H100');
+    expect(symbol?.querySelector('text')).toHaveAttribute('font-size', '46');
   });
 
   it('opens the interactive sequence renderer from the top bar', async () => {
@@ -196,6 +196,8 @@ describe('sequence editor', () => {
     const user = userEvent.setup();
     render(<App />);
     await user.click(screen.getByRole('button', { name: 'Settings' }));
+    await user.click(screen.getByRole('button', { name: 'Add performer' }));
+    await user.click(screen.getByRole('button', { name: 'Add performer' }));
     await user.selectOptions(screen.getByLabelText('Type'), 'circle-passing');
     await user.click(screen.getByRole('button', { name: 'Juggler 1 left beat 1 empty' }));
     await user.click(screen.getByRole('button', { name: 'LIFT' }));
@@ -208,6 +210,7 @@ describe('sequence editor', () => {
     const user = userEvent.setup();
     render(<App />);
     await user.click(screen.getByRole('button', { name: 'Settings' }));
+    await user.click(screen.getByRole('button', { name: 'Add performer' }));
     await user.click(screen.getByRole('button', { name: 'Add performer' }));
     await user.selectOptions(screen.getByLabelText('Type'), 'circle-passing');
     await user.click(screen.getByRole('button', { name: 'Juggler 1 left beat 1 empty' }));
@@ -769,7 +772,7 @@ describe('sequence editor', () => {
       await user.click(screen.getByRole('button', { name: action }));
 
       const target = screen.getByLabelText('Target');
-      expect(Array.from((target as HTMLSelectElement).options).map((option) => option.textContent)).toEqual(['A', 'B', 'C']);
+      expect(Array.from((target as HTMLSelectElement).options).map((option) => option.textContent)).toEqual(['Juggler 1 · A', 'Juggler 1 · B', 'Juggler 1 · C']);
     },
   );
 
