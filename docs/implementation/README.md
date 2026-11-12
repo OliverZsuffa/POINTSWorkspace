@@ -2,16 +2,14 @@
 
 ## Purpose
 
-The implementation is divided into bounded work packages so separate agents can work on separate application areas without conflicting assumptions or overlapping ownership.
-
-These are proposed plans, not approval to start implementation. Each package remains awaiting approval.
+The implementation is divided into bounded work packages so separate agents can work on separate application areas without conflicting assumptions or overlapping ownership. Each package requires explicit approval before implementation.
 
 ## Work package order
 
-| ID | Work package | Responsibility | Depends on |
+| ID | Work package | Responsibility | Depends on | Status |
 |---|---|---|---|
-| 01 | Foundation and domain model | Project scaffold, shared types, sequence model and interfaces | None |
-| 02 | Object state and validation | Simultaneous beat processing, state transitions and validity checks | 01 | **Implemented, pending CI** |
+| 01 | Foundation and domain model | Project scaffold, shared types, sequence model and interfaces | None | Implemented and merged to main |
+| 02 | Object state and validation | Simultaneous beat processing, state transitions and validity checks | 01 | Implemented, pending CI |
 | 03 | Sequence editor | Notation grid, editing interactions, settings and undo | 01, 02 |
 | 04 | Sequence renderer | 3D scene, animation, playback and editor synchronisation | 01, 02 |
 | 05 | Sequence generator | Constraint search and candidate generation | 01, 02 |
