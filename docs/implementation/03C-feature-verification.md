@@ -2,7 +2,7 @@
 
 ## Status
 
-Audit in progress on `work/03c-editor-completion`. This matrix distinguishes automated evidence from complete verification. A test passing does not automatically establish visual correctness or complete feature behaviour.
+Implementation merged into `main` through PR #9. Automated checks pass. The remaining audit work is manual visual verification and the explicitly marked partial requirements. This matrix distinguishes automated evidence from complete verification. A test passing does not automatically establish visual correctness or complete feature behaviour.
 
 Status meanings:
 
@@ -72,11 +72,11 @@ Status meanings:
 
 | Check | Result | Evidence |
 |---|---|---|
-| Prettier | Pending | CI |
-| ESLint | Pending | CI |
-| Strict TypeScript | Pending | CI |
-| Unit and component tests | Pending | CI |
-| Production build | Pending | CI |
+| Prettier | Passed | CI run #43279634725 |
+| ESLint | Passed | CI run #43279634725 |
+| Strict TypeScript | Passed | CI run #43279634725 |
+| Unit and component tests | Passed | CI run #43279634725 |
+| Production build | Passed | CI run #43279634725 |
 | Desktop visual review | Pending | Manual browser review |
 | Tablet visual review | Pending | Manual browser review |
 | Phone visual review | Pending | Manual browser review |
