@@ -482,4 +482,19 @@ describe('sequence editor', () => {
     expect(screen.getByRole('button', { name: 'Juggler 1 left beat 1 empty' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Juggler 2 left beat 1 empty' })).toBeInTheDocument();
   });
+
+  it('opens the action menu for an empty cell and closes it after choosing an action', async () => {
+    const user = userEvent.setup();
+    render(<App />);
+    expect(screen.queryByRole('button', { name: 'LIFT' })).not.toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Juggler 1 left beat 1 empty' }));
+    expect(screen.getByRole('button', { name: 'LIFT' })).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'LIFT' }));
+    expect(screen.queryByRole('button', { name: 'LIFT' })).not.toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Change action' }));
+    expect(screen.getByRole('button', { name: 'HOLD' })).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'HOLD' }));
+    expect(screen.getByRole('button', { name: 'Juggler 1 left beat 1 HOLD' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'HOLD' })).not.toBeInTheDocument();
+  });
 });
