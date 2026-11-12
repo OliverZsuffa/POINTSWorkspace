@@ -286,4 +286,34 @@ describe('sequence editor', () => {
     expect(screen.getByRole('button', { name: 'Select beat 2' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Juggler 1 left beat 9 empty' })).toBeInTheDocument();
   });
+
+  it('moves an entire ball rectangle when dragging one of its cells', () => {
+    render(<App />);
+    const start = screen.getByRole('button', { name: 'Juggler 1 left beat 1 empty' });
+    const end = screen.getByRole('button', { name: 'Juggler 1 left beat 3 empty' });
+    fireEvent.mouseDown(start, { shiftKey: true });
+    fireEvent.mouseUp(end);
+    const hold = screen.getByRole('button', { name: 'Juggler 1 left beat 2 HOLD' });
+    const destination = screen.getByRole('button', { name: 'Juggler 1 left beat 4 empty' });
+    fireEvent.mouseDown(hold);
+    fireEvent.mouseUp(destination);
+    expect(screen.getByRole('button', { name: 'Juggler 1 left beat 2 LIFT A' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Juggler 1 left beat 3 HOLD' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Juggler 1 left beat 4 LEAVE A' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Juggler 1 left beat 1 empty' })).toBeInTheDocument();
+  });
+
+  it('keeps linked SPECIAL text synchronised when either side is edited', async () => {
+    const prompt = vi.spyOn(window, 'prompt').mockReturnValue('Clap twice');
+    render(<App />);
+    const user = userEvent.setup();
+    await user.click(screen.getByRole('button', { name: 'Juggler 1 left beat 1 empty' }));
+    await user.click(screen.getByRole('button', { name: 'CLAP' }));
+    const right = screen.getByRole('button', { name: 'Juggler 1 right beat 1 Clap' });
+    fireEvent.doubleClick(right);
+    expect(prompt).toHaveBeenCalled();
+    expect(screen.getByRole('button', { name: 'Juggler 1 left beat 1 Clap twice' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Juggler 1 right beat 1 Clap twice' })).toBeInTheDocument();
+    prompt.mockRestore();
+  });
 });
