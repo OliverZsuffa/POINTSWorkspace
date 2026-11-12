@@ -1,1 +1,1 @@
-export { simulateSequence } from './simulate';
+export { sequenceSimulator, simulateSequence } from './simulate';
