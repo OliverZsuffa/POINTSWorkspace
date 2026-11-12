@@ -1375,7 +1375,7 @@ export default function App() {
       <section className="bottom-panels">
         <div className="validation-panel" role="region" aria-label="Validation">
           <div className="panel-heading"><strong>Validation</strong><span className={simulation.validation.isValid ? 'valid-count' : 'error-count'}>{simulation.validation.issues.length} {simulation.validation.issues.length === 1 ? 'issue' : 'issues'}</span></div>
-          {simulation.validation.issues.length === 0 ? <p className="no-issues">Sequence valid</p> : <ul>{simulation.validation.issues.slice(0, 8).map((issue, index) => (
+          {simulation.validation.issues.length === 0 ? <p className="no-issues">Sequence valid</p> : <ul>{simulation.validation.issues.map((issue, index) => (
             <li key={issue.code + index}><span>{issue.description}</span>{issue.affectedEntries[0] && <button type="button" onClick={() => {
               const entry = sequence.notation.find((item) => item.id === issue.affectedEntries[0]);
               if (entry) selectCell({ performerId: entry.performerId, hand: entry.hand, beatId: entry.time.beatId });
