@@ -23,7 +23,7 @@ import { compareRational, rational, type Rational } from './domain/time/rational
 import { DEFAULT_TIME_SIGNATURE } from './domain/time/time-signature';
 import { simulateSequence } from './domain/state';
 import { getBallRectangleEntries } from './features/editor/rectangles';
-import { getTimelineSlots, splitSubdivision } from './features/editor/timeline';
+import { getTimelineSlots, splitSubdivision, type TimelineSlot } from './features/editor/timeline';
 
 let nextId = 1;
 const id = (prefix: string) => prefix + '-' + (++nextId).toString(36);
@@ -968,7 +968,7 @@ export default function App() {
     if (!selected) return;
     const otherHand = selected.hand === 'left' ? 'right' : 'left';
     if (entryAt(selected.performerId, selected.hand, selected.beatId, selected.offset ?? rational(0)) ||
-        entryAt(selected.performerId, otherHand, selected.beatId)) return;
+        entryAt(selected.performerId, otherHand, selected.beatId, selected.offset ?? rational(0))) return;
     const linkId = asLinkId(id('special-link'));
     const entries: NotationEntry[] = hands.map((hand) => ({
       id: asActionEntryId(id('entry')),
@@ -985,7 +985,7 @@ export default function App() {
     const recipient = sequence.performers.find((person) => person.id === passRecipientId && person.id !== selected.performerId) ?? sequence.performers.find((person) => person.id !== selected.performerId);
     if (!recipient || recipient.id === selected.performerId) return;
     const recipientHand = passRecipientHand;
-    if (entryAt(selected.performerId, selected.hand, selected.beatId) ||
+    if (entryAt(selected.performerId, selected.hand, selected.beatId, selected.offset ?? rational(0)) ||
         entryAt(recipient.id, recipientHand, selected.beatId, selected.offset ?? rational(0))) {
       window.alert('Both hands must be empty at this beat.');
       return;
