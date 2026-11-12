@@ -416,7 +416,7 @@ export default function App() {
     const modifier = event.ctrlKey || event.metaKey;
     if (modifier && event.key.toLowerCase() === 'c') { event.preventDefault(); copySelected(); return; }
     if (modifier && event.key.toLowerCase() === 'v') { event.preventDefault(); pasteSelected(); return; }
-    if (modifier && event.key.toLowerCase() === 'z') { event.preventDefault(); event.shiftKey ? redo() : undo(); return; }
+    if (modifier && event.key.toLowerCase() === 'z') { event.preventDefault(); if (event.shiftKey) redo(); else undo(); return; }
     if (modifier && event.key.toLowerCase() === 'y') { event.preventDefault(); redo(); return; }
     if (event.key === '?' || (event.shiftKey && event.key === '/')) { event.preventDefault(); setShowShortcutHelp(true); return; }
     if (event.key === 'Escape') {
