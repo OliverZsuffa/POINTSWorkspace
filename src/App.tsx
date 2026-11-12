@@ -904,7 +904,16 @@ export default function App() {
     const initialC: ObjectLocation = sharedLayout
       ? sharedC && !sharedCOccupied ? { kind: 'position', positionId: sharedC.id } : { kind: 'hand-held', performerId, hand: 'right' }
       : { kind: 'position', positionId: ownedPositions[2]!.id };
-    const seatAssignments = [...sequence.seatAssignments, {
+    const missingSeatAssignments = sequence.performers
+      .filter((person) => !sequence.seatAssignments.some((assignment) => assignment.performerId === person.id))
+      .map((person) => {
+        const index = sequence.performers.findIndex((item) => item.id === person.id);
+        return {
+          performerId: person.id,
+          seat: { kind: 'rectangle-side' as const, side: (index % 2 === 0 ? 'long-a' : 'long-b') as 'long-a' | 'long-b', seatIndex: Math.floor(index / 2) },
+        };
+      });
+    const seatAssignments = [...sequence.seatAssignments, ...missingSeatAssignments, {
       performerId, seat: { kind: 'rectangle-side' as const, side: (performerNumber % 2 ? 'long-a' : 'long-b') as 'long-a' | 'long-b', seatIndex: Math.floor((performerNumber - 1) / 2) },
     }];
     commit({
@@ -1089,8 +1098,19 @@ export default function App() {
       return entry;
     });
 
+    const seatAssignments = type === 'individual-passing'
+      ? [...sequence.seatAssignments, ...sequence.performers
+          .filter((person) => !sequence.seatAssignments.some((assignment) => assignment.performerId === person.id))
+          .map((person) => {
+            const index = sequence.performers.findIndex((item) => item.id === person.id);
+            return {
+              performerId: person.id,
+              seat: { kind: 'rectangle-side' as const, side: (index % 2 === 0 ? 'long-a' : 'long-b') as 'long-a' | 'long-b', seatIndex: Math.floor(index / 2) },
+            };
+          })]
+      : sequence.seatAssignments;
     commit({
-      ...sequence, sequenceType: type, positions, notation, individualPassingLayout,
+      ...sequence, sequenceType: type, positions, notation, individualPassingLayout, seatAssignments,
       tableLayout: type === 'solo' ? { type: 'solo' }
         : type === 'circle-passing' ? { type: 'polygon', sideCount: sequence.performers.length }
           : { type: 'rectangle', longSideSeatCount: Math.max(1, Math.ceil(sequence.performers.length / 2)), shortSideSeatCount: 0 },
