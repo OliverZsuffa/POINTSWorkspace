@@ -227,7 +227,7 @@ describe('sequence editor', () => {
     await user.click(screen.getByRole('button', { name: 'Juggler 2 left beat 1 empty' }));
     await user.click(screen.getByRole('button', { name: 'LIFT' }));
     const cell = screen.getByRole('button', { name: 'Juggler 2 left beat 1 LIFT A(b)' });
-    expect(cell.querySelector('tspan')?.textContent).toBe('b');
+    expect(cell.querySelector('text')?.textContent).toBe('A(b)');
   });
 
   it('does not print HOLD or ZIP inside the ball rectangle symbols', async () => {

@@ -219,23 +219,23 @@ function ActionSymbol({ action, sequence, hand }: { action: NotationAction; sequ
     case 'HOLD': path = 'M7 9H41 M7 39H41'; break;
     case 'LIFT':
       path = 'M7 9H41 M7 9V39 M7 39H41';
-      if (action.target.kind === 'position') { const reference = positionNotation(sequence, action.target.positionId); target = reference.name; subscript = reference.subscript ?? ''; }
+      if (action.target.kind === 'position') target = positionReference(sequence, action.target.positionId);
       else if (action.target.kind === 'circle-position') { target = action.target.position; subscript = circleSubscript(action.target); }
       else if ('performerId' in action.target) { const targetPerformerId = action.target.performerId; target = 'X'; subscript = sequence.performers.find((person) => person.id === targetPerformerId)?.identifier ?? '?'; }
       break;
     case 'LEAVE':
       path = 'M7 9H41 M41 9V39 M7 39H41';
-      if (action.target.kind === 'position') { const reference = positionNotation(sequence, action.target.positionId); target = reference.name; subscript = reference.subscript ?? ''; }
+      if (action.target.kind === 'position') target = positionReference(sequence, action.target.positionId);
       else if (action.target.kind === 'circle-position') { target = action.target.position; subscript = circleSubscript(action.target); }
       else if ('hand' in action.target) { const targetHand = action.target.hand; const targetPerformerId = action.target.performerId; target = targetHand === 'left' ? 'L' : 'R'; circledTarget = true; subscript = sequence.performers.find((person) => person.id === targetPerformerId)?.identifier ?? '?'; }
       break;
     case 'BOUNCE':
       path = 'M7 9H41 M7 39H41';
-      if (action.target.kind === 'position') { const reference = positionNotation(sequence, action.target.positionId); target = reference.name; subscript = reference.subscript ?? ''; }
+      if (action.target.kind === 'position') target = positionReference(sequence, action.target.positionId);
       else { target = action.target.position; subscript = circleSubscript(action.target); }
       break;
     case 'TAP':
-      if (action.target.kind === 'position') { const reference = positionNotation(sequence, action.target.positionId); target = reference.name; subscript = reference.subscript ?? ''; }
+      if (action.target.kind === 'position') target = positionReference(sequence, action.target.positionId);
       else { target = action.target.position; subscript = circleSubscript(action.target); }
       break;
     case 'ZIP':
@@ -265,20 +265,20 @@ function NotationMark({ action, sequence, hand }: { action: NotationAction; sequ
   switch (action.type) {
     case 'LIFT':
       path = 'M0 19H100 M0 19V81 M0 81H100';
-      if (action.target.kind === 'position') { const reference = positionNotation(sequence, action.target.positionId); label = reference.name; subscript = reference.subscript ?? ''; }
+      if (action.target.kind === 'position') label = positionReference(sequence, action.target.positionId);
       else if (action.target.kind === 'circle-position') { label = action.target.position; subscript = circleSubscript(action.target); }
       else if ('performerId' in action.target) { const targetPerformerId = action.target.performerId; label = 'X'; subscript = sequence.performers.find((person) => person.id === targetPerformerId)?.identifier ?? '?'; }
       break;
     case 'HOLD': path = 'M0 19H100 M0 81H100'; break;
     case 'LEAVE':
       path = 'M0 19H100 M100 19V81 M0 81H100';
-      if (action.target.kind === 'position') { const reference = positionNotation(sequence, action.target.positionId); label = reference.name; subscript = reference.subscript ?? ''; }
+      if (action.target.kind === 'position') label = positionReference(sequence, action.target.positionId);
       else if (action.target.kind === 'circle-position') { label = action.target.position; subscript = circleSubscript(action.target); }
       else if ('hand' in action.target) { const targetHand = action.target.hand; const targetPerformerId = action.target.performerId; label = targetHand === 'left' ? 'L' : 'R'; circledTarget = true; subscript = sequence.performers.find((person) => person.id === targetPerformerId)?.identifier ?? '?'; }
       break;
     case 'BOUNCE':
       path = 'M0 19H100 M0 81H100';
-      if (action.target.kind === 'position') { const reference = positionNotation(sequence, action.target.positionId); label = reference.name; subscript = reference.subscript ?? ''; }
+      if (action.target.kind === 'position') label = positionReference(sequence, action.target.positionId);
       else { label = action.target.position; subscript = circleSubscript(action.target); }
       break;
     case 'ZIP':
@@ -291,7 +291,7 @@ function NotationMark({ action, sequence, hand }: { action: NotationAction; sequ
     <svg className="ball-segment" viewBox="0 0 100 100" aria-hidden="true">
       <path d={path} fill="none" stroke="#263238" strokeWidth="2.6" strokeLinecap="square" strokeLinejoin="miter" />
       {circledTarget && <circle cx="36" cy="50" r="13" fill="none" stroke="#263238" strokeWidth="1.8" />}
-      {label && <text x={subscript ? 38 : 50} y="50" textAnchor="middle" dominantBaseline="middle" fontFamily="Arial,sans-serif" fontSize={label.length > 2 ? 24 : 38} fontWeight="600" fill="#172033">{label}{subscript && <tspan fontSize="25" baselineShift="sub">{subscript}</tspan>}</text>}
+      {label && <text x={subscript ? 38 : 50} y="50" textAnchor="middle" dominantBaseline="middle" fontFamily="Arial,sans-serif" fontSize={label.length > 3 ? 28 : 38} fontWeight="600" fill="#172033">{label}{subscript && <tspan fontSize="25" baselineShift="sub">{subscript}</tspan>}</text>}
     </svg>
   );
 }
@@ -1233,7 +1233,7 @@ export default function App() {
                       onClick={() => toggleInitialLocation(location)}
                       disabled={!ball && sequence.initialState.placements.length >= sequence.balls.length}
                       aria-label={position.name + (ball ? ', occupied' : ', empty')}>
-                      <span className="position-name">{position.name}{positionNotation(sequence, position.id).subscript && <sub>{positionNotation(sequence, position.id).subscript}</sub>}</span><span className="ball-indicator" />
+                      <span className="position-name">{positionReference(sequence, position.id)}</span><span className="ball-indicator" />
                     </button>
                   );
                 })}
