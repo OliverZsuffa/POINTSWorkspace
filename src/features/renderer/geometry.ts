@@ -190,8 +190,8 @@ export function getTableFootprint(sequence: Sequence): { width: number; depth: n
   if (sequence.tableLayout.type === 'rectangle') {
     const positionSpan = getPositionSpan(sequence);
     const seatPitch = getSeatPitch(sequence);
-    const width = Math.max(3.2, Math.max(1, sequence.tableLayout.longSideSeatCount - 1) * seatPitch + positionSpan + 0.6);
-    const depth = Math.max(2.4, Math.max(1, sequence.tableLayout.shortSideSeatCount - 1) * seatPitch + positionSpan + 0.6);
+    const width = Math.max(3.2, Math.max(0, sequence.tableLayout.longSideSeatCount - 1) * seatPitch + positionSpan + 0.6);
+    const depth = Math.max(2.4, Math.max(0, sequence.tableLayout.shortSideSeatCount - 1) * seatPitch + positionSpan + 0.6);
     return { width, depth, round: false };
   }
   return { width: 3.6, depth: 2.5, round: false };
