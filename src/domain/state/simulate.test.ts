@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { asActionEntryId, asBallId, asLinkId, asPositionId } from '../ids';
+import { asActionEntryId, asBallId, asLinkId, asPerformerId, asPositionId } from '../ids';
 import type { NotationEntry, Sequence } from '../model';
 import { rational } from '../time/rational';
 import {
@@ -131,9 +131,7 @@ describe('object state simulation', () => {
   });
 
   it('resolves circle passing targets relative to the acting performer', () => {
-    const secondPerformer = representativeSoloSequence.performers[0]!.id === performerId
-      ? 'performer-2' as typeof performerId
-      : performerId;
+    const secondPerformer = asPerformerId('performer-2');
     const otherA = asPositionId('position-A-performer-2');
     const sequence: Sequence = {
       ...representativeSoloSequence,
