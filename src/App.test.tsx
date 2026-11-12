@@ -316,4 +316,25 @@ describe('sequence editor', () => {
     expect(screen.getByRole('button', { name: 'Juggler 1 right beat 1 Clap twice' })).toBeInTheDocument();
     prompt.mockRestore();
   });
+
+  it('splits timeline intervals recursively and labels conventional counts', async () => {
+    const user = userEvent.setup();
+    render(<App />);
+    await user.click(screen.getByRole('button', { name: 'Subdivide beat 1 interval 1' }));
+    expect(screen.getByRole('button', { name: 'Juggler 1 left beat 1 empty' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Juggler 1 left beat 1 & empty' })).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Subdivide beat 1 interval 1' }));
+    expect(screen.getByRole('button', { name: 'Juggler 1 left beat 1 e empty' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Juggler 1 left beat 1 & empty' })).toBeInTheDocument();
+    expect(screen.getByText(/simulator currently evaluates all actions/)).toBeInTheDocument();
+  });
+
+  it('adds notation at the selected subdivision offset', async () => {
+    const user = userEvent.setup();
+    render(<App />);
+    await user.click(screen.getByRole('button', { name: 'Subdivide beat 1 interval 1' }));
+    await user.click(screen.getByRole('button', { name: 'Juggler 1 left beat 1 & empty' }));
+    await user.click(screen.getByRole('button', { name: 'LIFT' }));
+    expect(screen.getByRole('button', { name: 'Juggler 1 left beat 1 & LIFT A' })).toBeInTheDocument();
+  });
 });
