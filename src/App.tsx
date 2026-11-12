@@ -204,8 +204,8 @@ function NotationMark({ action, sequence, hand }: { action: NotationAction; sequ
       break;
     case 'ZIP':
       path = action.role === 'source'
-        ? hand === 'left' ? 'M0 2H100 M100 2V98' : 'M0 81H100 M100 19V81'
-        : hand === 'left' ? 'M0 2H100 M0 2V98' : 'M0 81H100 M0 19V81';
+        ? hand === 'left' ? 'M0 19H100 M100 19V81' : 'M0 81H100 M100 19V81'
+        : hand === 'left' ? 'M0 19H100 M0 19V81' : 'M0 81H100 M0 19V81';
       label = 'ZIP';
       break;
   }
