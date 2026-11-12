@@ -92,6 +92,7 @@ describe('sequence editor', () => {
   it('sets initial objects by clicking visible positions', async () => {
     const user = userEvent.setup();
     render(<App />);
+    await user.click(screen.getByRole('button', { name: /Initial positions/ }));
 
     await user.click(screen.getByRole('button', { name: 'A, occupied' }));
     expect(screen.getByRole('button', { name: 'A, empty' })).toBeInTheDocument();
@@ -438,6 +439,7 @@ describe('sequence editor', () => {
     await user.clear(name);
     await user.type(name, 'Oliver');
     fireEvent.blur(name);
+    await user.click(screen.getByRole('button', { name: /Initial positions/ }));
     expect(screen.getAllByText('Oliver')).toHaveLength(2);
     const identifier = screen.getByRole('textbox', { name: 'Performer identifier a' });
     await user.clear(identifier);
