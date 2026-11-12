@@ -11,7 +11,7 @@ The implementation is divided into bounded work packages so separate agents can 
 | 01 | Foundation and domain model | Project scaffold, shared types, sequence model and interfaces | None | Implemented and merged to main |
 | 02 | Object state and validation | Simultaneous beat processing, state transitions and validity checks | 01 | Implemented and merged to main |
 | 03 | Sequence editor | Notation grid, editing interactions, settings and undo | 01, 02 | Approved, implementation in progress |
-| 03B | Editor corrections and visual refinement | Correct initial ball setup, notation visuals, beat state and target editing | 03 | Implemented on `plan/editor-corrections`, PR #5 open |
+| 03B | Editor corrections and visual refinement | Correct initial ball setup, notation visuals, beat state and target editing | 03 | Implemented and merged to main |
 | 04 | Sequence renderer | 3D scene, animation, playback and editor synchronisation | 01, 02 | Awaiting approval |
 | 05 | Sequence generator | Constraint search and candidate generation | 01, 02 | Awaiting approval |
 | 06 | Data, persistence and export | Sequence codes, import, local persistence, presets and image export | 01, 02 | Awaiting approval |
@@ -54,4 +54,4 @@ Agents may implement unrelated parts while a blocker remains open, but must not 
 
 ## Approval
 
-Package 03 was approved for implementation. Its Package 03B correction plan has been implemented on `plan/editor-corrections` and is awaiting review in PR #5. Packages 04 to 07 remain awaiting approval. Package 08 is listed as a future integration package and still needs a detailed implementation plan.
+Packages 01, 02 and 03B are implemented and merged to main. Package 03 is approved and its remaining editor scope is being completed on `work/03-sequence-editor-completion`. Packages 04 to 07 remain awaiting approval. Package 08 has a detailed implementation plan and remains awaiting approval.
