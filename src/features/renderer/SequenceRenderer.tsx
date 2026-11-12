@@ -219,7 +219,7 @@ export default function SequenceRenderer({ sequence, simulation, onSelectHand }:
     scene.background = new THREE.Color('#f5f7fb');
     const camera = new THREE.PerspectiveCamera(42, 1, 0.1, 100);
     const target = new THREE.Vector3(0, 0.8, 0);
-    let radius = Math.max(10.5, (getTableFootprint(sequence).width / 2 + 1.05) * 2.8);
+    let radius = Math.max(7.5, (getTableFootprint(sequence).width / 2 + 1.05) * 2.8);
     let theta = 0;
     let phi = 0.35;
     const updateCamera = () => {
