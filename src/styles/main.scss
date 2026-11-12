@@ -670,3 +670,17 @@ html, body, #root { min-height: 100%; background: #90d0d5; }
 .beat-head small { font-size: 10px; }
 .performer-heading { font-size: 12px; }
 .hand-row .row-label { font-size: 13px; }
+
+
+.workspace-divider::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 3px;
+  height: 30px;
+  transform: translate(-50%, -50%);
+  background: repeating-linear-gradient(to bottom, #9aa8b8 0 2px, transparent 2px 6px);
+}
+.workspace-divider:hover::after,
+.workspace-divider:focus-visible::after { background: repeating-linear-gradient(to bottom, #3569bd 0 2px, transparent 2px 6px); }
