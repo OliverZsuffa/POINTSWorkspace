@@ -1,5 +1,7 @@
 # Implementation Plan 01: Foundation and Domain Model
 
+**Status: Completed on branch implementation/01-foundation-domain-model. CI passed. Awaiting review.**
+
 ## Goal
 
 Establish the application scaffold and shared framework independent data model used by every feature.
@@ -26,67 +28,39 @@ Establish the application scaffold and shared framework independent data model u
 - Final persistence behaviour.
 - Production PWA behaviour.
 
-## Proposed approach
+## Implemented
 
-Keep the domain model independent of React and visual rendering. It must represent the sequence itself, not the current appearance of the notation grid.
-
-Represent time in a way that can express musical duration and subdivisions without relying on screen column indices. Preserve the distinction between main musical beats and subdivisions. Compound meter representation remains open until resolved.
-
-Represent each ball as an identifiable object. Positions have a capacity of exactly zero or one ball. Each hand has capacity for one finger held object and one separate back balanced object. A back balanced object does not occupy the fingers.
-
-Actions assigned to the same beat are simultaneous. The model must not encode an arbitrary processing order.
-
-Define stable contracts for sequence settings, performers, hands, positions, beats, subdivisions, actions, object identity and location, linked actions, validation issues, renderer state, playback position, generator constraints and candidates.
-
-Use immutable or safely copied domain updates so undo, redo and candidate generation cannot mutate shared sequence state unexpectedly. Document public interfaces before downstream agents begin.
-
-## Files and components
-
-| File or area | Planned change |
-|---|---|
-| src/domain/ | Framework independent sequence model and domain types |
-| src/contracts/ | Public interfaces shared by feature packages |
-| src/fixtures/ | Representative development sequences |
-| src/ | Minimal application bootstrap |
-| Project configuration | Tooling, scripts and strict type checking |
-| docs/architecture/ | Domain model and interface decisions |
-
-Exact file names may change to fit the scaffold, but ownership boundaries must remain clear.
-
-## Steps
-
-1. Inspect the agreed technology references and establish the minimal scaffold.
-2. Define the canonical sequence model from the design document and notation specification.
-3. Define time and object identity abstractions without prematurely fixing unresolved compound meter details.
-4. Define action and relationship types, including paired ZIP and linked SPECIAL.
-5. Define contracts for validation, rendering, generation and persistence.
-6. Add fixtures covering all action families and important invalid states.
-7. Add unit tests for model invariants.
-8. Publish the contracts for dependent work packages.
+1. Created the React 18, TypeScript and Vite application scaffold.
+2. Configured Sass, Inter font assets, ESLint, Prettier, Vitest and React Testing Library.
+3. Added strict TypeScript settings and project scripts.
+4. Defined branded IDs and shared sequence types.
+5. Defined explicit musical beat grouping and exact rational timeline positions.
+6. Defined performers, positions, ball identities, initial placements, notation actions, table layouts and seat assignments.
+7. Updated the POINTS notation specification with the agreed beat timing, hand capacity, balancing, TAP, BOUNCE, SPECIAL and transfer rules.
+8. Defined shared simulator, validator, codec, generator and renderer contracts.
+9. Added representative sequence fixtures and unit tests.
+10. Documented the shared model in docs/architecture/DOMAIN_MODEL.md.
+11. Added continuous integration checks for formatting, linting, type checking, tests and production build.
 
 ## Verification
 
-- [ ] Formatting
-- [ ] Linting
-- [ ] TypeScript strict type check
-- [ ] Automated tests
-- [ ] Production build
-- [ ] Domain logic has no React or renderer dependency
-- [ ] Downstream packages can consume the shared contracts
+- [x] Formatting check
+- [x] Linting
+- [x] TypeScript strict type check
+- [x] Automated tests
+- [x] Production build
+- [x] Domain logic has no React or renderer dependency
+- [x] Downstream packages can consume the shared contracts
+
+All checks passed in [GitHub Actions run 43240109472](https://github.com/OliverZsuffa/POINTSWorkspace/actions/runs/43240109472) against the completed implementation commit.
 
 ## Dependencies
 
 None. This is the prerequisite package.
 
-## Risks and open questions
+## Remaining limitations
 
-- Compound meter grouping must be resolved before the time model is final.
-- Stable ball identity and position ownership need careful design for passing.
-- Sequence code format must not be frozen until the complete model is agreed.
-- Shared contracts must be reviewed before downstream agents implement against them.
-
-## Approval
-
-Status: Awaiting approval
-
-Implementation must not begin until this plan is explicitly approved.
+- The final sequence code schema and versioning policy remain for the data package.
+- Validation and simulation behaviour are interfaces only. Their implementation belongs to work package 02.
+- Generator constraints are shared request types only. Search behaviour belongs to work package 05.
+- A package lockfile is not committed yet. CI currently installs the declared dependencies from package.json.
