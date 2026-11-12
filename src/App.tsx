@@ -1240,7 +1240,7 @@ export default function App() {
               {hands.map((hand) => (
                 <div className="hand-row" key={hand} style={{ gridTemplateColumns: `82px repeat(${timelineSlots.length}, 42px) 18px` }}>
                   <div className="row-label">{hand === 'left' ? 'L' : 'R'}</div>
-                  {timelineSlots.map((slot, index) => {
+                  {timelineSlots.map((slot) => {
                     const beatIndex = sequence.beats.findIndex((beat) => beat.id === slot.beatId);
                     const beat = sequence.beats[beatIndex]!;
                     const entry = entryAt(performer.id, hand, beat.id, slot.offset);
