@@ -526,8 +526,9 @@ export default function App() {
         const initial = sequence.initialState.placements.find((placement) => placement.ballId === ball.id);
         const current = latest?.ballLocations[ball.id];
         if (!initial || !current || initial.location.kind !== 'position') return true;
+        const initialPositionId = initial.location.positionId;
         const referencedByNotation = sequence.notation.some((entry) =>
-          positionTargetId(entry.action) === initial.location.positionId,
+          positionTargetId(entry.action) === initialPositionId,
         );
         return referencedByNotation || simulation.snapshots.some((snapshot) =>
           !snapshot.ballLocations[ball.id] || !sameLocation(initial.location, snapshot.ballLocations[ball.id]!),
@@ -906,7 +907,7 @@ export default function App() {
     : simulation.snapshots[0];
   const stateBeatLabel = selectedBeatIndex < 0
     ? 'Initial state'
-    : selectedSnapshot?.at.beatId === selected?.beatId && selectedSnapshot.phase === 'after'
+    : selectedSnapshot?.at.beatId === selected?.beatId && selectedSnapshot?.phase === 'after'
       ? 'After beat ' + (selectedBeatIndex + 1)
       : 'Before beat ' + (selectedBeatIndex + 1);
 
