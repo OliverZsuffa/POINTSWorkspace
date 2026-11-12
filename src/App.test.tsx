@@ -422,4 +422,27 @@ describe('sequence editor', () => {
     expect(screen.getByRole('button', { name: /Juggler 1 left beat 4 LEAVE/ })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Juggler 2 left beat 4 LIFT X/ })).toBeInTheDocument();
   });
+
+  it('supports tap based drawing, moving and erasing for touch layouts', () => {
+    const { container } = render(<App />);
+    const modes = container.querySelectorAll('.mode-tool');
+    fireEvent.click(modes[0]!);
+    fireEvent.click(screen.getByRole('button', { name: 'Juggler 1 left beat 1 empty' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Juggler 1 left beat 3 empty' }));
+    expect(screen.getByRole('button', { name: 'Juggler 1 left beat 1 LIFT A' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Juggler 1 left beat 3 LEAVE A' })).toBeInTheDocument();
+
+    fireEvent.click(modes[1]!);
+    fireEvent.click(screen.getByRole('button', { name: 'Juggler 1 left beat 2 HOLD' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Juggler 1 left beat 3 LEAVE A' }));
+    expect(screen.getByRole('button', { name: 'Juggler 1 left beat 2 LIFT A' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Juggler 1 left beat 3 HOLD' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Juggler 1 left beat 4 LEAVE A' })).toBeInTheDocument();
+
+    fireEvent.click(modes[2]!);
+    fireEvent.click(screen.getByRole('button', { name: 'Juggler 1 left beat 2 LIFT A' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Juggler 1 left beat 4 LEAVE A' }));
+    expect(screen.getByRole('button', { name: 'Juggler 1 left beat 2 empty' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Juggler 1 left beat 4 empty' })).toBeInTheDocument();
+  });
 });
