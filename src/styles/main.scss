@@ -213,3 +213,8 @@ button:disabled { cursor: default; opacity: .35; }
 .move-beat-right { right: 14px; }
 .beat-head:hover .move-beat, .move-beat:focus-visible { opacity: 1; }
 .move-beat:disabled { opacity: .08; }
+
+.performer-chip { display: inline-flex; align-items: center; gap: 4px; padding: 3px 5px; }
+.performer-chip input { height: 25px; min-width: 0; border: 1px solid #dce5f2; border-radius: 4px; padding: 0 5px; background: #fff; color: #1f2e45; font-size: 11px; text-transform: none; }
+.performer-chip .performer-name { width: 96px; }
+.performer-chip .performer-identifier { width: 25px; text-align: center; }
