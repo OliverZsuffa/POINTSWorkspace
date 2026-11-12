@@ -469,7 +469,15 @@ export default function App() {
       const unsafe = removed.some((ball) => {
         const initial = sequence.initialState.placements.find((placement) => placement.ballId === ball.id);
         const current = latest?.ballLocations[ball.id];
-        return !initial || !current || initial.location.kind !== 'position' || simulation.snapshots.some((snapshot) => !snapshot.ballLocations[ball.id] || !sameLocation(initial.location, snapshot.ballLocations[ball.id]!));
+        if (!initial || !current || initial.location.kind !== 'position') return true;
+        const referencedByNotation = sequence.notation.some((entry) => {
+          const action = entry.action;
+          return (action.type === 'LIFT' || action.type === 'LEAVE' || action.type === 'TAP' || action.type === 'BOUNCE') &&
+            action.target.kind === 'position' && action.target.positionId === initial.location.positionId;
+        });
+        return referencedByNotation || simulation.snapshots.some((snapshot) =>
+          !snapshot.ballLocations[ball.id] || !sameLocation(initial.location, snapshot.ballLocations[ball.id]!),
+        );
       });
       if (unsafe) { window.alert('The selected balls are in use. Move them back to their initial table positions before reducing the count.'); return; }
       const removedIds = new Set(removed.map((ball) => ball.id));
