@@ -14,7 +14,7 @@ import {
   getTablePositionPosition,
 } from './geometry';
 
-function sequence(performerCount = 1): Sequence {
+function sequence(\n  performerCount = 1,\n  tableLayout: Sequence['tableLayout'] = { type: 'solo' },\n  seatAssignments: Sequence['seatAssignments'] = [],\n): Sequence {
   const performers = Array.from({ length: performerCount }, (_, index) => ({
     id: asPerformerId(String.fromCharCode(97 + index)),
     name: `Performer ${index + 1}`,
@@ -59,6 +59,35 @@ describe('renderer geometry', () => {
     expect(Math.abs(point.x)).toBeLessThanOrEqual(footprint.width / 2);
     expect(Math.abs(point.z)).toBeLessThanOrEqual(footprint.depth / 2);
     expect(point.y).toBeGreaterThan(0);
+  });
+
+  it('aligns rectangle table positions with the assigned seat edge', () => {
+    const performerId = asPerformerId('a');
+    const value = sequence(1, { type: 'rectangle', longSideSeatCount: 2, shortSideSeatCount: 1 }, [
+      { performerId, seat: { kind: 'rectangle-side', side: 'long-b', seatIndex: 0 } },
+    ]);
+    const footprint = getTableFootprint(value);
+    const point = getTablePositionPosition(value, value.positions[0]!, 'circle');
+    expect(Math.abs(point.x)).toBeLessThanOrEqual(footprint.width / 2);
+    expect(Math.abs(point.z)).toBeLessThanOrEqual(footprint.depth / 2);
+    expect(point.x).toBeLessThan(0);
+    expect(point.z).toBeGreaterThan(0);
+  });
+
+  it('keeps polygon table positions inside every polygon edge', () => {
+    const performerId = asPerformerId('a');
+    const sideCount = 5;
+    const value = sequence(1, { type: 'polygon', sideCount }, [
+      { performerId, seat: { kind: 'polygon-edge', edgeIndex: 0 } },
+    ]);
+    const footprint = getTableFootprint(value);
+    const point = getTablePositionPosition(value, value.positions[0]!, 'circle');
+    const apothem = (footprint.width / 2) * Math.cos(Math.PI / sideCount);
+    for (let edge = 0; edge < sideCount; edge += 1) {
+      const angle = Math.PI / 2 + ((edge + 0.5) * Math.PI * 2) / sideCount;
+      const distance = point.x * Math.cos(angle) + point.z * Math.sin(angle);
+      expect(distance).toBeLessThanOrEqual(apothem + 1e-9);
+    }
   });
 
   it('places left and right hands on opposite sides', () => {
