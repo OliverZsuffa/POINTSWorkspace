@@ -41,37 +41,42 @@ The ampersand marks the midpoint between beats. The syllables $e$ and $a$ mark t
 
 ## 4. Actions
 
-| Action | Meaning |
-|---|---|
-| HOLD | Keep holding the object without acting. |
-| LIFT | Lift an object from the target position. |
-| LEAVE | Leave an object at the target position. |
-| BOUNCE | Tap a position while holding an object. |
-| TAP | Tap a position with an empty hand. |
-| EMPTY | No action. |
-| SPECIAL | Perform an action not covered by the other types. |
+Each action has its own small symbol. The borders indicate how the action relates to the ball rectangle. A target position appears inside the symbol where required.
 
-The symbols are formed from the borders of a cell. A target position is shown inside the cell where the action requires one.
+| Action | Symbol | Meaning |
+|---|---|---|
+| HOLD | ![HOLD](images/icons/hold.svg) | Keep holding the object without acting. |
+| LIFT | ![LIFT](images/icons/lift.svg) | Lift an object from the target position. |
+| LEAVE | ![LEAVE](images/icons/leave.svg) | Leave an object at the target position. |
+| BOUNCE | ![BOUNCE](images/icons/bounce.svg) | Tap a position while holding an object. |
+| TAP | ![TAP](images/icons/tap.svg) | Tap a position with an empty hand. |
+| EMPTY | ![EMPTY](images/icons/empty.svg) | No action. |
 
-![POINTS action symbols](images/action-symbols.svg)
-
-SPECIAL can represent actions such as a clap. A clap requires both hands to be free during that beat.
+SPECIAL represents an action not covered by the other types, such as a clap. A clap requires both hands to be free during that beat.
 
 ## 5. Ball Rectangles
 
-A rectangle represents one ball over time while it is held by a hand. It is opened by LIFT and closed by LEAVE. HOLD and BOUNCE can extend the rectangle between those actions. The rectangle remains straight and continuous across the beats. It does not trace a path between table positions.
+A rectangle represents one ball over time while it is held by a hand. LIFT opens the rectangle, HOLD or BOUNCE can extend it, and LEAVE closes it. The rectangle remains straight and continuous across the beats. It does not trace a path between table positions.
 
-![A ball represented by a rectangle spanning three beats](images/ball-rectangle.svg)
+The three symbols below combine to form one rectangle spanning three beats:
 
-TAP is independent of a ball rectangle because it is performed with an empty hand. EMPTY has no symbol.
+| Beat 1 | Beat 2 | Beat 3 |
+|---|---|---|
+| ![LIFT](images/icons/lift.svg) | ![HOLD](images/icons/hold.svg) | ![LEAVE](images/icons/leave.svg) |
+| LIFT | HOLD | LEAVE |
+
+TAP is independent of a ball rectangle because it is performed with an empty hand. EMPTY has no action symbol.
 
 ## 6. ZIP
 
 ZIP transfers an object between the two hands of the same performer. It combines a source action and a receiving action at the same beat. Its direction determines which hand sends and which receives.
 
-The four ZIP symbols are distinguished by which pair of cell borders is shown:
-
-![ZIP source and receiving symbols](images/zip-symbols.svg)
+| ZIP action | Symbol |
+|---|---|
+| Source left | ![ZIP source left](images/icons/zip-source-left.svg) |
+| Source right | ![ZIP source right](images/icons/zip-source-right.svg) |
+| Receive left | ![ZIP receive left](images/icons/zip-receive-left.svg) |
+| Receive right | ![ZIP receive right](images/icons/zip-receive-right.svg) |
 
 ## 7. Passing
 
@@ -106,9 +111,12 @@ The subscript on each action identifies the other performer. For example, a pass
 - In $a$'s right-hand row: LEAVE with circled $L$, subscript $b$.
 - In $b$'s left-hand row: LIFT with target $X$, subscript $a$.
 
-The sender's rectangle closes as the receiver's rectangle opens in the same beat:
+The sender's rectangle closes as the receiver's rectangle opens in the same beat. For a pass from the right hand of performer $a$ to the left hand of performer $b$, the two symbols are:
 
-![Individual pass between two performers](images/individual-pass.svg)
+| Sender, performer $a$ | Receiver, performer $b$ |
+|---|---|
+| ![LEAVE into left hand](images/icons/pass-leave.svg) | ![LIFT from X](images/icons/pass-lift.svg) |
+| LEAVE with circled $L$, subscript $b$ | LIFT with target $X$, subscript $a$ |
 
 This can also describe a transfer that functions like a ZIP between performers. A transfer between the hands of one performer uses ZIP instead.
 
