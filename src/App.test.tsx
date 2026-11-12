@@ -383,4 +383,21 @@ describe('sequence editor', () => {
     expect(screen.getByRole('button', { name: 'Juggler 1 left beat 5 LIFT A' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Juggler 1 left beat 6 LEAVE A' })).toBeInTheDocument();
   });
+
+  it('moves both linked ZIP halves with the complete ball rectangle', () => {
+    render(<App />);
+    const start = screen.getByRole('button', { name: 'Juggler 1 left beat 1 empty' });
+    const end = screen.getByRole('button', { name: 'Juggler 1 right beat 4 empty' });
+    fireEvent.mouseDown(start, { shiftKey: true });
+    fireEvent.mouseUp(end);
+    const zipSource = screen.getByRole('button', { name: 'Juggler 1 left beat 2 ZIP ↗' });
+    const next = screen.getByRole('button', { name: 'Juggler 1 left beat 3 empty' });
+    fireEvent.mouseDown(zipSource);
+    fireEvent.mouseUp(next);
+    expect(screen.getByRole('button', { name: 'Juggler 1 left beat 2 LIFT A' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Juggler 1 left beat 3 ZIP ↗' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Juggler 1 right beat 3 ZIP ↙' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Juggler 1 right beat 4 HOLD' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Juggler 1 right beat 5 LEAVE A' })).toBeInTheDocument();
+  });
 });
