@@ -33,9 +33,9 @@ The time signature must be given, for example $\frac{3}{4}$ or $\frac{4}{4}$. Be
 
 | Subdivision | Count |
 |---|---|
-| Quarter notes | $1\;2\;3\;4$ |
-| Eighth notes | $1\;\&\;2\;\&\;3\;\&\;4\;\&$ |
-| Sixteenth notes | $1\;e\;\&\;a\;2\;e\;\&\;a$ |
+| Quarter notes | `1 2 3 4` |
+| Eighth notes | `1 & 2 & 3 & 4 &` |
+| Sixteenth notes | `1 e & a 2 e & a` |
 
 The ampersand marks the midpoint between beats. The syllables $e$ and $a$ mark the two additional sixteenth-note subdivisions.
 
