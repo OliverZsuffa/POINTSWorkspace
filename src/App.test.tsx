@@ -96,7 +96,7 @@ describe('sequence editor', () => {
     expect(screen.getByRole('button', { name: 'A, occupied' })).toBeInTheDocument();
   });
 
-  it('renders notation using the POINTS symbol geometry', async () => {
+  it('renders notation using large target labels and square cells', async () => {
     const user = userEvent.setup();
     render(<App />);
 
@@ -106,7 +106,9 @@ describe('sequence editor', () => {
     const symbol = screen.getByRole('button', { name: 'Juggler 1 left beat 1 LIFT A' }).querySelector('svg.ball-segment');
     expect(symbol).toBeInTheDocument();
     expect(symbol).toHaveAttribute('viewBox', '0 0 100 100');
+    expect(screen.getByRole('button', { name: 'Juggler 1 left beat 1 LIFT A' })).toHaveStyle({ width: '52px', height: '52px' });
     expect(symbol?.querySelector('path')).toHaveAttribute('d', 'M0 19H100 M0 19V81 M0 81H100');
+    expect(symbol?.querySelector('text')).toHaveAttribute('font-size', '38');
   });
 
   it('exposes sequence settings and initial object distribution', async () => {
@@ -203,6 +205,14 @@ describe('sequence editor', () => {
     await user.selectOptions(screen.getByLabelText('Direction'), 'right');
     const cell = screen.getByRole('button', { name: /Juggler 1 left beat 1 LIFT/ });
     expect(cell.querySelector('tspan')?.textContent).toBe('R');
+  });
+
+  it('does not print HOLD or ZIP inside the ball rectangle symbols', async () => {
+    const user = userEvent.setup();
+    const { container } = render(<App />);
+    await user.click(screen.getByRole('button', { name: 'Juggler 1 left beat 1 empty' }));
+    await user.click(screen.getByRole('button', { name: 'HOLD' }));
+    expect(container.querySelector('.notation-cell.occupied text')).toBeNull();
   });
 
   it('shows both halves of the ZIP toolbar symbol', () => {
