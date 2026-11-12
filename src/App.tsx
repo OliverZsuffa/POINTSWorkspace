@@ -548,6 +548,13 @@ export default function App() {
       const slot = slotByEntry.get(entry.id);
       return slot ? { ...entry, time: { beatId: slot.beatId, offset: slot.offset } } : entry;
     }) });
+    const shiftCell = (cell: EditorCell): EditorCell => {
+      const index = timelineSlots.findIndex((slot) => slot.beatId === cell.beatId && compareRational(slot.offset, cell.offset ?? rational(0)) === 0);
+      const slot = timelineSlots[index + offset];
+      return slot ? { ...cell, beatId: slot.beatId, offset: slot.offset, duration: slot.duration } : cell;
+    };
+    setSelectedCells((cells) => cells.map(shiftCell));
+    if (selected) setSelected(shiftCell(selected));
   };
 
   const eraseRectangle = (first: EditorCell, last: EditorCell) => {
@@ -578,6 +585,7 @@ export default function App() {
     for (const entry of sequence.notation) {
       if ('linkId' in entry.action && entry.action.linkId && links.has(entry.action.linkId) && !entries.some((item) => item.id === entry.id)) entries.push(entry);
     }
+    if (!entries.length) { setClipboard([]); return; }
     setClipboard(entries.map((entry) => ({
       entry,
       rowOffset: sequence.performers.findIndex((person) => person.id === entry.performerId) * 2 + hands.indexOf(entry.hand) - anchorRow,
