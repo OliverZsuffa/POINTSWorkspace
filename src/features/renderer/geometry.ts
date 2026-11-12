@@ -25,6 +25,7 @@ function normalize(point: Point3): Point3 {
 
 export function getHandReachProgress(progress: number): number {
   const clamped = Math.max(0, Math.min(1, progress));
+  if (clamped === 0 || clamped === 1) return 0;
   return Math.sin(clamped * Math.PI);
 }
 
