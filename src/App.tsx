@@ -636,19 +636,18 @@ export default function App() {
                         type="button"
                         key={beat.id}
                         className={'notation-cell' + (selectedCell ? ' selected' : '') + (errors.length ? ' invalid' : '') + (entry ? ' occupied' : '')}
-                        onPointerDown={(event) => {
+                        onMouseDown={(event) => {
                           if (!event.shiftKey) return;
                           event.preventDefault();
                           const cell = { performerId: performer.id, hand, beatId: beat.id };
                           setSelected(cell);
                           setDragStart(cell);
                         }}
-                        onPointerUp={() => {
+                        onMouseUp={() => {
                           if (!dragStart) return;
                           drawRectangle(dragStart, { performerId: performer.id, hand, beatId: beat.id });
                           setDragStart(null);
                         }}
-                        onPointerCancel={() => setDragStart(null)}
                         onClick={() => {
                           if (!dragStart) setSelected({ performerId: performer.id, hand, beatId: beat.id });
                         }}
