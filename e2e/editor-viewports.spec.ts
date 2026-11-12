@@ -22,8 +22,9 @@ for (const viewport of viewports) {
     const cell = page.locator('.notation-cell').first();
     const bounds = await cell.boundingBox();
     expect(bounds).not.toBeNull();
-    expect(bounds!.width).toBe(42);
-    expect(bounds!.height).toBe(42);
+    const expectedCellSize = viewport.width <= 700 ? 44 : viewport.width <= 1100 ? 48 : 56;
+    expect(bounds!.width).toBe(expectedCellSize);
+    expect(bounds!.height).toBe(expectedCellSize);
 
     const background = await main.evaluate((element) => getComputedStyle(element).backgroundColor);
     expect(background).toBe('rgb(144, 208, 213)');
