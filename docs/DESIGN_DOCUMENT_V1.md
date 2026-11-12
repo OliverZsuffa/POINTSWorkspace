@@ -169,17 +169,23 @@ Validation must cover the rules defined by POINTS notation. Examples include:
 
 The exact validation rules and severity levels remain to be specified. Selecting a general error should navigate to the affected cell or time position where possible. SPECIAL actions must be rejected when the relevant hand is not empty.
 
-### 1.7 Export and sharing
+### 1.7 Sequence codes, import, and persistence
 
-Once a sequence is complete, the user should be able to export it as an image.
+Every sequence has a compact, machine oriented code represented as one continuous string. It does not need to be human readable. The code must encode everything required to reconstruct the complete sequence, including BPM, table layout, seat assignments, initial state, notation, and SPECIAL text.
 
-The export should support both:
-- One continuous image containing the entire sequence.
-- An image split into multiple segments.
+The code is generated automatically and can be copied explicitly at any time. Pasting a code loads the sequence immediately when there is no existing sequence that would be overwritten. If a sequence is already present, the application asks the user to confirm before replacing it. Replacing a sequence can be undone through the editor's undo history.
 
-Each sequence should also have a compact textual code that encodes the complete pattern. The code should be short enough to share easily. Another user should be able to paste the code into POINTS Workspace and reconstruct the complete sequence.
+There is one current working sequence rather than a collection of named sequences. Multiple saved sequences, editable sequence names, and a duplicate sequence management feature are not required. The most recent working sequence is restored when the application is reopened, including when it is incomplete or invalid.
 
-The actual encoding format and import interaction have not yet been designed. The sequence code must be available to copy explicitly at any time, even though it is generated automatically. A conventional manual save action is not required for each sequence. The application must restore the most recent sequence when reopened, including sequences that are incomplete or currently invalid. The exact local storage and recovery mechanism remains open.
+The distinction between a code that cannot be parsed and a sequence that can be imported but fails notation validation still needs to be specified. A structurally invalid imported sequence should be made available in the editor and clearly marked as invalid, rather than silently treated as valid.
+
+### 1.8 Image export
+
+The user can export the sequence as one continuous image or as multiple image segments. The user chooses where the image is split.
+
+The export includes all sequence information by default. Before exporting, the user can open an options window to include or exclude individual parts of the output. The object state at the start and end of the sequence can be included when selected.
+
+The user can choose black or white for text and background, or choose a transparent background. The exact export options interface remains to be designed.
 
 ## 2. Sequence Renderer
 
@@ -303,11 +309,19 @@ Comparing multiple candidates side by side is not required.
 
 The user explicitly starts generation by pressing a Generate control. Results appear progressively as they are found.
 
-The generator should attempt to find all valid sequences up to a configured or defined maximum result limit. It must communicate how many results are available and divide them into pages rather than displaying an unbounded gallery at once.
+The generator should attempt to find all valid sequences up to a fixed application defined maximum result limit. It must communicate how many results are available and divide them into pages rather than displaying an unbounded gallery at once. The user can continue searching for additional results when more are available.
 
-The user can continue searching for additional results when more are available. The exact maximum result limit, page size, and behaviour when the search space is extremely large remain to be defined.
+The user can stop generation while it is running. Results already found remain available after stopping. When the generator reaches its result limit, it must communicate that additional results may exist. The exact maximum result limit, page size, and behaviour when the search space is extremely large remain to be defined.
 
 The generator should be able to indicate when it has exhausted the search space within the applicable limits.
+
+### 3.6 Existing sequence fragments as constraints
+
+A selected fragment of an existing sequence can be used as a required or forbidden pattern. It does not have to remain at its original beat positions. A required fragment may occur anywhere in the generated sequence.
+
+The generated sequence must be longer than the selected fragment. A forbidden fragment must not occur anywhere in the generated sequence, including across bar boundaries.
+
+The fragment must match the same structure and actions, including the same source position, destination position, and hand. Similar actions with different targets or hands do not count as a match. The user can select the fragment directly from the notation editor or provide its compact sequence code.
 
 ## Status and scope
 
