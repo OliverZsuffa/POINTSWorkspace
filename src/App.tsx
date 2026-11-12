@@ -328,90 +328,67 @@ export default function App() {
       compareRational(entry.time.offset, offset) === 0,
     );
 
-  const drawRectangle = (
-    first: { performerId: string; hand: Hand; beatId: string },
-    last: { performerId: string; hand: Hand; beatId: string },
-  ) => {
+  const drawRectangle = (first: EditorCell, last: EditorCell) => {
     if (first.performerId !== last.performerId) return;
-    let start = first;
-    let end = last;
-    let startIndex = sequence.beats.findIndex((beat) => beat.id === start.beatId);
-    let endIndex = sequence.beats.findIndex((beat) => beat.id === end.beatId);
-    if (startIndex < 0 || endIndex < 0 || startIndex === endIndex) return;
-    if (startIndex > endIndex) {
-      [start, end] = [end, start];
-      [startIndex, endIndex] = [endIndex, startIndex];
-    }
-    const performerId = asPerformerId(start.performerId);
-    const targetPosition = sequence.positions.find((position) => position.kind === 'table' && (position.owner.kind === 'shared' || position.owner.performerId === start.performerId)) ?? sequence.positions.find((position) => position.kind === 'table');
+    const firstIndex = timelineSlots.findIndex((slot) => slot.beatId === first.beatId && compareRational(slot.offset, first.offset ?? rational(0)) === 0);
+    const lastIndex = timelineSlots.findIndex((slot) => slot.beatId === last.beatId && compareRational(slot.offset, last.offset ?? rational(0)) === 0);
+    if (firstIndex < 0 || lastIndex < 0 || firstIndex === lastIndex) return;
+    const startIndex = Math.min(firstIndex, lastIndex);
+    const endIndex = Math.max(firstIndex, lastIndex);
+    const startCell = firstIndex <= lastIndex ? first : last;
+    const endCell = firstIndex <= lastIndex ? last : first;
+    const startSlot = timelineSlots[startIndex]!;
+    const endSlot = timelineSlots[endIndex]!;
+    const performerId = asPerformerId(startCell.performerId);
+    const targetPosition = sequence.positions.find((position) => position.kind === 'table' && (position.owner.kind === 'shared' || position.owner.performerId === startCell.performerId))
+      ?? sequence.positions.find((position) => position.kind === 'table');
     if (!targetPosition) return;
-    const affectedHands = start.hand === end.hand ? [start.hand] : [start.hand, end.hand];
-    for (let index = startIndex; index <= endIndex; index += 1) {
-      const beat = sequence.beats[index];
-      if (!beat) return;
-      for (const hand of affectedHands) {
-        if (entryAt(start.performerId, hand, beat.id)) return;
-      }
+    const cellsToCheck: { hand: Hand; slot: TimelineSlot }[] = [];
+    if (startCell.hand === endCell.hand) {
+      for (let index = startIndex; index <= endIndex; index += 1) cellsToCheck.push({ hand: startCell.hand, slot: timelineSlots[index]! });
+    } else {
+      for (let index = startIndex; index <= startIndex + 1; index += 1) cellsToCheck.push({ hand: startCell.hand, slot: timelineSlots[index]! });
+      for (let index = startIndex + 1; index <= endIndex; index += 1) cellsToCheck.push({ hand: endCell.hand, slot: timelineSlots[index]! });
     }
+    if (cellsToCheck.some(({ hand, slot }) => entryAt(startCell.performerId, hand, slot.beatId, slot.offset))) return;
 
     const entries: NotationEntry[] = [];
-    if (start.hand === end.hand) {
+    const add = (hand: Hand, slot: TimelineSlot, action: NotationAction) => entries.push({
+      id: asActionEntryId(id('entry')),
+      performerId,
+      hand,
+      time: { beatId: slot.beatId, offset: slot.offset },
+      action,
+    });
+    if (startCell.hand === endCell.hand) {
       for (let index = startIndex; index <= endIndex; index += 1) {
-        const beat = sequence.beats[index]!;
+        const slot = timelineSlots[index]!;
         const action: NotationAction = index === startIndex
           ? { type: 'LIFT', target: { kind: 'position', positionId: targetPosition.id } }
           : index === endIndex
             ? { type: 'LEAVE', target: { kind: 'position', positionId: targetPosition.id } }
             : { type: 'HOLD' };
-        entries.push({
-          id: asActionEntryId(id('entry')),
-          performerId,
-          hand: start.hand,
-          time: { beatId: beat.id, offset: rational(0) },
-          action,
-        });
+        add(startCell.hand, slot, action);
       }
     } else {
       if (endIndex - startIndex < 2) return;
       const linkId = asLinkId(id('zip'));
       for (let index = startIndex; index <= endIndex; index += 1) {
-        const beat = sequence.beats[index]!;
+        const slot = timelineSlots[index]!;
         if (index === startIndex) {
-          entries.push({
-            id: asActionEntryId(id('entry')), performerId, hand: start.hand,
-            time: { beatId: beat.id, offset: rational(0) },
-            action: { type: 'LIFT', target: { kind: 'position', positionId: targetPosition.id } },
-          });
+          add(startCell.hand, slot, { type: 'LIFT', target: { kind: 'position', positionId: targetPosition.id } });
         } else if (index === startIndex + 1) {
-          entries.push(
-            {
-              id: asActionEntryId(id('entry')), performerId, hand: start.hand,
-              time: { beatId: beat.id, offset: rational(0) },
-              action: { type: 'ZIP', role: 'source', linkId },
-            },
-            {
-              id: asActionEntryId(id('entry')), performerId, hand: end.hand,
-              time: { beatId: beat.id, offset: rational(0) },
-              action: { type: 'ZIP', role: 'receiver', linkId },
-            },
-          );
+          add(startCell.hand, slot, { type: 'ZIP', role: 'source', linkId });
+          add(endCell.hand, slot, { type: 'ZIP', role: 'receiver', linkId });
         } else if (index === endIndex) {
-          entries.push({
-            id: asActionEntryId(id('entry')), performerId, hand: end.hand,
-            time: { beatId: beat.id, offset: rational(0) },
-            action: { type: 'LEAVE', target: { kind: 'position', positionId: targetPosition.id } },
-          });
+          add(endCell.hand, slot, { type: 'LEAVE', target: { kind: 'position', positionId: targetPosition.id } });
         } else {
-          entries.push({
-            id: asActionEntryId(id('entry')), performerId, hand: end.hand,
-            time: { beatId: beat.id, offset: rational(0) },
-            action: { type: 'HOLD' },
-          });
+          add(endCell.hand, slot, { type: 'HOLD' });
         }
       }
     }
     commit({ ...sequence, notation: [...sequence.notation, ...entries] });
-    selectCell(end);
+    selectCell(endCell);
   };
 
   const handleEditorKeyDown = (event: KeyboardEvent<HTMLElement>) => {
@@ -488,7 +465,7 @@ export default function App() {
 
     if (type === 'ZIP') {
       const otherHand = hand === 'left' ? 'right' : 'left';
-      const other = entryAt(performerId, otherHand, beatId);
+      const other = entryAt(performerId, otherHand, beatId, selected.offset ?? rational(0));
       if (other) {
         window.alert('The other hand already has notation at this beat.');
         return;
@@ -497,7 +474,7 @@ export default function App() {
         id: asActionEntryId(id('entry')),
         performerId: asPerformerId(performerId),
         hand: otherHand,
-        time: { beatId: asBeatId(beatId), offset: rational(0) },
+        time: { beatId: asBeatId(beatId), offset: selected.offset ?? rational(0) },
         action: { type: 'ZIP', role: 'receiver', linkId },
       };
       notation = [...notation.filter((entry) => entry.id !== newEntry.id), newEntry, paired];
@@ -571,14 +548,14 @@ export default function App() {
     const rows = sequence.performers.flatMap((performer) => hands.map((hand) => ({ performerId: performer.id, hand })));
     const firstRow = rows.findIndex((row) => row.performerId === first.performerId && row.hand === first.hand);
     const lastRow = rows.findIndex((row) => row.performerId === last.performerId && row.hand === last.hand);
-    const firstBeat = sequence.beats.findIndex((beat) => beat.id === first.beatId);
-    const lastBeat = sequence.beats.findIndex((beat) => beat.id === last.beatId);
+    const firstSlot = timelineSlots.findIndex((slot) => slot.beatId === first.beatId && compareRational(slot.offset, first.offset ?? rational(0)) === 0);
+    const lastSlot = timelineSlots.findIndex((slot) => slot.beatId === last.beatId && compareRational(slot.offset, last.offset ?? rational(0)) === 0);
     const cells: EditorCell[] = [];
     for (let row = Math.min(firstRow, lastRow); row <= Math.max(firstRow, lastRow); row += 1) {
-      for (let beat = Math.min(firstBeat, lastBeat); beat <= Math.max(firstBeat, lastBeat); beat += 1) {
+      for (let index = Math.min(firstSlot, lastSlot); index <= Math.max(firstSlot, lastSlot); index += 1) {
         const targetRow = rows[row];
-        const targetBeat = sequence.beats[beat];
-        if (targetRow && targetBeat) cells.push({ ...targetRow, beatId: targetBeat.id });
+        const slot = timelineSlots[index];
+        if (targetRow && slot) cells.push({ ...targetRow, beatId: slot.beatId, offset: slot.offset, duration: slot.duration });
       }
     }
     removeCells(cells);
@@ -990,7 +967,7 @@ export default function App() {
   const addClap = () => {
     if (!selected) return;
     const otherHand = selected.hand === 'left' ? 'right' : 'left';
-    if (entryAt(selected.performerId, selected.hand, selected.beatId) ||
+    if (entryAt(selected.performerId, selected.hand, selected.beatId, selected.offset ?? rational(0)) ||
         entryAt(selected.performerId, otherHand, selected.beatId)) return;
     const linkId = asLinkId(id('special-link'));
     const entries: NotationEntry[] = hands.map((hand) => ({
@@ -1009,12 +986,12 @@ export default function App() {
     if (!recipient || recipient.id === selected.performerId) return;
     const recipientHand = passRecipientHand;
     if (entryAt(selected.performerId, selected.hand, selected.beatId) ||
-        entryAt(recipient.id, recipientHand, selected.beatId)) {
+        entryAt(recipient.id, recipientHand, selected.beatId, selected.offset ?? rational(0))) {
       window.alert('Both hands must be empty at this beat.');
       return;
     }
     const linkId = asLinkId(id('pass-link'));
-    const time = { beatId: asBeatId(selected.beatId), offset: rational(0) };
+    const time = { beatId: asBeatId(selected.beatId), offset: selected.offset ?? rational(0) };
     const entries: NotationEntry[] = [
       {
         id: asActionEntryId(id('entry')),
@@ -1288,7 +1265,7 @@ export default function App() {
                           }
                         }}
                         onMouseUp={() => {
-                          const cell = { performerId: performer.id, hand, beatId: beat.id };
+                          const cell = { performerId: performer.id, hand, beatId: beat.id, offset: slot.offset, duration: slot.duration };
                           if (eraseStart) { eraseRectangle(eraseStart, cell); setEraseStart(null); return; }
                           if (dragStart) { drawRectangle(dragStart, cell); setDragStart(null); return; }
                           if (moveStart) { moveRectangle(moveStart, cell); setMoveStart(null); }
@@ -1298,7 +1275,7 @@ export default function App() {
                           selectCell({ performerId: performer.id, hand, beatId: beat.id, offset: slot.offset, duration: slot.duration }, event.shiftKey);
                         }}
                         onDoubleClick={() => entry && entry.action.type === 'SPECIAL' && addAction('SPECIAL')}
-                        onContextMenu={(event) => { if (entry?.action.type === 'SPECIAL') { event.preventDefault(); selectCell({ performerId: performer.id, hand, beatId: beat.id }); addAction('SPECIAL'); } }}
+                        onContextMenu={(event) => { if (entry?.action.type === 'SPECIAL') { event.preventDefault(); selectCell({ performerId: performer.id, hand, beatId: beat.id, offset: slot.offset, duration: slot.duration }); addAction('SPECIAL'); } }}
                         aria-label={performer.name + ' ' + hand + ' beat ' + (beatIndex + 1) + (compareRational(slot.offset, rational(0)) === 0 ? '' : ' ' + slot.label) + (entry ? ' ' + actionLabel(entry.action, sequence) : ' empty')}
                         title={errors.join(' ')}
                       >
