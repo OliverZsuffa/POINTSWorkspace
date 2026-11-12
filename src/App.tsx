@@ -53,7 +53,7 @@ function makeSequence(): Sequence {
       id: asBeatId('beat-' + (index + 1)),
       subdivisions: [],
     })),
-    performers: [{ id: performerId, name: 'Juggler 1' }],
+    performers: [{ id: performerId, name: 'Juggler 1', identifier: 'a' }],
     positions: [...positions, ...backs],
     balls,
     initialState: {
@@ -83,7 +83,7 @@ function actionLabel(action: NotationAction, sequence: Sequence): string {
         ? action.type + ' ' + positionName(sequence, action.target.positionId)
         : action.target.kind === 'circle-position'
           ? action.type + ' ' + action.target.position + (action.target.direction ? (action.target.distance && action.target.distance > 1 ? action.target.distance : '') + (action.target.direction === 'left' ? 'L' : 'R') : '')
-          : action.type + ' ' + action.target.performerId;
+          : action.type + ' ' + (sequence.performers.find((person) => person.id === action.target.performerId)?.identifier ?? '?');
     case 'ZIP':
       return 'ZIP ' + (action.role === 'source' ? '↗' : '↙');
     case 'SPECIAL':
@@ -97,8 +97,9 @@ function makeAction(
   type: ActionName,
   sequence: Sequence,
   linkId?: ReturnType<typeof asLinkId>,
+  performerId?: string,
 ): NotationAction {
-  const position = sequence.positions.find((item) => item.kind === 'table');
+  const position = sequence.positions.find((item) => item.kind === 'table' && (item.owner.kind === 'shared' || item.owner.performerId === performerId)) ?? sequence.positions.find((item) => item.kind === 'table');
   const target: TableActionTarget = sequence.sequenceType === 'circle-passing'
     ? { kind: 'circle-position', position: 'A' }
     : { kind: 'position', positionId: position?.id ?? asPositionId('missing-position') };
@@ -268,7 +269,7 @@ export default function App() {
       [startIndex, endIndex] = [endIndex, startIndex];
     }
     const performerId = asPerformerId(start.performerId);
-    const targetPosition = sequence.positions.find((position) => position.kind === 'table');
+    const targetPosition = sequence.positions.find((position) => position.kind === 'table' && (position.owner.kind === 'shared' || position.owner.performerId === start.performerId)) ?? sequence.positions.find((position) => position.kind === 'table');
     if (!targetPosition) return;
     const affectedHands = start.hand === end.hand ? [start.hand] : [start.hand, end.hand];
     for (let index = startIndex; index <= endIndex; index += 1) {
@@ -375,7 +376,7 @@ export default function App() {
     const { performerId, hand, beatId } = selected;
     const existing = entryAt(performerId, hand, beatId);
     const linkId = asLinkId(id('link'));
-    let action = makeAction(type, sequence, linkId);
+    let action = makeAction(type, sequence, linkId, performerId);
     if (type === 'SPECIAL') {
       const text = window.prompt('SPECIAL', existing?.action.type === 'SPECIAL' ? existing.action.text : 'SPECIAL');
       if (text === null) return;
@@ -564,7 +565,7 @@ export default function App() {
     const used = new Set(sequence.positions.filter((position) => position.kind === 'table').map((position) => position.name));
     const name = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('').find((letter) => !used.has(letter));
     if (!name) return;
-    const owners = sequence.sequenceType === 'individual-passing'
+    const owners = sequence.sequenceType === 'individual-passing' && sequence.individualPassingLayout === 'shared-positions'
       ? [{ kind: 'shared' as const }]
       : sequence.performers.map((performer) => ({ kind: 'performer' as const, performerId: performer.id }));
     const added = owners.map((owner) => ({
