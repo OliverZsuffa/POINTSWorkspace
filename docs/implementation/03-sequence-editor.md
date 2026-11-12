@@ -2,7 +2,7 @@
 
 ## Status
 
-Approved on 12 November 2026. Implementation complete on branch work/03-sequence-editor-completion. Automated verification passes. Manual visual review remains.
+Approved on 12 November 2026. Implemented and merged into main through PR #6 on 12 November 2026. Automated verification passes. Manual visual review across desktop, tablet and phone remains.
 
 ## Goal
 
@@ -182,7 +182,7 @@ Package 04 has not been implemented. The editor must work independently of the r
 
 ## Approval
 
-Approved by Oliver on 12 November 2026. Implementation completed on branch work/03-sequence-editor-completion. Pull request #6 is open for review. Package 03B is already merged into main.
+Approved by Oliver on 12 November 2026. Implemented and merged into main through PR #6 on 12 November 2026. Package 03B was merged through PR #5.
 
 
 ## Implementation notes
