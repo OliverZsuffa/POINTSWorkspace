@@ -337,4 +337,29 @@ describe('sequence editor', () => {
     await user.click(screen.getByRole('button', { name: 'LIFT' }));
     expect(screen.getByRole('button', { name: 'Juggler 1 left beat 1 & LIFT A' })).toBeInTheDocument();
   });
+
+  it('moves a beat together with its notation and subdivision structure', async () => {
+    const user = userEvent.setup();
+    render(<App />);
+    await user.click(screen.getByRole('button', { name: 'Juggler 1 left beat 1 empty' }));
+    await user.click(screen.getByRole('button', { name: 'LIFT' }));
+    await user.click(screen.getByRole('button', { name: 'Move beat 2 left' }));
+    expect(screen.getByRole('button', { name: 'Juggler 1 left beat 2 LIFT A' })).toBeInTheDocument();
+  });
+
+  it('allows performer names and identifiers to be edited', async () => {
+    const user = userEvent.setup();
+    render(<App />);
+    await user.click(screen.getByRole('button', { name: 'Settings' }));
+    const name = screen.getByRole('textbox', { name: 'Performer name Juggler 1' });
+    await user.clear(name);
+    await user.type(name, 'Oliver');
+    fireEvent.blur(name);
+    expect(screen.getByText('Oliver')).toBeInTheDocument();
+    const identifier = screen.getByRole('textbox', { name: 'Performer identifier a' });
+    await user.clear(identifier);
+    await user.type(identifier, 'z');
+    fireEvent.blur(identifier);
+    expect(screen.getByText('z')).toBeInTheDocument();
+  });
 });
