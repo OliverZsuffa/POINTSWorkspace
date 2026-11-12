@@ -887,7 +887,17 @@ export default function App() {
   const selectedPassRecipient = selectedEntry ? passRecipientTarget(selectedEntry) : undefined;
   const selectedPassSource = selectedEntry ? passSourceTarget(selectedEntry) : undefined;
   const selectedBeatIndex = selected ? sequence.beats.findIndex((beat) => beat.id === selected.beatId) : -1;
-  const selectedSnapshot = selectedBeatIndex >= 0 ? simulation.snapshots.find((snapshot) => snapshot.at.beatId === selected?.beatId && snapshot.phase === 'after') : simulation.snapshots.find((snapshot) => snapshot.phase === 'before');
+  const selectedSnapshot = selectedBeatIndex >= 0
+    ? [...simulation.snapshots].reverse().find((snapshot) => {
+      const snapshotBeatIndex = sequence.beats.findIndex((beat) => beat.id === snapshot.at.beatId);
+      return snapshotBeatIndex < selectedBeatIndex || (snapshotBeatIndex === selectedBeatIndex && snapshot.phase === 'after');
+    }) ?? simulation.snapshots[0]
+    : simulation.snapshots[0];
+  const stateBeatLabel = selectedBeatIndex < 0
+    ? 'Initial state'
+    : selectedSnapshot?.at.beatId === selected?.beatId && selectedSnapshot.phase === 'after'
+      ? 'After beat ' + (selectedBeatIndex + 1)
+      : 'Before beat ' + (selectedBeatIndex + 1);
 
   return (
     <main className="app-root" aria-label="POINTS Workspace" tabIndex={0} onKeyDown={handleEditorKeyDown}>
@@ -1108,7 +1118,7 @@ export default function App() {
         </div>
         <div className="state-panel">
           <button type="button" className="state-toggle" onClick={() => setShowState((value) => !value)} aria-expanded={showState}>Object state {showState ? '−' : '+'}</button>
-          {showState && <div className="state-content"><div className="state-beat-label">{selectedBeatIndex >= 0 ? 'After beat ' + (selectedBeatIndex + 1) : 'Initial state'}</div>
+          {showState && <div className="state-content"><div className="state-beat-label">{stateBeatLabel}</div>
             {sequence.balls.map((ball) => {
               const location = selectedSnapshot?.ballLocations[ball.id] ??
                 sequence.initialState.placements.find((placement) => placement.ballId === ball.id)?.location;
