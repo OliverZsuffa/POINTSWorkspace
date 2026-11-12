@@ -11,17 +11,18 @@ function heldBall(simulation: SimulationResult, sequence: Sequence, beatIndex: n
 
 function linkedCounterpart(sequence: Sequence, entry: NotationEntry): NotationEntry | undefined {
   if (!('linkId' in entry.action) || !entry.action.linkId) return undefined;
+  const linkId = entry.action.linkId;
   if (entry.action.type === 'ZIP') {
-    return sequence.notation.find((item) => item.id !== entry.id && item.action.type === 'ZIP' && item.action.linkId === entry.action.linkId);
+    return sequence.notation.find((item) => item.id !== entry.id && item.action.type === 'ZIP' && item.action.linkId === linkId);
   }
   if (entry.action.type === 'LEAVE' && entry.action.target.kind === 'pass-recipient-hand') {
-    return sequence.notation.find((item) => item.id !== entry.id && item.action.type === 'LIFT' && item.action.linkId === entry.action.linkId);
+    return sequence.notation.find((item) => item.id !== entry.id && item.action.type === 'LIFT' && item.action.linkId === linkId);
   }
   if (entry.action.type === 'LIFT' && entry.action.target.kind === 'pass-source') {
-    return sequence.notation.find((item) => item.id !== entry.id && item.action.type === 'LEAVE' && item.action.linkId === entry.action.linkId);
+    return sequence.notation.find((item) => item.id !== entry.id && item.action.type === 'LEAVE' && item.action.linkId === linkId);
   }
   if (entry.action.type === 'SPECIAL') {
-    return sequence.notation.find((item) => item.id !== entry.id && item.action.type === 'SPECIAL' && item.action.linkId === entry.action.linkId);
+    return sequence.notation.find((item) => item.id !== entry.id && item.action.type === 'SPECIAL' && item.action.linkId === linkId);
   }
   return undefined;
 }
