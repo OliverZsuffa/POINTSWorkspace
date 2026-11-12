@@ -648,4 +648,108 @@ describe('sequence editor', () => {
 
     expect(screen.getByRole('button', { name: 'Juggler 1 left beat 1 empty' })).toBeInTheDocument();
   });
+
+
+  it.each(['BOUNCE', 'TAP', 'EMPTY'] as const)(
+    'inserts and renders the %s action',
+    async (action) => {
+      const user = userEvent.setup();
+      render(<App />);
+
+      await user.click(screen.getByRole('button', { name: 'Juggler 1 left beat 1 empty' }));
+      await user.click(screen.getByRole('button', { name: action }));
+
+      expect(
+        screen.getByRole('button', {
+          name: action === 'EMPTY'
+            ? 'Juggler 1 left beat 1 EMPTY'
+            : 'Juggler 1 left beat 1 ' + action + ' A',
+        }),
+      ).toBeInTheDocument();
+    },
+  );
+
+  it.each(['TAP', 'BOUNCE'] as const)(
+    '%s target controls offer table positions only',
+    async (action) => {
+      const user = userEvent.setup();
+      render(<App />);
+
+      await user.click(screen.getByRole('button', { name: 'Juggler 1 left beat 1 empty' }));
+      await user.click(screen.getByRole('button', { name: action }));
+
+      const target = screen.getByLabelText('Target');
+      expect(Array.from((target as HTMLSelectElement).options).map((option) => option.textContent)).toEqual(['A', 'B', 'C']);
+    },
+  );
+
+  it('renders a two performer distance as a proper circle passing subscript', async () => {
+    const user = userEvent.setup();
+    render(<App />);
+
+    await user.click(screen.getByRole('button', { name: 'Settings' }));
+    await user.click(screen.getByRole('button', { name: 'Add performer' }));
+    await user.click(screen.getByRole('button', { name: 'Add performer' }));
+    await user.selectOptions(screen.getByLabelText('Type'), 'circle-passing');
+    await user.click(screen.getByRole('button', { name: 'Juggler 1 left beat 1 empty' }));
+    await user.click(screen.getByRole('button', { name: 'LIFT' }));
+    await user.selectOptions(screen.getByLabelText('Performer'), 'other');
+    await user.selectOptions(screen.getByLabelText('Direction'), 'left');
+    await user.clear(screen.getByLabelText('Distance'));
+    await user.type(screen.getByLabelText('Distance'), '2');
+
+    const cell = screen.getByRole('button', { name: /Juggler 1 left beat 1 LIFT/ });
+    expect(cell.querySelector('tspan')?.textContent).toBe('2L');
+  });
+
+  it('keeps both sides of an individual pass synchronised when its recipient changes', async () => {
+    const user = userEvent.setup();
+    render(<App />);
+
+    await user.click(screen.getByRole('button', { name: 'Settings' }));
+    await user.click(screen.getByRole('button', { name: 'Add performer' }));
+    await user.click(screen.getByRole('button', { name: 'Add performer' }));
+    await user.selectOptions(screen.getByLabelText('Type'), 'individual-passing');
+    await user.click(screen.getByRole('button', { name: 'Juggler 1 left beat 1 empty' }));
+    await user.selectOptions(screen.getByLabelText('Pass to'), { label: 'Juggler 2 (b)' });
+    await user.selectOptions(screen.getByLabelText('Hand'), 'right');
+    await user.click(screen.getByRole('button', { name: 'PASS' }));
+
+    await user.click(screen.getByRole('button', { name: /Juggler 1 left beat 1 LEAVE/ }));
+    await user.selectOptions(screen.getByLabelText('Recipient'), { label: 'Juggler 3 (c)' });
+    await user.selectOptions(screen.getByLabelText('Hand'), 'left');
+
+    expect(screen.getByRole('button', { name: /Juggler 3 left beat 1 LIFT X/ })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Juggler 1 left beat 1 LEAVE/ })).toBeInTheDocument();
+  });
+
+  it('deletes both ZIP symbols together', () => {
+    render(<App />);
+
+    fireEvent.mouseDown(screen.getByRole('button', { name: 'Juggler 1 left beat 1 empty' }), { shiftKey: true });
+    fireEvent.mouseUp(screen.getByRole('button', { name: 'Juggler 1 right beat 4 empty' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Juggler 1 left beat 2 ZIP ↗' }));
+    fireEvent.keyDown(screen.getByRole('main', { name: 'POINTS Workspace' }), { key: 'Delete' });
+
+    expect(screen.getByRole('button', { name: 'Juggler 1 left beat 2 empty' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Juggler 1 right beat 2 empty' })).toBeInTheDocument();
+  });
+
+  it('undoes and redoes a complete rectangle drawing as one transaction', async () => {
+    const user = userEvent.setup();
+    render(<App />);
+
+    fireEvent.mouseDown(screen.getByRole('button', { name: 'Juggler 1 left beat 1 empty' }), { shiftKey: true });
+    fireEvent.mouseUp(screen.getByRole('button', { name: 'Juggler 1 left beat 3 empty' }));
+    await user.click(screen.getByTitle('Undo'));
+
+    expect(screen.getByRole('button', { name: 'Juggler 1 left beat 1 empty' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Juggler 1 left beat 2 empty' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Juggler 1 left beat 3 empty' })).toBeInTheDocument();
+
+    await user.click(screen.getByTitle('Redo'));
+    expect(screen.getByRole('button', { name: 'Juggler 1 left beat 1 LIFT A' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Juggler 1 left beat 2 HOLD' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Juggler 1 left beat 3 LEAVE A' })).toBeInTheDocument();
+  });
 });
