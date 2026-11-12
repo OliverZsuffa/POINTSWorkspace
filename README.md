@@ -6,7 +6,7 @@ A web based workspace for creating and working with POINTS notation.
 
 The application is being migrated from the existing Godot prototype to a browser based application. Its visual direction combines the interface design of [Bone008/jif-web](https://github.com/Bone008/jif-web) with the colour identity of the [POINTS website](https://pointscs.github.io/).
 
-See [Design Direction](docs/DESIGN_DIRECTION.md) for the agreed visual and technical references.
+See [Design Direction](docs/DESIGN_DIRECTION.md) for the agreed visual and technical references. The proposed agent work packages are documented in [Implementation Work Packages](docs/implementation/README.md).
 
 ## Technology stack
 
