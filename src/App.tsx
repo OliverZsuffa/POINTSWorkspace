@@ -1501,10 +1501,13 @@ export default function App() {
             <label className="target-control">Target
               <select value={targetableEntry.action.target.positionId} onChange={(event) => changeTarget(targetableEntry, event.target.value)}>
                 {sequence.positions.filter((position) => position.kind === 'table' || ((targetableEntry.action.type === 'LIFT' || targetableEntry.action.type === 'LEAVE') && position.kind === 'hand-back')).map((position) => {
+                  const ownerPerformerId = position.kind === 'table' && position.owner.kind === 'performer'
+                    ? position.owner.performerId
+                    : undefined;
                   const ownerName = position.kind === 'hand-back'
                     ? sequence.performers.find((person) => person.id === position.performerId)?.name
-                    : position.owner.kind === 'performer'
-                      ? sequence.performers.find((person) => person.id === position.owner.performerId)?.name
+                    : ownerPerformerId
+                      ? sequence.performers.find((person) => person.id === ownerPerformerId)?.name
                       : undefined;
                   return <option key={position.id} value={position.id}>{ownerName ? ownerName + ' · ' + position.name : position.name}</option>;
                 })}
@@ -1639,7 +1642,9 @@ export default function App() {
           <div className="panel-heading"><strong>Validation</strong><span className={simulation.validation.isValid ? 'valid-count' : 'error-count'}>{simulation.validation.issues.length} {simulation.validation.issues.length === 1 ? 'issue' : 'issues'}</span></div>
           {simulation.validation.issues.length === 0 ? <p className="no-issues">Sequence valid</p> : <ul>{simulation.validation.issues.map((issue, index) => (
             <li key={issue.code + index}><span>{issue.description}</span>{issue.affectedEntries[0] && <button type="button" onClick={() => {
-              const sourceId = simulationModel.sourceEntryById.get(issue.affectedEntries[0]) ?? issue.affectedEntries[0];
+              const affectedEntryId = issue.affectedEntries[0];
+              if (!affectedEntryId) return;
+              const sourceId = simulationModel.sourceEntryById.get(affectedEntryId) ?? affectedEntryId;
               const entry = sequence.notation.find((item) => item.id === sourceId);
               if (entry) {
                 const slot = timelineSlots.find((item) =>
