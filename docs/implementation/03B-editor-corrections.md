@@ -2,7 +2,7 @@
 
 ## Status
 
-Awaiting Oliver's approval. No application code changes are included in this plan commit.
+Approved by Oliver on 12 November 2026. Implementation in progress.
 
 ## Goal
 
@@ -117,9 +117,10 @@ Use `docs/POINTS_NOTATION.md` as the source of truth.
 - `src/App.tsx`
 - `src/styles/main.scss`
 - `src/App.test.tsx`
-- Additional focused tests only if needed.
+- `src/domain/model.ts` and simulator target resolution, solely to represent own-performer circle targets
+- Focused domain and simulator tests for own-performer circle targets
 
-The shared domain model and simulator should remain unchanged unless implementation reveals a genuine contract limitation. Any such change must be documented before being made.
+The shared domain model and simulator should remain unchanged unless implementation reveals a genuine contract limitation. A confirmed limitation is that `CirclePassingTarget` currently requires a direction and positive distance, so it cannot represent the acting performer's own A, B or C position. Package 03B therefore also updates `src/domain/model.ts`, the simulator target resolver and their focused tests. The own performer target is represented explicitly by omitting direction and distance. No other domain semantics are changed.
 
 ## Approval
 
