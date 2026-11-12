@@ -711,12 +711,12 @@ describe('sequence editor', () => {
     await user.click(screen.getByRole('button', { name: 'Add performer' }));
     await user.selectOptions(screen.getByLabelText('Type'), 'individual-passing');
     await user.click(screen.getByRole('button', { name: 'Juggler 1 left beat 1 empty' }));
-    await user.selectOptions(screen.getByLabelText('Pass to'), { label: 'Juggler 2 (b)' });
+    await user.selectOptions(screen.getByLabelText('Pass to'), screen.getByRole('option', { name: 'Juggler 2 (b)' }));
     await user.selectOptions(screen.getByLabelText('Hand'), 'right');
     await user.click(screen.getByRole('button', { name: 'PASS' }));
 
     await user.click(screen.getByRole('button', { name: /Juggler 1 left beat 1 LEAVE/ }));
-    await user.selectOptions(screen.getByLabelText('Recipient'), { label: 'Juggler 3 (c)' });
+    await user.selectOptions(screen.getByLabelText('Recipient'), screen.getByRole('option', { name: 'Juggler 3 (c)' }));
     await user.selectOptions(screen.getByLabelText('Hand'), 'left');
 
     expect(screen.getByRole('button', { name: /Juggler 3 left beat 1 LIFT X/ })).toBeInTheDocument();
