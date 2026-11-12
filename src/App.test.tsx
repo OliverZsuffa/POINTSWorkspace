@@ -1,4 +1,4 @@
-import { cleanup, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it } from 'vitest';
 import App from './App';
@@ -24,6 +24,22 @@ describe('sequence editor', () => {
 
     await user.click(screen.getByTitle('Undo'));
     expect(screen.getByRole('button', { name: 'Juggler 1 left beat 1 empty' })).toBeInTheDocument();
+  });
+
+  it('draws a complete ball rectangle with Shift and drag', () => {
+    render(<App />);
+
+    const start = screen.getByRole('button', { name: 'Juggler 1 left beat 1 empty' });
+    const middle = screen.getByRole('button', { name: 'Juggler 1 left beat 2 empty' });
+    const end = screen.getByRole('button', { name: 'Juggler 1 left beat 3 empty' });
+
+    fireEvent.mouseDown(start, { shiftKey: true });
+    fireEvent.mouseUp(end);
+
+    expect(screen.getByRole('button', { name: 'Juggler 1 left beat 1 LIFT A' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Juggler 1 left beat 2 HOLD' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Juggler 1 left beat 3 LEAVE A' })).toBeInTheDocument();
+    expect(screen.getByText('Sequence valid')).toBeInTheDocument();
   });
 
   it('leaves the other linked SPECIAL action standalone when one side is deleted', async () => {
