@@ -11,7 +11,6 @@
   <text class="beat" x="640" y="38">Beat 3</text>
   <path class="line" d="M95 70H725 M95 70V150 M725 70V150 M95 150H725"/>
   <text class="target" x="180" y="110">A</text>
-  <text class="target" x="410" y="110">A</text>
   <text class="target" x="640" y="110">A</text>
   <text class="label" x="180" y="190">LIFT</text>
   <text class="label" x="410" y="190">HOLD</text>
