@@ -192,7 +192,7 @@ function circleSubscript(target: Extract<TableActionTarget, { kind: 'circle-posi
 
 function ActionSymbol({ action, sequence, hand }: { action: NotationAction; sequence: Sequence; hand: Hand }) {
   if (action.type === 'EMPTY') return null;
-  if (action.type === 'SPECIAL') return <span className="special-symbol">{action.text || 'SPECIAL'}</span>;
+  if (action.type === 'SPECIAL') return <span className="special-symbol">{action.text || 'SPECIAL'}{action.linkId && <span className="special-link-indicator" aria-label="Linked SPECIAL">↔</span>}</span>;
   let path = '';
   let target = '';
   let subscript = '';
@@ -1352,7 +1352,6 @@ export default function App() {
                           if (dragStart || eraseStart || moveStart) return;
                           selectCell(cell, event.shiftKey);
                         }}
-                        onDoubleClick={() => entry && entry.action.type === 'SPECIAL' && editSpecial(entry, { performerId: performer.id, hand, beatId: beat.id, offset: slot.offset, duration: slot.duration })}
                         onContextMenu={(event) => { if (entry?.action.type === 'SPECIAL') { event.preventDefault(); editSpecial(entry, { performerId: performer.id, hand, beatId: beat.id, offset: slot.offset, duration: slot.duration }); } }}
                         aria-label={performer.name + ' ' + hand + ' beat ' + (beatIndex + 1) + (compareRational(slot.offset, rational(0)) === 0 ? '' : ' ' + slot.label) + (entry ? ' ' + actionLabel(entry.action, sequence) : ' empty')}
                         title={errors.join(' ')}
