@@ -286,7 +286,7 @@ export default function App() {
   const [clipboard, setClipboard] = useState<ClipboardItem[]>([]);
   const [eraseStart, setEraseStart] = useState<EditorCell | null>(null);
   const [moveStart, setMoveStart] = useState<EditorCell | null>(null);
-  const [touchMode, setTouchMode] = useState<'draw' | 'move' | 'erase' | null>(null);
+  const [touchMode, setTouchMode] = useState<'select' | 'draw' | 'move' | 'erase' | null>(null);
   const [history, setHistory] = useState<Sequence[]>([]);
   const [future, setFuture] = useState<Sequence[]>([]);
   const [showSettings, setShowSettings] = useState(false);
@@ -1224,6 +1224,7 @@ export default function App() {
 
       <section className="editor-toolbar" aria-label="Notation actions">
         <div className="action-tools">
+          <button type="button" className={'tool mode-tool' + (touchMode === 'select' ? ' active' : '')} onClick={() => { setTouchMode(touchMode === 'select' ? null : 'select'); setDragStart(null); setMoveStart(null); setEraseStart(null); }}>Select</button>
           <button type="button" className="tool clipboard-tool" onClick={copySelected} disabled={!selected || !(selectedCells.length ? selectedCells : [selected]).some((cell) => Boolean(entryAt(cell.performerId, cell.hand, cell.beatId, cell.offset ?? rational(0))))}>Copy</button>
           <button type="button" className="tool clipboard-tool" onClick={pasteSelected} disabled={!selected || clipboard.length === 0}>Paste</button>
           <button type="button" className={'tool mode-tool' + (touchMode === 'draw' ? ' active' : '')} onClick={() => { setTouchMode(touchMode === 'draw' ? null : 'draw'); setDragStart(null); }}>Draw</button>
@@ -1335,6 +1336,7 @@ export default function App() {
                         }}
                         onClick={(event) => {
                           const cell = { performerId: performer.id, hand, beatId: beat.id, offset: slot.offset, duration: slot.duration };
+                          if (touchMode === 'select') { selectCell(cell, true); return; }
                           if (touchMode === 'draw') {
                             if (!dragStart) { selectCell(cell); setDragStart(cell); }
                             else { drawRectangle(dragStart, cell); setDragStart(null); setTouchMode(null); }
