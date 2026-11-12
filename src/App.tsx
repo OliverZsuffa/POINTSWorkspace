@@ -390,6 +390,67 @@ export default function App() {
     });
   };
 
+  const removePerformer = (performerId: string) => {
+    const performer = sequence.performers.find((item) => item.id === performerId);
+    if (!performer || sequence.performers.length <= 1) return;
+    if (!window.confirm('Remove ' + performer.name + ' and their notation?')) return;
+    const positions = sequence.positions.filter((position) =>
+      position.kind === 'hand-back'
+        ? position.performerId !== performerId
+        : position.owner.kind === 'shared' || position.owner.performerId !== performerId,
+    );
+    commit({
+      ...sequence,
+      performers: sequence.performers.filter((item) => item.id !== performerId),
+      positions,
+      notation: sequence.notation.filter((entry) => entry.performerId !== performerId),
+      seatAssignments: sequence.seatAssignments.filter((assignment) => assignment.performerId !== performerId),
+      tableLayout: sequence.sequenceType === 'solo'
+        ? { type: 'solo' }
+        : { type: 'rectangle', longSideSeatCount: Math.max(1, sequence.performers.length - 1), shortSideSeatCount: 0 },
+    });
+    if (selected?.performerId === performerId) setSelected(null);
+  };
+
+  const addPosition = () => {
+    const used = new Set(sequence.positions.filter((position) => position.kind === 'table').map((position) => position.name));
+    const name = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('').find((letter) => !used.has(letter));
+    if (!name) return;
+    const owners = sequence.sequenceType === 'individual-passing'
+      ? [{ kind: 'shared' as const }]
+      : sequence.performers.map((performer) => ({ kind: 'performer' as const, performerId: performer.id }));
+    const added = owners.map((owner) => ({
+      kind: 'table' as const,
+      id: asPositionId(id('position')),
+      name,
+      owner,
+    }));
+    commit({ ...sequence, positions: [...sequence.positions, ...added] });
+  };
+
+  const renamePosition = (positionId: string, name: string) => {
+    const cleanName = name.trim();
+    if (!cleanName) return;
+    const current = sequence.positions.find((position) => position.id === positionId);
+    if (!current || current.kind !== 'table') return;
+    const duplicate = sequence.positions.some((position) =>
+      position.kind === 'table' && position.id !== positionId && position.name === cleanName &&
+      (position.owner.kind === current.owner.kind &&
+       (position.owner.kind === 'shared' || (current.owner.kind === 'performer' && position.owner.performerId === current.owner.performerId))),
+    );
+    if (duplicate) {
+      window.alert('A position with this name already exists in the same layout.');
+      return;
+    }
+    commit({ ...sequence, positions: sequence.positions.map((position) =>
+      position.id === positionId && position.kind === 'table' ? { ...position, name: cleanName } : position,
+    ) });
+  };
+
+  const removePosition = (positionId: string) => {
+    commit({ ...sequence, positions: sequence.positions.filter((position) => position.id !== positionId) });
+  };
+
   const changeType = (type: SequenceType) => {
     let positions = sequence.positions;
     if (type === 'individual-passing') {
@@ -558,7 +619,8 @@ export default function App() {
             </select>
           </label>
           <div className="setting-control"><span>Beats</span><div className="stepper"><button type="button" onClick={removeBeat} disabled={sequence.beats.length <= 1 || sequence.notation.some((entry) => entry.time.beatId === sequence.beats[sequence.beats.length - 1]?.id)}>−</button><output>{sequence.beats.length}</output><button type="button" onClick={addBeat}>+</button></div></div>
-          <div className="performer-settings"><span>Performers</span>{sequence.performers.map((performer) => <span className="performer-chip" key={performer.id}>{performer.name}</span>)}<button type="button" onClick={addPerformer}>Add performer</button></div>
+          <div className="performer-settings"><span>Performers</span>{sequence.performers.map((performer) => <span className="performer-chip" key={performer.id}>{performer.name}{sequence.performers.length > 1 && <button type="button" className="remove-chip" onClick={() => removePerformer(performer.id)} aria-label={'Remove ' + performer.name}>×</button>}</span>)}<button type="button" onClick={addPerformer}>Add performer</button></div>
+          <div className="position-settings"><span>Positions</span>{sequence.positions.filter((position) => position.kind === 'table').map((position) => <div className="position-edit" key={position.id}><input aria-label={'Rename position ' + position.name} defaultValue={position.name} onBlur={(event) => renamePosition(position.id, event.target.value)} /><button type="button" onClick={() => removePosition(position.id)} aria-label={'Remove position ' + position.name}>×</button></div>)}<button type="button" onClick={addPosition}>Add position</button></div>
           <details className="initial-state-settings">
             <summary>Initial object distribution</summary>
             <div className="initial-state-grid">
