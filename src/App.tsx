@@ -142,7 +142,8 @@ function ActionSymbol({ action, sequence, hand }: { action: NotationAction; sequ
       else if (action.target.kind === 'circle-position') target = action.target.position + (action.target.distance > 1 ? String(action.target.distance) : '') + (action.target.direction === 'left' ? 'L' : 'R');
       else if (action.target.kind === 'pass-source') {
         target = 'X';
-        subscript = ('performerId' in action.target ? sequence.performers.find((person) => person.id === action.target.performerId)?.identifier : undefined) ?? '?';
+        const targetPerformerId = 'performerId' in action.target ? action.target.performerId : undefined;
+        subscript = sequence.performers.find((person) => person.id === targetPerformerId)?.identifier ?? '?';
       }
       break;
     case 'LEAVE':
@@ -152,7 +153,8 @@ function ActionSymbol({ action, sequence, hand }: { action: NotationAction; sequ
       else if (action.target.kind === 'pass-recipient-hand') {
         target = action.target.hand === 'left' ? 'L' : 'R';
         circledTarget = true;
-        subscript = ('performerId' in action.target ? sequence.performers.find((person) => person.id === action.target.performerId)?.identifier : undefined) ?? '?';
+        const targetPerformerId = 'performerId' in action.target ? action.target.performerId : undefined;
+        subscript = sequence.performers.find((person) => person.id === targetPerformerId)?.identifier ?? '?';
       }
       break;
     case 'BOUNCE':
@@ -200,7 +202,8 @@ function NotationMark({ action, sequence, hand }: { action: NotationAction; sequ
       else if (action.target.kind === 'circle-position') label = action.target.position + (action.target.distance > 1 ? String(action.target.distance) : '') + (action.target.direction === 'left' ? 'L' : 'R');
       else if (action.target.kind === 'pass-source') {
         label = 'X';
-        subscript = ('performerId' in action.target ? sequence.performers.find((person) => person.id === action.target.performerId)?.identifier : undefined) ?? '?';
+        const targetPerformerId = 'performerId' in action.target ? action.target.performerId : undefined;
+        subscript = sequence.performers.find((person) => person.id === targetPerformerId)?.identifier ?? '?';
       }
       break;
     case 'HOLD':
@@ -214,7 +217,8 @@ function NotationMark({ action, sequence, hand }: { action: NotationAction; sequ
       else if (action.target.kind === 'pass-recipient-hand') {
         label = action.target.hand === 'left' ? 'L' : 'R';
         circledTarget = true;
-        subscript = ('performerId' in action.target ? sequence.performers.find((person) => person.id === action.target.performerId)?.identifier : undefined) ?? '?';
+        const targetPerformerId = 'performerId' in action.target ? action.target.performerId : undefined;
+        subscript = sequence.performers.find((person) => person.id === targetPerformerId)?.identifier ?? '?';
       }
       break;
     case 'BOUNCE':
