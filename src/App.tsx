@@ -468,29 +468,50 @@ export default function App() {
     }
     const selectedEntry = entryAt(selected.performerId, selected.hand, selected.beatId, selected.offset ?? rational(0));
     const targetKey = event.key.toUpperCase();
-    if (!modifier && selectedEntry && ['A', 'B', 'C', 'L', 'R'].includes(targetKey)) {
-      const action = selectedEntry.action;
-      if ('target' in action && action.target.kind === 'circle-position' && ['A', 'B', 'C'].includes(targetKey)) {
-        event.preventDefault();
-        changeCircleTarget(selectedEntry, 'position', targetKey);
-        return;
-      }
-      if (action.type === 'LEAVE' && 'hand' in action.target && 'performerId' in action.target) {
+    if (!modifier && /^[A-Z]$/.test(targetKey)) {
+      if (selectedEntry?.action.type === 'LEAVE' && 'hand' in selectedEntry.action.target && 'performerId' in selectedEntry.action.target) {
         const recipient = sequence.performers.find((person) => person.identifier?.toUpperCase() === targetKey && person.id !== selected.performerId);
-        if (recipient) { event.preventDefault(); changePassTarget(selectedEntry, recipient.id, action.target.hand); return; }
+        if (recipient) { event.preventDefault(); changePassTarget(selectedEntry, recipient.id, selectedEntry.action.target.hand); return; }
       }
-      if (action.type === 'LIFT' && 'performerId' in action.target) {
+      if (selectedEntry?.action.type === 'LIFT' && 'performerId' in selectedEntry.action.target) {
         const source = sequence.performers.find((person) => person.identifier?.toUpperCase() === targetKey && person.id !== selected.performerId);
         if (source) { event.preventDefault(); changePassTarget(selectedEntry, source.id); return; }
       }
-      if (['LIFT', 'LEAVE', 'TAP', 'BOUNCE'].includes(action.type) && 'target' in action && action.target.kind === 'position') {
-        const position = sequence.positions.find((item) =>
-          item.name.toUpperCase() === targetKey &&
-          (item.kind === 'table'
-            ? item.owner.kind === 'shared' || item.owner.performerId === selected.performerId
-            : (action.type === 'LIFT' || action.type === 'LEAVE') && item.performerId === selected.performerId),
-        );
-        if (position) { event.preventDefault(); changeTarget(selectedEntry, position.id); return; }
+      const circlePositionKey = sequence.sequenceType === 'circle-passing' && ['A', 'B', 'C'].includes(targetKey);
+      const position = circlePositionKey ? undefined : sequence.positions.find((item) =>
+        item.name.toUpperCase() === targetKey &&
+        (item.kind === 'table'
+          ? item.owner.kind === 'shared' || item.owner.performerId === selected.performerId
+          : (selectedEntry?.action.type === 'LIFT' || selectedEntry?.action.type === 'LEAVE') && item.performerId === selected.performerId),
+      );
+      if (circlePositionKey || position) {
+        event.preventDefault();
+        const currentAction = selectedEntry?.action;
+        const nextType: ActionName = currentAction?.type === 'HOLD' ? 'BOUNCE'
+          : currentAction?.type === 'EMPTY' || !currentAction ? 'TAP'
+            : ['LIFT', 'LEAVE', 'TAP', 'BOUNCE'].includes(currentAction.type) ? currentAction.type
+              : 'TAP';
+        const target: TableActionTarget = circlePositionKey
+          ? { kind: 'circle-position', position: targetKey as 'A' | 'B' | 'C' }
+          : { kind: 'position', positionId: position!.id };
+        const nextAction = { type: nextType, target } as NotationAction;
+        const nextEntry: NotationEntry = selectedEntry
+          ? { ...selectedEntry, action: nextAction }
+          : {
+              id: asActionEntryId(id('entry')),
+              performerId: asPerformerId(selected.performerId),
+              hand: selected.hand,
+              time: { beatId: asBeatId(selected.beatId), offset: selected.offset ?? rational(0) },
+              action: nextAction,
+            };
+        commit({
+          ...sequence,
+          notation: selectedEntry
+            ? sequence.notation.map((entry) => entry.id === selectedEntry.id ? nextEntry : entry)
+            : [...sequence.notation, nextEntry],
+        });
+        setShowActionMenu(false);
+        return;
       }
     }
     const actionShortcuts: Record<string, ActionName> = {
@@ -1415,9 +1436,14 @@ export default function App() {
           {!showActionMenu && targetableEntry && targetableEntry.action.target.kind === 'position' && (
             <label className="target-control">Target
               <select value={targetableEntry.action.target.positionId} onChange={(event) => changeTarget(targetableEntry, event.target.value)}>
-                {sequence.positions.filter((position) => position.kind === 'table' || ((targetableEntry.action.type === 'LIFT' || targetableEntry.action.type === 'LEAVE') && position.kind === 'hand-back' && position.performerId === targetableEntry.performerId)).map((position) => (
-                  <option key={position.id} value={position.id}>{position.name}</option>
-                ))}
+                {sequence.positions.filter((position) => position.kind === 'table' || ((targetableEntry.action.type === 'LIFT' || targetableEntry.action.type === 'LEAVE') && position.kind === 'hand-back')).map((position) => {
+                  const ownerName = position.kind === 'hand-back'
+                    ? sequence.performers.find((person) => person.id === position.performerId)?.name
+                    : position.owner.kind === 'performer'
+                      ? sequence.performers.find((person) => person.id === position.owner.performerId)?.name
+                      : undefined;
+                  return <option key={position.id} value={position.id}>{ownerName ? ownerName + ' · ' + position.name : position.name}</option>;
+                })}
               </select>
             </label>
           )}
