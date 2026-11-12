@@ -1662,7 +1662,7 @@ export default function App() {
       <section className="editor-scroll" aria-label="Notation editor" onClick={(event) => { if (event.target === event.currentTarget) clearSelection(); }}>
         <div className="notation-grid">
           <div className="grid-head" style={{ gridTemplateColumns: `82px repeat(${timelineSlots.length}, var(--notation-cell-size)) 18px` }}>
-            <div className="row-label heading-label">{sequence.sequenceType === 'circle-passing' ? 'PATTERN' : 'PERFORMER'}</div>
+            <div className="row-label heading-label">{sequence.sequenceType === 'circle-passing' ? 'PATTERN' : 'JUGGLER'}</div>
             {timelineSlots.map((slot, index) => {
               const beatIndex = sequence.beats.findIndex((beat) => beat.id === slot.beatId);
               const beat = sequence.beats[beatIndex]!;
