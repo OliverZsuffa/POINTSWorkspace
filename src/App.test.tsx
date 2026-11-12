@@ -56,6 +56,33 @@ describe('sequence editor', () => {
     expect(screen.getByText('Sequence valid')).toBeInTheDocument();
   });
 
+  it('moves the selected cell with the arrow keys', () => {
+    render(<App />);
+
+    const first = screen.getByRole('button', { name: 'Juggler 1 left beat 1 empty' });
+    const second = screen.getByRole('button', { name: 'Juggler 1 left beat 2 empty' });
+
+    fireEvent.click(first);
+    fireEvent.keyDown(first, { key: 'ArrowRight' });
+
+    expect(second).toHaveClass('selected');
+  });
+
+  it('adds and renames table positions in sequence settings', async () => {
+    const user = userEvent.setup();
+    render(<App />);
+
+    await user.click(screen.getByRole('button', { name: 'Settings' }));
+    await user.click(screen.getByRole('button', { name: 'Add position' }));
+
+    const newPosition = screen.getByRole('textbox', { name: 'Rename position D' });
+    await user.clear(newPosition);
+    await user.type(newPosition, 'E');
+    fireEvent.blur(newPosition);
+
+    expect(screen.getByRole('textbox', { name: 'Rename position E' })).toBeInTheDocument();
+  });
+
   it('exposes sequence settings and initial object distribution', async () => {
     const user = userEvent.setup();
     render(<App />);
