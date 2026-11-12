@@ -534,15 +534,23 @@ export default function App() {
     const performer = sequence.performers.find((item) => item.id === performerId);
     if (!performer || sequence.performers.length <= 1) return;
     if (!window.confirm('Remove ' + performer.name + ' and their notation?')) return;
-    const positions = sequence.positions.filter((position) =>
-      position.kind === 'hand-back'
-        ? position.performerId !== performerId
-        : position.owner.kind === 'shared' || position.owner.performerId !== performerId,
-    );
+    const removedPositions = new Set(sequence.positions.filter((position) =>
+      position.kind === 'hand-back' ? position.performerId === performerId :
+        position.owner.kind === 'performer' && position.owner.performerId === performerId,
+    ).map((position) => position.id));
+    const removedBalls = new Set(sequence.initialState.placements.filter((placement) => {
+      const location = placement.location;
+      if (location.kind === 'hand-held') return location.performerId === performerId;
+      if (location.kind === 'hand-back') return location.performerId === performerId;
+      return removedPositions.has(location.positionId);
+    }).map((placement) => placement.ballId));
+    const positions = sequence.positions.filter((position) => !removedPositions.has(position.id));
     commit({
       ...sequence,
       performers: sequence.performers.filter((item) => item.id !== performerId),
       positions,
+      balls: sequence.balls.filter((ball) => !removedBalls.has(ball.id)),
+      initialState: { placements: sequence.initialState.placements.filter((placement) => !removedBalls.has(placement.ballId)) },
       notation: sequence.notation.filter((entry) => entry.performerId !== performerId),
       seatAssignments: sequence.seatAssignments.filter((assignment) => assignment.performerId !== performerId),
       tableLayout: sequence.sequenceType === 'solo'
@@ -596,20 +604,15 @@ export default function App() {
     let individualPassingLayout = sequence.individualPassingLayout;
     if (type === 'individual-passing') {
       const tables = sequence.positions.filter((position) => position.kind === 'table');
-      const firstPerformer = sequence.performers[0];
-      if (firstPerformer) {
-        const owned = tables.map((position) => ({
-          ...position,
-          owner: { kind: 'performer' as const, performerId: firstPerformer.id },
-        }));
-        const additional = sequence.performers.slice(1).flatMap((performer) => tables.map((position) => ({
-          kind: 'table' as const,
-          id: asPositionId(id('position')),
-          name: position.name,
-          owner: { kind: 'performer' as const, performerId: performer.id },
-        })));
-        positions = [...sequence.positions.filter((position) => position.kind === 'hand-back'), ...owned, ...additional];
-      }
+      const names = [...new Set(tables.map((position) => position.name))];
+      const normalized = sequence.performers.flatMap((performer, performerIndex) => names.map((name) => {
+        const existing = tables.find((position) => position.name === name && position.owner.kind === 'performer' && position.owner.performerId === performer.id)
+          ?? (performerIndex === 0 ? tables.find((position) => position.name === name) : undefined);
+        return existing
+          ? { ...existing, owner: { kind: 'performer' as const, performerId: performer.id } }
+          : { kind: 'table' as const, id: asPositionId(id('position')), name, owner: { kind: 'performer' as const, performerId: performer.id } };
+      }));
+      positions = [...sequence.positions.filter((position) => position.kind === 'hand-back'), ...normalized];
       individualPassingLayout = 'per-performer-positions';
     }
     commit({
