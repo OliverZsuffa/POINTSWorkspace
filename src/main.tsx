@@ -12,3 +12,23 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
     <App />
   </React.StrictMode>,
 );
+
+if (import.meta.env.PROD && 'serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker
+      .register(`${import.meta.env.BASE_URL}service-worker.js`, {
+        scope: import.meta.env.BASE_URL,
+      })
+      .then((registration) => {
+        const announceUpdate = () => window.dispatchEvent(new Event('points-update-ready'));
+        if (registration.waiting && navigator.serviceWorker.controller) announceUpdate();
+        registration.addEventListener('updatefound', () => {
+          registration.installing?.addEventListener('statechange', (event) => {
+            const worker = event.target as ServiceWorker;
+            if (worker.state === 'installed' && navigator.serviceWorker.controller) announceUpdate();
+          });
+        });
+      })
+      .catch(() => undefined);
+  });
+}
