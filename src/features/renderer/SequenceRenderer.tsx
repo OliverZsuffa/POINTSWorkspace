@@ -468,9 +468,13 @@ export default function SequenceRenderer({ sequence, simulation, onSelectHand }:
           const mesh = balls.get(ball.id);
           if (!before || !after || !mesh) continue;
 
-          if (before.kind === 'position' && after.kind === 'hand-held' && progressValue >= 0.5) {
-            const hand = handVisuals.find((item) => item.performerId === after.performerId && item.hand === after.hand);
-            if (hand) mesh.position.copy(hand.mesh.position);
+          if (before.kind === 'position' && after.kind === 'hand-held') {
+            if (progressValue >= 0.5) {
+              const hand = handVisuals.find((item) => item.performerId === after.performerId && item.hand === after.hand);
+              if (hand) mesh.position.copy(hand.mesh.position);
+            } else {
+              mesh.position.copy(vector(getObjectPosition(current.sequence, before, current.layout)));
+            }
           } else if (before.kind === 'hand-held' && after.kind === 'position') {
             if (progressValue <= 0.5) {
               const hand = handVisuals.find((item) => item.performerId === before.performerId && item.hand === before.hand);
