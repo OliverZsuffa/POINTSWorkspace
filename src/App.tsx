@@ -290,6 +290,7 @@ export default function App() {
   const [history, setHistory] = useState<Sequence[]>([]);
   const [future, setFuture] = useState<Sequence[]>([]);
   const [showSettings, setShowSettings] = useState(false);
+  const [showActionMenu, setShowActionMenu] = useState(false);
   const [showState, setShowState] = useState(false);
   const [dragStart, setDragStart] = useState<EditorCell | null>(null);
   const [passRecipientId, setPassRecipientId] = useState('');
@@ -315,7 +316,7 @@ export default function App() {
       : [cell]);
   };
 
-  const clearSelection = () => { setSelected(null); setSelectedCells([]); setDragStart(null); setEraseStart(null); setMoveStart(null); setTouchMode(null); };
+  const clearSelection = () => { setSelected(null); setSelectedCells([]); setDragStart(null); setEraseStart(null); setMoveStart(null); setTouchMode(null); setShowActionMenu(false); };
 
   const commit = (next: Sequence) => {
     setHistory((items) => [...items.slice(-99), sequence]);
@@ -414,7 +415,7 @@ export default function App() {
     if (event.key === 'ArrowDown') nextRow += 1;
     const row = rows[Math.max(0, Math.min(rows.length - 1, nextRow))];
     const slot = timelineSlots[Math.max(0, Math.min(timelineSlots.length - 1, nextSlot))];
-    if (row && slot) selectCell({ performerId: row.performerId, hand: row.hand, beatId: slot.beatId, offset: slot.offset, duration: slot.duration }, event.shiftKey);
+    if (row && slot) { selectCell({ performerId: row.performerId, hand: row.hand, beatId: slot.beatId, offset: slot.offset, duration: slot.duration }, event.shiftKey); if (!event.shiftKey) setShowActionMenu(!entryAt(row.performerId, row.hand, slot.beatId, slot.offset)); }
   };
 
   const addAction = (type: ActionName) => {
@@ -640,7 +641,7 @@ export default function App() {
 
   const selectInterval = (beatId: string, offset: Rational, duration: Rational) => {
     const cells = sequence.performers.flatMap((performer) => hands.map((hand) => ({ performerId: performer.id, hand, beatId, offset, duration })));
-    if (cells[0]) { setSelected(cells[0]); setSelectedCells(cells); setPassRecipientId(''); setPassRecipientHand('left'); }
+    if (cells[0]) { setSelected(cells[0]); setSelectedCells(cells); setPassRecipientId(''); setPassRecipientHand('left'); setShowActionMenu(false); }
   };
 
   const selectBeat = (beatId: string) => {
@@ -1033,6 +1034,7 @@ export default function App() {
       action: { type: 'SPECIAL', text: 'Clap', linkId },
     }));
     commit({ ...sequence, notation: [...sequence.notation, ...entries] });
+    setShowActionMenu(false);
   };
 
   const addIndividualPass = () => {
@@ -1064,6 +1066,7 @@ export default function App() {
       },
     ];
     commit({ ...sequence, notation: [...sequence.notation, ...entries] });
+    setShowActionMenu(false);
     setPassRecipientId('');
     setPassRecipientHand('left');
   };
@@ -1241,151 +1244,28 @@ export default function App() {
 
       <section className="editor-toolbar" aria-label="Notation actions">
         <div className="action-tools">
-          <button type="button" className={'tool mode-tool' + (touchMode === 'select' ? ' active' : '')} onClick={() => { setTouchMode(touchMode === 'select' ? null : 'select'); setDragStart(null); setMoveStart(null); setEraseStart(null); }}>Select</button>
+          <button type="button" className={'tool mode-tool' + (touchMode === 'select' ? ' active' : '')} onClick={() => { setTouchMode(touchMode === 'select' ? null : 'select'); setDragStart(null); setMoveStart(null); setEraseStart(null); setShowActionMenu(false); }}>Select</button>
           <button type="button" className="tool clipboard-tool" onClick={copySelected} disabled={!selected || !(selectedCells.length ? selectedCells : [selected]).some((cell) => Boolean(entryAt(cell.performerId, cell.hand, cell.beatId, cell.offset ?? rational(0))))}>Copy</button>
           <button type="button" className="tool clipboard-tool" onClick={pasteSelected} disabled={!selected || clipboard.length === 0}>Paste</button>
-          <button type="button" className={'tool mode-tool' + (touchMode === 'draw' ? ' active' : '')} onClick={() => { setTouchMode(touchMode === 'draw' ? null : 'draw'); setDragStart(null); }}>Draw</button>
-          <button type="button" className={'tool mode-tool' + (touchMode === 'move' ? ' active' : '')} onClick={() => { setTouchMode(touchMode === 'move' ? null : 'move'); setMoveStart(null); }}>Move</button>
-          <button type="button" className={'tool mode-tool' + (touchMode === 'erase' ? ' active' : '')} onClick={() => { setTouchMode(touchMode === 'erase' ? null : 'erase'); setEraseStart(null); }}>Erase</button>
-          {actionNames.map((name) => (
-            <button type="button" key={name} aria-label={name} title={name} className={'tool' + (name === 'ZIP' ? ' zip-tool' : '')} onClick={() => { if (selected) addAction(name); }} disabled={!selected}>
+          <button type="button" className={'tool mode-tool' + (touchMode === 'draw' ? ' active' : '')} onClick={() => { setTouchMode(touchMode === 'draw' ? null : 'draw'); setDragStart(null); setShowActionMenu(false); }}>Draw</button>
+          <button type="button" className={'tool mode-tool' + (touchMode === 'move' ? ' active' : '')} onClick={() => { setTouchMode(touchMode === 'move' ? null : 'move'); setMoveStart(null); setShowActionMenu(false); }}>Move</button>
+          <button type="button" className={'tool mode-tool' + (touchMode === 'erase' ? ' active' : '')} onClick={() => { setTouchMode(touchMode === 'erase' ? null : 'erase'); setEraseStart(null); setShowActionMenu(false); }}>Erase</button>
+          {selectedEntry && <button type="button" className="tool change-action-tool" onClick={() => setShowActionMenu((open) => !open)}>Change action</button>}
+          {showActionMenu && actionNames.map((name) => (
+            <button type="button" key={name} aria-label={name} title={name} className={'tool' + (name === 'ZIP' ? ' zip-tool' : '')} onClick={() => { if (selected) addAction(name); }}>
               {name === 'ZIP' ? <span className="zip-tool-preview"><ActionSymbol action={{ type: 'ZIP', role: 'source', linkId: asLinkId('zip-preview') }} sequence={sequence} hand="left" /><ActionSymbol action={{ type: 'ZIP', role: 'receiver', linkId: asLinkId('zip-preview') }} sequence={sequence} hand="right" /></span> : <ActionSymbol action={makeAction(name, sequence)} sequence={sequence} hand={selected?.hand ?? 'left'} />}
             </button>
           ))}
-          {sequence.sequenceType === 'individual-passing' && <>
+          {showActionMenu && sequence.sequenceType === 'individual-passing' && <>
             <label className="target-control">Pass to <select value={passRecipientValue} onChange={(event) => setPassRecipientId(event.target.value)}>{sequence.performers.filter((person) => person.id !== selected?.performerId).map((person) => <option key={person.id} value={person.id}>{person.name} ({person.identifier ?? '?'})</option>)}</select></label>
             <label className="target-control">Hand <select value={passRecipientHand} onChange={(event) => setPassRecipientHand(event.target.value as Hand)}><option value="left">Left</option><option value="right">Right</option></select></label>
             <button type="button" className="tool" onClick={addIndividualPass} disabled={!selected || sequence.performers.length < 2}>PASS</button>
           </>}
-          <button type="button" className="tool" onClick={addClap} disabled={!selected}>CLAP</button>
+          {showActionMenu && <button type="button" className="tool" onClick={addClap} disabled={!selected}>CLAP</button>}
           <button type="button" className="tool delete-tool" onClick={removeSelected} disabled={!selected || !(selectedCells.length ? selectedCells : [selected]).some((cell) => Boolean(entryAt(cell.performerId, cell.hand, cell.beatId, cell.offset ?? rational(0))))}>Delete</button>
         </div>
-        <span className="selection-label">{selected ? sequence.performers.find((item) => item.id === selected.performerId)?.name + ' · ' + selected.hand + ' · beat ' + (sequence.beats.findIndex((beat) => beat.id === selected.beatId) + 1) : 'Select a cell'}</span>
-        {targetableEntry && targetableEntry.action.target.kind === 'position' && (
-          <label className="target-control">Target
-            <select value={targetableEntry.action.target.positionId} onChange={(event) => changeTarget(targetableEntry, event.target.value)}>
-              {sequence.positions.filter((position) => position.kind === 'table' || ((targetableEntry.action.type === 'LIFT' || targetableEntry.action.type === 'LEAVE') && position.kind === 'hand-back' && position.performerId === targetableEntry.performerId)).map((position) => (
-                <option key={position.id} value={position.id}>{position.name}</option>
-              ))}
-            </select>
-          </label>
-        )}
-        {targetableEntry && targetableEntry.action.target.kind === 'circle-position' && (
-          <div className="target-control">
-            <label>Position <select value={targetableEntry.action.target.position} onChange={(event) => changeCircleTarget(targetableEntry, 'position', event.target.value)}><option>A</option><option>B</option><option>C</option></select></label>
-            <label>Performer <select value={targetableEntry.action.target.direction ? 'other' : 'self'} onChange={(event) => setCircleTargetMode(targetableEntry, event.target.value as 'self' | 'other')}><option value="self">Self</option><option value="other" disabled={sequence.performers.length < 2}>Other</option></select></label>
-            {targetableEntry.action.target.direction && <>
-              <label>Direction <select value={targetableEntry.action.target.direction} onChange={(event) => changeCircleTarget(targetableEntry, 'direction', event.target.value)}><option value="left">Left</option><option value="right">Right</option></select></label>
-              <label>Distance <input type="number" min="1" max={Math.max(1, sequence.performers.length - 1)} value={targetableEntry.action.target.distance ?? 1} onChange={(event) => changeCircleTarget(targetableEntry, 'distance', event.target.value)} /></label>
-            </>}
-          </div>
-        )}
-        {targetableEntry && selectedPassRecipient && (
-          <div className="target-control">
-            <label>Recipient <select value={selectedPassRecipient.performerId} onChange={(event) => changePassTarget(targetableEntry, event.target.value, selectedPassRecipient.hand)}>{sequence.performers.filter((person) => person.id !== selected?.performerId).map((person) => <option key={person.id} value={person.id}>{person.name} ({person.identifier ?? '?'})</option>)}</select></label>
-            <label>Hand <select value={selectedPassRecipient.hand} onChange={(event) => changePassTarget(targetableEntry, selectedPassRecipient.performerId, event.target.value as Hand)}><option value="left">Left</option><option value="right">Right</option></select></label>
-          </div>
-        )}
-        {targetableEntry && selectedPassSource && (
-          <label className="target-control">Source <select value={selectedPassSource.performerId} onChange={(event) => changePassTarget(targetableEntry, event.target.value)}>{sequence.performers.filter((person) => person.id !== selected?.performerId).map((person) => <option key={person.id} value={person.id}>{person.name} ({person.identifier ?? '?'})</option>)}</select></label>
-        )}
-      </section>
-
-      <section className="editor-scroll" aria-label="Notation editor" onClick={(event) => { if (event.target === event.currentTarget) clearSelection(); }}>
-        <div className="notation-grid">
-          <div className="grid-head" style={{ gridTemplateColumns: `82px repeat(${timelineSlots.length}, 42px) 18px` }}>
-            <div className="row-label heading-label">PERFORMER</div>
-            {timelineSlots.map((slot, index) => {
-              const beatIndex = sequence.beats.findIndex((beat) => beat.id === slot.beatId);
-              const beat = sequence.beats[beatIndex]!;
-              const isBeatStart = compareRational(slot.offset, rational(0)) === 0;
-              const isBeatEnd = timelineSlots[index + 1]?.beatId !== slot.beatId;
-              return <div className={'beat-head' + (isBeatStart ? ' beat-start' : '') + (isBeatStart && beatIndex % sequence.timeSignature.beatGrouping.length === 0 ? ' bar-start' : '')} key={beat.id + ':' + slot.offset.numerator + '/' + slot.offset.denominator}>
-                <button type="button" className="beat-select" onClick={() => isBeatStart ? selectBeat(beat.id) : selectInterval(beat.id, slot.offset, slot.duration)} aria-label={isBeatStart ? 'Select beat ' + (beatIndex + 1) : 'Select beat ' + (beatIndex + 1) + ' subdivision ' + slot.label}>
-                  <span>{slot.label}</span><small>{isBeatStart ? Math.floor(beatIndex / sequence.timeSignature.beatGrouping.length) + 1 + '.' + (beatIndex % sequence.timeSignature.beatGrouping.length + 1) : ' '}</small>
-                </button>
-                {isBeatStart && <button type="button" className="move-beat move-beat-left" onClick={() => moveBeat(beat.id, -1)} disabled={beatIndex === 0} aria-label={'Move beat ' + (beatIndex + 1) + ' left'}>‹</button>}
-                {isBeatStart && <button type="button" className="move-beat move-beat-right" onClick={() => moveBeat(beat.id, 1)} disabled={beatIndex === sequence.beats.length - 1} aria-label={'Move beat ' + (beatIndex + 1) + ' right'}>›</button>}
-                <button type="button" className="subdivide-interval" onClick={() => subdivideInterval(beat.id, slot.offset, slot.duration)} aria-label={'Subdivide beat ' + (beatIndex + 1) + ' interval ' + slot.label}>÷</button>
-                {isBeatEnd && <button type="button" className="insert-beat" onClick={() => insertBeatAfter(beat.id)} aria-label={'Insert beat after ' + (beatIndex + 1)}>+</button>}
-              </div>;
-            })}
-            <button type="button" className="add-beat" onClick={addBeat} aria-label="Add beat">+</button>
-          </div>
-          {(sequence.beats.some((beat) => beat.subdivisions.length > 0) || (sequence.timeSignature.numerator === 6 && sequence.timeSignature.denominator === 8)) && <p className="timeline-note">Subdivisions are shown in the notation grid, but the simulator currently evaluates all actions in a main beat simultaneously. The current binary subdivision model does not represent triplet subdivisions in 6/8.</p>}
-          {sequence.performers.map((performer) => (
-            <div className="performer-block" key={performer.id}>
-              <div className="performer-heading">{performer.name}<span>{performer.identifier ?? ''}</span></div>
-              {hands.map((hand) => (
-                <div className="hand-row" key={hand} style={{ gridTemplateColumns: `82px repeat(${timelineSlots.length}, 42px) 18px` }}>
-                  <div className="row-label">{hand === 'left' ? 'L' : 'R'}</div>
-                  {timelineSlots.map((slot) => {
-                    const beatIndex = sequence.beats.findIndex((beat) => beat.id === slot.beatId);
-                    const beat = sequence.beats[beatIndex]!;
-                    const entry = entryAt(performer.id, hand, beat.id, slot.offset);
-                    const selectedCell = selectedCells.some((cell) => cell.performerId === performer.id && cell.hand === hand && cell.beatId === beat.id && compareRational(cell.offset ?? rational(0), slot.offset) === 0);
-                    const errors = entry ? issuesByEntry.get(entry.id) ?? [] : [];
-                    return (
-                      <button
-                        type="button"
-                        key={beat.id + ':' + slot.offset.numerator + '/' + slot.offset.denominator}
-                        className={'notation-cell' + (selectedCell ? ' selected' : '') + (errors.length ? ' invalid' : '') + (entry ? ' occupied' : '') + (beatIndex % sequence.timeSignature.beatGrouping.length === 0 && compareRational(slot.offset, rational(0)) === 0 ? ' bar-start' : '')}
-                        onMouseDown={(event) => {
-                          if (touchMode) return;
-                          const cell = { performerId: performer.id, hand, beatId: beat.id, offset: slot.offset, duration: slot.duration };
-                          if (event.ctrlKey) {
-                            event.preventDefault();
-                            setEraseStart(cell);
-                          } else if (event.shiftKey) {
-                            event.preventDefault();
-                            selectCell(cell);
-                            setDragStart(cell);
-                          } else if (entry) {
-                            setMoveStart(cell);
-                          }
-                        }}
-                        onMouseUp={() => {
-                          if (touchMode) return;
-                          const cell = { performerId: performer.id, hand, beatId: beat.id, offset: slot.offset, duration: slot.duration };
-                          if (eraseStart) { eraseRectangle(eraseStart, cell); setEraseStart(null); return; }
-                          if (dragStart) { drawRectangle(dragStart, cell); setDragStart(null); return; }
-                          if (moveStart) { moveRectangle(moveStart, cell); setMoveStart(null); }
-                        }}
-                        onClick={(event) => {
-                          const cell = { performerId: performer.id, hand, beatId: beat.id, offset: slot.offset, duration: slot.duration };
-                          if (touchMode === 'select') { selectCell(cell, true); return; }
-                          if (touchMode === 'draw') {
-                            if (!dragStart) { selectCell(cell); setDragStart(cell); }
-                            else { drawRectangle(dragStart, cell); setDragStart(null); setTouchMode(null); }
-                            return;
-                          }
-                          if (touchMode === 'erase') {
-                            if (!eraseStart) setEraseStart(cell);
-                            else { eraseRectangle(eraseStart, cell); setEraseStart(null); setTouchMode(null); }
-                            return;
-                          }
-                          if (touchMode === 'move') {
-                            if (!moveStart) {
-                              if (entry) { selectCell(cell); setMoveStart(cell); }
-                            } else { moveRectangle(moveStart, cell); setMoveStart(null); setTouchMode(null); }
-                            return;
-                          }
-                          if (dragStart || eraseStart || moveStart) return;
-                          selectCell(cell, event.shiftKey);
-                        }}
-                        onContextMenu={(event) => { if (entry?.action.type === 'SPECIAL') { event.preventDefault(); editSpecial(entry, { performerId: performer.id, hand, beatId: beat.id, offset: slot.offset, duration: slot.duration }); } }}
-                        aria-label={performer.name + ' ' + hand + ' beat ' + (beatIndex + 1) + (compareRational(slot.offset, rational(0)) === 0 ? '' : ' ' + slot.label) + (entry ? ' ' + actionLabel(entry.action, sequence) : ' empty')}
-                        title={errors.join(' ')}
-                      >
-                        {entry ? <NotationMark action={entry.action} sequence={sequence} hand={hand} /> : null}
-                      </button>
-                    );
-                  })}
-                  <span className="grid-end" />
-                </div>
-              ))}
-            </div>
-          ))}
+        <div className="target-tools">
+          {selectedEntry && renderTargetControls(selectedEntry)}
         </div>
       </section>
 
