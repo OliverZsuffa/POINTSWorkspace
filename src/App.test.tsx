@@ -459,7 +459,7 @@ describe('sequence editor', () => {
     const leave = screen.getByRole('button', { name: /Juggler 1 left beat 3 LEAVE/ });
     fireEvent.mouseDown(hold);
     fireEvent.mouseUp(leave);
-    expect(screen.getByRole('button', { name: 'Juggler 1 left beat 2 LIFT A' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Juggler 1 left beat 2 LIFT A(a)' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Juggler 1 left beat 3 HOLD' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Juggler 1 left beat 4 LEAVE/ })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Juggler 2 left beat 4 LIFT X/ })).toBeInTheDocument();
