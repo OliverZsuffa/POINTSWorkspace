@@ -95,6 +95,42 @@ describe('renderer geometry', () => {
     }
   });
 
+  it('uses exactly one polygon side per circle passing participant', () => {
+    const value = { ...sequence(10, { type: 'rectangle', longSideSeatCount: 10, shortSideSeatCount: 0 }), sequenceType: 'circle-passing' as const };
+    const footprint = getTableFootprint(value);
+    expect(footprint.round).toBe(true);
+    expect(footprint.sideCount).toBe(value.performers.length);
+  });
+
+  it('keeps owned positions distinct along a circle table edge', () => {
+    const value = { ...sequence(10, { type: 'polygon', sideCount: 10 }), sequenceType: 'circle-passing' as const };
+    const performer = value.performers[0]!;
+    const positions = ['A', 'B', 'C'].map((name) => ({
+      id: asPositionId('position-' + name),
+      kind: 'table' as const,
+      name,
+      owner: { kind: 'performer' as const, performerId: performer.id },
+    }));
+    const configured = { ...value, positions };
+    const points = positions.map((position) => getTablePositionPosition(configured, position, 'circle'));
+    expect(Math.hypot(points[0]!.x - points[1]!.x, points[0]!.z - points[1]!.z)).toBeGreaterThanOrEqual(0.7);
+    expect(Math.hypot(points[1]!.x - points[2]!.x, points[1]!.z - points[2]!.z)).toBeGreaterThanOrEqual(0.7);
+  });
+
+  it('places circle performers close to the table without overlapping neighbours', () => {
+    const value = { ...sequence(10, { type: 'polygon', sideCount: 10 }), sequenceType: 'circle-passing' as const };
+    const anchors = value.performers.map((performer) => getPerformerAnchor(value, performer, 'circle'));
+    const neighbourDistances = anchors.map((point, index) => {
+      const next = anchors[(index + 1) % anchors.length]!;
+      return Math.hypot(point.x - next.x, point.z - next.z);
+    });
+    expect(Math.min(...neighbourDistances)).toBeGreaterThan(0.76);
+    const firstPosition = value.positions[0]!;
+    const tablePoint = getTablePositionPosition(value, firstPosition, 'circle');
+    const firstAnchor = getPerformerAnchor(value, value.performers[0]!, 'circle');
+    expect(Math.hypot(firstAnchor.x - tablePoint.x, firstAnchor.z - tablePoint.z)).toBeLessThan(1.7);
+  });
+
   it('places left and right hands on opposite sides', () => {
     const value = sequence();
     const left = getHandPosition(value, 'a', 'left', 'circle');
