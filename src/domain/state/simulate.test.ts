@@ -200,6 +200,14 @@ describe('object state simulation', () => {
     const result = simulateSequence(sequence);
     expect(result.validation.isValid).toBe(true);
     expect(result.snapshots[1]?.handStates[performerId]?.right.heldBallId).toBe('ball-1');
+    const invalidDistance = simulateSequence({
+      ...sequence,
+      notation: [entry('circle-lift-invalid-distance', 'right', {
+        type: 'LIFT',
+        target: { kind: 'circle-position', position: 'A', direction: 'left', distance: 2 },
+      })],
+    });
+    expect(invalidDistance.validation.issues.map((item) => item.code)).toContain('unknown-lift-target');
   });
 
   it('allows BOUNCE while a second object is balanced on the same hand', () => {
