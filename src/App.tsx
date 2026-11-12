@@ -675,7 +675,7 @@ export default function App() {
   const changeType = (type: SequenceType) => {
     let positions = sequence.positions;
     let individualPassingLayout = sequence.individualPassingLayout;
-    if (type === 'individual-passing' && sequence.individualPassingLayout !== 'shared-positions') {
+    if (type === 'circle-passing' || (type === 'individual-passing' && sequence.individualPassingLayout !== 'shared-positions')) {
       const tables = sequence.positions.filter((position) => position.kind === 'table');
       const names = [...new Set(tables.map((position) => position.name))];
       const normalized = sequence.performers.flatMap((performer, performerIndex) => names.map((name) => {
