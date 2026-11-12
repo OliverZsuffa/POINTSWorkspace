@@ -6,13 +6,13 @@ export default defineConfig({
   reporter: 'list',
   outputDir: 'test-results',
   use: {
-    baseURL: 'http://127.0.0.1:4173',
+    baseURL: 'http://127.0.0.1:4173/POINTSWorkspace/',
     browserName: 'chromium',
     headless: true,
   },
   webServer: {
     command: 'npm run preview -- --host 127.0.0.1',
-    url: 'http://127.0.0.1:4173',
+    url: 'http://127.0.0.1:4173/POINTSWorkspace/',
     reuseExistingServer: !process.env.CI,
     timeout: 30_000,
   },
