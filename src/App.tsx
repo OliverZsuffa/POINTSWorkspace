@@ -1053,22 +1053,30 @@ export default function App() {
     if (!cleanName) return;
     const current = sequence.positions.find((position) => position.id === positionId);
     if (!current || current.kind !== 'table') return;
+    const circlePositionIds = sequence.sequenceType === 'circle-passing'
+      ? new Set(sequence.positions.filter((position) => position.kind === 'table' && position.name === current.name).map((position) => position.id))
+      : new Set([positionId]);
     const duplicate = sequence.positions.some((position) =>
-      position.kind === 'table' && position.id !== positionId && position.name === cleanName &&
-      (position.owner.kind === current.owner.kind &&
-       (position.owner.kind === 'shared' || (current.owner.kind === 'performer' && position.owner.performerId === current.owner.performerId))),
+      position.kind === 'table' && !circlePositionIds.has(position.id) && position.name === cleanName &&
+      (sequence.sequenceType === 'circle-passing' ||
+       (position.owner.kind === current.owner.kind &&
+        (position.owner.kind === 'shared' || (current.owner.kind === 'performer' && position.owner.performerId === current.owner.performerId)))),
     );
     if (duplicate) {
       window.alert('A position with this name already exists in the same layout.');
       return;
     }
     commit({ ...sequence, positions: sequence.positions.map((position) =>
-      position.id === positionId && position.kind === 'table' ? { ...position, name: cleanName } : position,
+      circlePositionIds.has(position.id) && position.kind === 'table' ? { ...position, name: cleanName } : position,
     ) });
   };
 
   const removePosition = (positionId: string) => {
-    commit({ ...sequence, positions: sequence.positions.filter((position) => position.id !== positionId) });
+    const current = sequence.positions.find((position) => position.id === positionId);
+    const removeIds = sequence.sequenceType === 'circle-passing' && current?.kind === 'table'
+      ? new Set(sequence.positions.filter((position) => position.kind === 'table' && position.name === current.name).map((position) => position.id))
+      : new Set([positionId]);
+    commit({ ...sequence, positions: sequence.positions.filter((position) => !removeIds.has(position.id)) });
   };
 
   const changeType = (type: SequenceType) => {
