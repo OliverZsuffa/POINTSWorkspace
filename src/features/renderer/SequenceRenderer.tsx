@@ -72,7 +72,9 @@ function getActionTargetPosition(
     if (action.target.kind === 'position') {
       const positionId = action.target.positionId;
       const position = sequence.positions.find((item) => item.id === positionId);
-      return position ? getTablePositionPosition(sequence, position, layout) : undefined;
+      if (!position) return undefined;
+      if (position.kind === 'hand-back') return getHandPosition(sequence, position.performerId, position.hand, layout);
+      return getTablePositionPosition(sequence, position, layout);
     }
     if (action.target.kind === 'circle-position') {
       const circleTarget = action.target;
@@ -344,7 +346,9 @@ export default function SequenceRenderer({ sequence, simulation, onSelectHand }:
         const hand = selected?.userData.hand as 'left' | 'right' | undefined;
         const current = sceneStateRef.current;
         const beat = current.sequence.beats[current.playhead];
-        if (performerId && hand && beat) current.onSelectHand(performerId, hand, beat.id);
+        if (current.simulation.validation.isValid && performerId && hand && beat) {
+          current.onSelectHand(performerId, hand, beat.id);
+        }
       }
       pointerStart = null;
     };
@@ -379,6 +383,7 @@ export default function SequenceRenderer({ sequence, simulation, onSelectHand }:
       const beat = current.sequence.beats[current.playhead];
       const valid = current.simulation.validation.isValid;
       const progressValue = valid ? current.progress : 0;
+      renderer.domElement.style.visibility = valid ? 'visible' : 'hidden';
 
       if (beat) {
         for (const ball of current.sequence.balls) {
@@ -432,6 +437,23 @@ export default function SequenceRenderer({ sequence, simulation, onSelectHand }:
             visual.arm.position.copy(shoulder.clone().add(handPoint).multiplyScalar(0.5));
             visual.arm.scale.y = direction.length();
             visual.arm.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), direction.normalize());
+          }
+        }
+
+        for (const ball of current.sequence.balls) {
+          const before = snapshotLocation(current.simulation, beat.id, 'before', ball.id);
+          const after = snapshotLocation(current.simulation, beat.id, 'after', ball.id);
+          if (!before || !after || before.kind !== after.kind) continue;
+          if (before.kind === 'hand-held' && after.kind === 'hand-held' &&
+              before.performerId === after.performerId && before.hand === after.hand) {
+            const hand = handVisuals.find((item) => item.performerId === before.performerId && item.hand === before.hand);
+            const mesh = balls.get(ball.id);
+            if (hand && mesh) mesh.position.copy(hand.mesh.position);
+          } else if (before.kind === 'hand-back' && after.kind === 'hand-back' &&
+              before.positionId === after.positionId) {
+            const hand = handVisuals.find((item) => item.performerId === before.performerId && item.hand === before.hand);
+            const mesh = balls.get(ball.id);
+            if (hand && mesh) mesh.position.copy(hand.mesh.position.clone().add(new THREE.Vector3(0, 0.18, 0)));
           }
         }
       }
