@@ -262,7 +262,6 @@ export default function SequenceRenderer({ sequence, simulation, onSelectHand }:
       : new THREE.BoxGeometry(footprint.width, 0.08, footprint.depth);
     const table = new THREE.Mesh(tableGeometry, makeMaterial('#b9c8db'));
     table.position.y = -0.04;
-    if (footprint.round && footprint.sideCount) table.rotation.y = Math.PI / footprint.sideCount;
     table.castShadow = true;
     table.receiveShadow = true;
     scene.add(table);
