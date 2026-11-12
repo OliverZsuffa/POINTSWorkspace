@@ -195,32 +195,37 @@ The interface should not cover the scene with unnecessary text or descriptions.
 
 The environment is pannable. With a mouse, the user can pan the scene.
 
-The renderer shows jugglers sitting or standing around a table, performing the selected pattern. The intended visual style is comparable to Juggling Lab.
+The renderer shows jugglers sitting or standing around a table, performing the selected pattern. The intended visual style and level of character detail should follow Juggling Lab, including its simplified stick figure like performers. Realistic anatomy, fingers, and joints are not required. Hands may stretch or elongate when needed to communicate an action. The movement and state of the objects must remain clear.
 
-Objects must be visually distinguishable through colour. The renderer should show the movement of objects and the actions of jugglers clearly.
+The renderer must animate hand actions individually enough to communicate what is happening. LIFT, LEAVE, BOUNCE, and TAP must have visually distinct actions appropriate to their notation. BOUNCE shows a hand tapping a position with an object it continues to hold. TAP shows an empty hand tapping a position. The renderer should make it clear when an object is held with the fingers and when it is balanced on top of a hand at L or R.
+
+Objects must be visually distinguishable through colour. The renderer should show the movement of objects and the actions of jugglers clearly. Object trajectories are calculated automatically. Custom trajectory editing and manual trajectory height or shape controls are not required at this stage.
 
 The table and juggler arrangement depend on the sequence type.
 
 **Circle juggling and circle passing**
 
-The user can specify the number of sides of a polygonal table. A juggler is positioned at each side of the table.
+The user can choose a polygonal table. A juggler is seated at each edge. The number of edges determines the number of seats.
 
 **Solo patterns**
 
 A solo pattern is visualised with one juggler at a table.
 
-**Individual passing patterns**
+**Rectangular table and individual passing patterns**
 
-The user can arrange jugglers individually and freely, rather than being restricted to a regular circle.
+The user can choose a rectangular table and specify the number of seats on each side. Jugglers are assigned to individual seats. This provides a structured alternative to the polygonal table for individual passing patterns. Free positioning and rotation of each juggler in the scene are not currently required.
 
 ### 2.3 Playback and scene controls
 
 The renderer must support:
 - Play and pause.
 - Scrubbing through the sequence manually.
+- Stepping forwards and backwards by exactly one beat.
 - Playing exactly one cycle.
 - Repeating the sequence indefinitely.
-- Changing playback speed.
+- Setting playback tempo in beats per minute (BPM).
+
+In step mode, moving from one beat state to the next is animated over 0.5 seconds, after which playback stops at the new beat. In continuous playback, the animation runs smoothly without pauses at beat boundaries. The duration of each beat is determined by the BPM, and subdivisions take proportionally less time. For example, a half beat takes half the duration of a full beat.
 - Camera rotation.
 - Zoom.
 - Panning with the mouse.
@@ -228,6 +233,10 @@ The renderer must support:
 - Changing juggler positioning.
 
 Controls should also have keyboard shortcuts where appropriate. The exact shortcut assignments remain open.
+
+Selecting a table position in the renderer should visibly mark that position. The position labels are otherwise hidden to keep the scene uncluttered.
+
+The current playback position should be indicated in the Sequence Editor, so the user can see which point in the notation is currently being animated. A corresponding current beat or subdivision indicator inside the renderer is not required at this stage.
 
 Changes made in the Sequence Editor update the renderer immediately, including during playback.
 
