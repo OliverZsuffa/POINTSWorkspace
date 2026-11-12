@@ -503,12 +503,19 @@ export default function App() {
               time: { beatId: asBeatId(selected.beatId), offset: selected.offset ?? rational(0) },
               action: nextAction,
             };
-        commit({
-          ...sequence,
-          notation: selectedEntry
-            ? sequence.notation.map((entry) => entry.id === selectedEntry.id ? nextEntry : entry)
-            : [...sequence.notation, nextEntry],
-        });
+        let notation = sequence.notation.filter((entry) => entry.id !== selectedEntry?.id);
+        const oldAction = selectedEntry?.action;
+        const oldLinkId = oldAction && 'linkId' in oldAction ? oldAction.linkId : undefined;
+        if (oldLinkId && (oldAction?.type === 'ZIP' ||
+          (oldAction?.type === 'LEAVE' && 'target' in oldAction && oldAction.target.kind === 'pass-recipient-hand') ||
+          (oldAction?.type === 'LIFT' && 'target' in oldAction && oldAction.target.kind === 'pass-source'))) {
+          notation = notation.filter((entry) => !('linkId' in entry.action && entry.action.linkId === oldLinkId));
+        } else if (oldLinkId && oldAction?.type === 'SPECIAL') {
+          notation = notation.map((entry) => entry.action.type === 'SPECIAL' && entry.action.linkId === oldLinkId
+            ? { ...entry, action: { type: 'SPECIAL', text: entry.action.text } }
+            : entry);
+        }
+        commit({ ...sequence, notation: [...notation, nextEntry] });
         setShowActionMenu(false);
         return;
       }
