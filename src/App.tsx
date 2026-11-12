@@ -1411,7 +1411,27 @@ export default function App() {
           </label>
           <div className="setting-control"><span>Balls</span><div className="stepper"><button type="button" onClick={() => changeBallCount(sequence.balls.length - 1)} disabled={sequence.balls.length <= 1}>−</button><output>{sequence.balls.length}</output><button type="button" onClick={() => changeBallCount(sequence.balls.length + 1)}>+</button></div></div>
           <div className="setting-control"><span>Beats</span><div className="stepper"><button type="button" onClick={removeBeat} disabled={sequence.beats.length <= 1 || sequence.notation.some((entry) => entry.time.beatId === sequence.beats[sequence.beats.length - 1]?.id)}>−</button><output>{sequence.beats.length}</output><button type="button" onClick={addBeat}>+</button></div></div>
-          <div className="performer-settings"><span>Performers</span>{sequence.performers.map((performer) => <div className="performer-chip" key={performer.id + performer.name + performer.identifier}><input className="performer-name" aria-label={'Performer name ' + performer.name} defaultValue={performer.name} onBlur={(event) => updatePerformer(performer.id, 'name', event.target.value)} /><input className="performer-identifier" aria-label={'Performer identifier ' + (performer.identifier ?? '')} defaultValue={performer.identifier ?? ''} maxLength={1} onBlur={(event) => updatePerformer(performer.id, 'identifier', event.target.value)} />{sequence.performers.length > 1 && <button type="button" className="remove-chip" onClick={() => removePerformer(performer.id)} disabled={sequence.sequenceType === 'circle-passing' && sequence.performers.length <= 3} aria-label={'Remove ' + performer.name}>×</button>}</div>)}<button type="button" onClick={addPerformer}>Add performer</button></div>
+          <div className="performer-settings">
+            <span>{sequence.sequenceType === 'circle-passing' ? 'People' : 'Performers'}</span>
+            {sequence.sequenceType === 'circle-passing' ? (
+              <div className="stepper" aria-label="People in circle">
+                <button type="button" onClick={() => removePerformer(sequence.performers[sequence.performers.length - 1]!.id)} disabled={sequence.performers.length <= 3} aria-label="Remove one person">−</button>
+                <output aria-label="People count">{sequence.performers.length}</output>
+                <button type="button" onClick={addPerformer} aria-label="Add one person">+</button>
+              </div>
+            ) : (
+              <>
+                {sequence.performers.map((performer) => (
+                  <div className="performer-chip" key={performer.id + performer.name + performer.identifier}>
+                    <input className="performer-name" aria-label={'Performer name ' + performer.name} defaultValue={performer.name} onBlur={(event) => updatePerformer(performer.id, 'name', event.target.value)} />
+                    <input className="performer-identifier" aria-label={'Performer identifier ' + (performer.identifier ?? '')} defaultValue={performer.identifier ?? ''} maxLength={1} onBlur={(event) => updatePerformer(performer.id, 'identifier', event.target.value)} />
+                    {sequence.performers.length > 1 && <button type="button" className="remove-chip" onClick={() => removePerformer(performer.id)} aria-label={'Remove ' + performer.name}>×</button>}
+                  </div>
+                ))}
+                <button type="button" onClick={addPerformer}>Add performer</button>
+              </>
+            )}
+          </div>
           <div className="position-settings"><span>Positions</span>{sequence.positions.filter((position) => position.kind === 'table').map((position) => <div className="position-edit" key={position.id + position.name}><input aria-label={'Rename position ' + position.name} defaultValue={position.name} onBlur={(event) => renamePosition(position.id, event.target.value)} /><button type="button" onClick={() => removePosition(position.id)} aria-label={'Remove position ' + position.name}>×</button></div>)}<button type="button" onClick={addPosition}>Add position</button></div>
         </section>
       )}
@@ -1509,7 +1529,7 @@ export default function App() {
           {showActionMenu && <button type="button" className="tool" onClick={addClap} disabled={!selected}>CLAP</button>}
           <button type="button" className="tool delete-tool" onClick={removeSelected} disabled={!selected || !(selectedCells.length ? selectedCells : [selected]).some((cell) => Boolean(entryAt(cell.performerId, cell.hand, cell.beatId, cell.offset ?? rational(0))))}>Delete</button>
         </div>
-        <span className="selection-label">{selected ? sequence.performers.find((item) => item.id === selected.performerId)?.name + ' · ' + selected.hand + ' · beat ' + (sequence.beats.findIndex((beat) => beat.id === selected.beatId) + 1) : 'Select a cell'}</span>
+        <span className="selection-label">{selected ? (sequence.sequenceType === 'circle-passing' ? 'Pattern' : sequence.performers.find((item) => item.id === selected.performerId)?.name) + ' · ' + selected.hand + ' · beat ' + (sequence.beats.findIndex((beat) => beat.id === selected.beatId) + 1) : 'Select a cell'}</span>
         <div className="target-tools">
           {!showActionMenu && targetableEntry && targetableEntry.action.target.kind === 'position' && (
             <label className="target-control">Target
@@ -1574,7 +1594,7 @@ export default function App() {
           {(sequence.beats.some((beat) => beat.subdivisions.length > 0) || (sequence.timeSignature.numerator === 6 && sequence.timeSignature.denominator === 8)) && <p className="timeline-note">Subdivisions are shown in the notation grid, but the simulator currently evaluates all actions in a main beat simultaneously. The current binary subdivision model does not represent triplet subdivisions in 6/8.</p>}
           {editorPerformers.map((performer) => (
             <div className="performer-block" key={performer.id}>
-              <div className="performer-heading">{performer.name}<span>{performer.identifier ?? ''}</span></div>
+              <div className="performer-heading">{sequence.sequenceType === 'circle-passing' ? 'Pattern' : performer.name}<span>{sequence.sequenceType === 'circle-passing' ? '' : performer.identifier ?? ''}</span></div>
               {hands.map((hand) => (
                 <div className="hand-row" key={hand} style={{ gridTemplateColumns: `82px repeat(${timelineSlots.length}, 42px) 18px` }}>
                   <div className="row-label">{hand === 'left' ? 'L' : 'R'}</div>
