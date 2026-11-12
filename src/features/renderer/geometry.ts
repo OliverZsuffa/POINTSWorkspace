@@ -159,7 +159,6 @@ export function getTablePositionPosition(
     if (seat.side === 'long-a' || seat.side === 'long-b') {
       const countOnSide = Math.max(1, sequence.tableLayout.longSideSeatCount);
       const seatX = countOnSide === 1 ? 0 : -width / 2 + (seat.seatIndex * width) / (countOnSide - 1);
-      const tangentOffset = Math.max(-depth / 2 + 0.2, Math.min(depth / 2 - 0.2, positionOffset(position.name)));
       return {
         x: Math.max(-width / 2 + 0.2, Math.min(width / 2 - 0.2, seatX + positionOffset(position.name))),
         y: 0.19,
