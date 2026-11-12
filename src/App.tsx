@@ -1492,10 +1492,12 @@ export default function App() {
       )}
 
       <section className="initial-positions" aria-label="Initial positions">
-        <div className="initial-positions-heading">
+        <button type="button" className="initial-positions-heading" onClick={() => setShowInitialPositions((value) => !value)} aria-expanded={showInitialPositions}>
           <strong>Initial positions</strong>
           <span>{sequence.initialState.placements.length} / {sequence.balls.length}</span>
-        </div>
+          <span className="disclosure-indicator">{showInitialPositions ? '−' : '+'}</span>
+        </button>
+        {showInitialPositions && <div className="initial-positions-content">
         {sequence.performers.map((performer) => {
           const tablePositions = sequence.positions.filter((position) =>
             position.kind === 'table' &&
@@ -1551,6 +1553,7 @@ export default function App() {
             </div>
           );
         })}
+        </div>}
       </section>
 
       {showRenderer && <SequenceRenderer
