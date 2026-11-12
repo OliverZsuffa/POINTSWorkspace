@@ -1,9 +1,10 @@
-import { render, screen } from '@testing-library/react';
+import { cleanup, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it } from 'vitest';
 import App from './App';
 
 describe('sequence editor', () => {
+  afterEach(cleanup);
   it('renders the workspace and notation editor', () => {
     render(<App />);
     expect(screen.getByRole('main', { name: 'POINTS Workspace' })).toBeInTheDocument();
