@@ -129,7 +129,8 @@ function ActionSymbol({ action, sequence, hand }: { action: NotationAction; sequ
 
   let path = '';
   let target = '';
-  let subscript = '';\n  let circledTarget = false;
+  let subscript = '';
+  let circledTarget = false;
 
   switch (action.type) {
     case 'HOLD':
@@ -139,7 +140,7 @@ function ActionSymbol({ action, sequence, hand }: { action: NotationAction; sequ
       path = 'M7 9H41 M7 9V39 M7 39H41';
       if (action.target.kind === 'position') target = positionName(sequence, action.target.positionId);
       else if (action.target.kind === 'circle-position') target = action.target.position + (action.target.distance > 1 ? String(action.target.distance) : '') + (action.target.direction === 'left' ? 'L' : 'R');
-      else {
+      else if (action.target.kind === 'pass-source') {
         target = 'X';
         subscript = sequence.performers.find((person) => person.id === action.target.performerId)?.identifier ?? '?';
       }
@@ -148,8 +149,9 @@ function ActionSymbol({ action, sequence, hand }: { action: NotationAction; sequ
       path = 'M7 9H41 M41 9V39 M7 39H41';
       if (action.target.kind === 'position') target = positionName(sequence, action.target.positionId);
       else if (action.target.kind === 'circle-position') target = action.target.position + (action.target.distance > 1 ? String(action.target.distance) : '') + (action.target.direction === 'left' ? 'L' : 'R');
-      else {
+      else if (action.target.kind === 'pass-recipient-hand') {
         target = action.target.hand === 'left' ? 'L' : 'R';
+        circledTarget = true;
         subscript = sequence.performers.find((person) => person.id === action.target.performerId)?.identifier ?? '?';
       }
       break;
@@ -759,9 +761,6 @@ export default function App() {
             (position.owner.kind === 'performer'
               ? position.owner.performerId === performer.id
               : performer.id === sequence.performers[0]?.id),
-          );
-          const backPositions = sequence.positions.filter((position) =>
-            position.kind === 'hand-back' && position.performerId === performer.id,
           );
           const heldLocation = (hand: Hand): ObjectLocation => ({ kind: 'hand-held', performerId: performer.id, hand });
           return (
