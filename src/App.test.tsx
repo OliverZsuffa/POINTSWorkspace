@@ -114,10 +114,8 @@ describe('sequence editor', () => {
     expect(symbol?.querySelector('text')).toHaveAttribute('font-size', '46');
   });
 
-  it('opens the interactive sequence renderer from the top bar', async () => {
-    const user = userEvent.setup();
+  it('shows the interactive sequence renderer alongside the editor by default', () => {
     render(<App />);
-    await user.click(screen.getByRole('button', { name: 'Renderer' }));
     expect(screen.getByRole('region', { name: 'Sequence renderer' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Play' })).toBeInTheDocument();
   });
