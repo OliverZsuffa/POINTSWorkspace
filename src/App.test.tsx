@@ -100,7 +100,7 @@ describe('sequence editor', () => {
     await user.click(screen.getByRole('button', { name: 'Juggler 1 left beat 1 empty' }));
     await user.click(screen.getByRole('button', { name: 'LIFT' }));
 
-    expect(screen.getByRole('button', { name: 'Juggler 1 left beat 1 LIFT A' }).querySelector('svg.notation-symbol')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Juggler 1 left beat 1 LIFT A' }).querySelector('svg.ball-segment')).toBeInTheDocument();
   });
 
   it('exposes sequence settings and initial object distribution', async () => {
