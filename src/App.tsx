@@ -711,7 +711,7 @@ export default function App() {
 
   const pasteSelected = () => {
     if (!selected || !clipboard.length) return;
-    const rows = sequence.performers.flatMap((performer) => hands.map((hand) => ({ performerId: performer.id, hand })));
+    const rows = editorPerformers.flatMap((performer) => hands.map((hand) => ({ performerId: performer.id, hand })));
     const anchorRow = rows.findIndex((row) => row.performerId === selected.performerId && row.hand === selected.hand);
     const anchorBeat = sequence.beats.findIndex((beat) => beat.id === selected.beatId);
     const destinations = clipboard.map((item) => {
