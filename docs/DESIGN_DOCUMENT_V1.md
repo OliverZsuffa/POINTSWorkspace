@@ -145,9 +145,17 @@ Notation elements can be entered and modified through a combination of:
 
 Keyboard shortcuts are a core part of the editor. A dedicated help section must explain them. A permanent shortcut overlay is not required. Undo and redo apply to changes made in the Sequence Editor only. They do not undo renderer settings or generator settings.
 
-The Godot interaction model is the starting point for the web editor, subject to usability testing. Retain the existing click, drag, modifier key, and right click interactions where practical. Dragging must construct the ball rectangle notation, including LIFT, HOLD, LEAVE, and ZIP actions, rather than merely stamping the same symbol into every traversed cell. The exact web gestures require testing.
+The Godot interaction model is the starting point for the web editor, subject to usability testing. Retain the existing click, drag, modifier key, and right click interactions where practical. Dragging must construct the ball rectangle notation, including LIFT, HOLD, LEAVE, and ZIP actions, rather than merely stamping the same symbol into every traversed cell.
 
-Action entry and target editing should prioritise speed and minimal interaction friction. The exact menu and input sequence remains open. Targets may be typed, but input must be restricted to legal targets for the selected action and context.
+The default interaction should minimise friction. A cell click should provide direct access to editing, while keyboard navigation and selection remain available. The exact distinction between selecting a cell and opening its action menu remains a design choice to resolve through prototyping. Selecting multiple cells and applying one action to all selected cells is supported. Arrow keys move the selection between cells, and Shift plus arrow keys extends the selection. The behaviour of double click and Enter remains undecided.
+
+Dragging notation starts with a LIFT at the starting cell and ends with a LEAVE at the ending cell. The drag can and must cross hand lanes when needed to construct linked actions such as ZIP. The editor previews the notation during the drag. Drawing over existing notation must not overwrite it. If the proposed drawing conflicts with existing notation, the existing notation is preserved and the new operation is prevented. A complete drag operation is one undoable edit, including any linked symbols it creates.
+
+Action menus show only actions that are valid for the current state. All available valid actions should be directly accessible rather than hidden in submenus. Menus close after an action is chosen. They do not remember the last used action or target. The exact menu placement remains undecided.
+
+Keyboard input is a primary editing method. Actions should have single key shortcuts where practical. After choosing an action, the user can type its target immediately to complete the entry. Escape cancels the current operation and clears the selection. Backspace deletes the selected notation. Arrow key navigation and Shift selection extension are supported. The exact shortcut mapping remains to be documented.
+
+Targets may be typed, but input must be restricted to legal targets for the selected action and context.
 
 For circle passing, the relative performer distance should be entered numerically, with direction represented separately. For individual passing, the other performer must be selected from the existing juggler list.
 
@@ -168,6 +176,8 @@ Validation must cover the rules defined by POINTS notation. Examples include:
 - Inconsistent object states across time or between hands.
 
 The exact validation rules and severity levels remain to be specified. Selecting a general error should navigate to the affected cell or time position where possible. SPECIAL actions must be rejected when the relevant hand is not empty.
+
+The editor does not prevent every invalid action from being entered. If an action is invalid in the current object state, the user may still enter it and the normal validation system marks the error. When an edit makes a linked action inconsistent, both affected cells are marked invalid rather than silently rewriting one side. ZIP symbols are a paired operation: deleting either side deletes the corresponding other side as well. Deleting one cell of a linked SPECIAL action does not automatically delete the other cell. The remaining cell is retained; its exact status and behaviour as a standalone SPECIAL action should be confirmed during further design.
 
 ### 1.7 Sequence codes, import, and persistence
 
