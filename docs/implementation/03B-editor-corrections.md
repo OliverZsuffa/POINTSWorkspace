@@ -59,7 +59,7 @@ Use `docs/POINTS_NOTATION.md` as the source of truth.
 
 - For ordinary solo and individual passing table actions, LIFT and LEAVE target controls must offer the available table positions and the acting performer's L and R hand-back positions.
 - TAP and BOUNCE target controls must offer table positions only. They do not target hand backs.
-- Circle passing must offer A, B and C, a separate left or right direction control, and a distance. Render the direction and distance as a proper subscript.
+- Circle passing must offer A, B and C, a separate left or right direction control, and a distance when targeting another performer. It must also allow the acting performer to target their own A, B or C position without a direction or distance subscript. The own performer is the default target. Render other performer direction and distance as a proper subscript.
 - Individual passing must expose the two reciprocal targets:
   - Sender LEAVE targets the recipient's hand using a circled L or R and the recipient's performer identifier as a subscript.
   - Receiver LIFT targets X and identifies the source performer as a subscript.
@@ -106,7 +106,8 @@ Use `docs/POINTS_NOTATION.md` as the source of truth.
 - [ ] LIFT and LEAVE can target L and R hand backs.
 - [ ] TAP and BOUNCE remain restricted to table positions.
 - [ ] Individual passing can select another performer and receiving hand, and creates reciprocal LEAVE and X-targeted LIFT entries.
-- [ ] Circle passing direction and distance are displayed as subscripts.
+- [ ] Circle passing can target the acting performer's own A, B and C positions without a subscript.
+- [ ] Circle passing can target other performers using left or right direction and distance, displayed as subscripts.
 - [ ] Individual passing identifiers are displayed as subscripts.
 - [ ] Blue palette is applied consistently and maintains contrast.
 - [ ] Prettier, ESLint, strict TypeScript, Vitest and production build pass.
