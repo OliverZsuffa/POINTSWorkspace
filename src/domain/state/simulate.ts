@@ -258,6 +258,7 @@ function evaluateBeat(sequence: Sequence, entries: readonly NotationEntry[], sta
         if (!ballInHand) issues.push(problem('hold-without-ball', 'HOLD requires an object in the hand.', [entry]));
         break;
       case 'EMPTY':
+        if (ballInHand) issues.push(problem('empty-hand-occupied', 'EMPTY requires no object held with the fingers.', [entry]));
         break;
       case 'SPECIAL':
         if (ballInHand) issues.push(problem('special-hand-occupied', 'SPECIAL requires free fingers.', [entry]));
