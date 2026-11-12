@@ -1424,11 +1424,17 @@ export default function App() {
         <div className="top-actions">
           <button type="button" onClick={undo} disabled={!history.length} title="Undo">↶</button>
           <button type="button" onClick={redo} disabled={!future.length} title="Redo">↷</button>
-          <button type="button" onClick={() => setShowRenderer((value) => !value)} aria-expanded={showRenderer}>Renderer</button>
+          {showEditor && showRenderer && <button type="button" onClick={() => setPanelsSwapped((value) => !value)} aria-label="Swap panels" title="Swap panels">⇄</button>}
+          {!showEditor && <button type="button" onClick={() => setShowEditor(true)}>Show editor</button>}
+          {!showRenderer && <button type="button" onClick={() => setShowRenderer(true)}>Show renderer</button>}
           <button type="button" onClick={() => setShowSettings((value) => !value)} aria-expanded={showSettings}>Settings</button>
           <button type="button" onClick={() => setShowShortcutHelp(true)} aria-label="Keyboard shortcuts" title="Keyboard shortcuts">?</button>
         </div>
       </header>
+      <nav className="workspace-tabs" aria-label="Workspace views">
+        {showEditor && <button type="button" className={activeWorkspaceTab === 'editor' ? 'active' : ''} aria-pressed={activeWorkspaceTab === 'editor'} onClick={() => setActiveWorkspaceTab('editor')}>Editor</button>}
+        {showRenderer && <button type="button" className={activeWorkspaceTab === 'renderer' ? 'active' : ''} aria-pressed={activeWorkspaceTab === 'renderer'} onClick={() => setActiveWorkspaceTab('renderer')}>Renderer</button>}
+      </nav>
 
       {showSettings && (
         <section className="settings-panel" aria-label="Sequence settings">
