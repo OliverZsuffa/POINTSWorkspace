@@ -155,14 +155,23 @@ test('PWA manifest is installable and the app shell reloads offline', async ({ p
     await navigator.serviceWorker.ready;
   });
   await page.waitForFunction(() => Boolean(navigator.serviceWorker.controller));
-  const cachedPaths = await page.evaluate(async () => {
+  const cacheCoverage = await page.evaluate(async () => {
     const cacheName = (await caches.keys()).find((key) => key.startsWith('points-workspace-'));
-    if (!cacheName) return [];
+    if (!cacheName) return { paths: [], missing: ['no application cache'] };
     const cache = await caches.open(cacheName);
-    return (await cache.keys()).map((request) => new URL(request.url).pathname);
+    const paths = (await cache.keys()).map((request) => new URL(request.url).pathname);
+    const resources = Array.from(document.querySelectorAll('script[src], link[rel="stylesheet"]')).map((element) =>
+      element instanceof HTMLScriptElement ? element.src : (element as HTMLLinkElement).href,
+    );
+    const missing: string[] = [];
+    for (const resource of resources) {
+      if (!(await cache.match(resource))) missing.push(new URL(resource).pathname);
+    }
+    return { paths, missing };
   });
-  expect(cachedPaths).toContain('/POINTSWorkspace/index.html');
-  expect(cachedPaths.some((path) => path.endsWith('.js'))).toBe(true);
+  expect(cacheCoverage.paths).toContain('/POINTSWorkspace/index.html');
+  expect(cacheCoverage.paths.some((path) => path.endsWith('.js'))).toBe(true);
+  expect(cacheCoverage.missing).toEqual([]);
 
   await context.setOffline(true);
   await page.reload();
