@@ -14,7 +14,7 @@ In solo juggling, three positions are arranged in front of the performer:
 | $B$ | Middle |
 | $C$ | Right |
 
-A position can be empty or occupied by a ball.
+Every position contains either zero or one ball.
 
 The hands also have special positions:
 
@@ -23,11 +23,15 @@ The hands also have special positions:
 | $L$ | Back of the left hand |
 | $R$ | Back of the right hand |
 
+Each hand can hold one ball with its fingers and simultaneously balance one additional ball on its back. A ball balanced on the back occupies the corresponding $L$ or $R$ position. It does not occupy the fingers and does not make the hand occupied for action eligibility. Each hand back position also contains either zero or one ball.
+
 How positions are assigned to performers in passing depends on the passing system.
 
 ## 3. Time and Hands
 
 A pattern is organised into beats. Each performer has a sequence for each hand. Every cell specifies that hand's action at that point in time.
+
+All actions take effect at the beginning of their assigned beat. Actions assigned to the same beat happen simultaneously. There is no ordering between actions in the same beat.
 
 The time signature must be given, for example $\frac{3}{4}$ or $\frac{4}{4}$. Beats can be subdivided using conventional music counting:
 
@@ -48,11 +52,15 @@ Each action has its own small symbol. The borders indicate how the action relate
 | HOLD | ![HOLD](images/icons/hold.svg) | Keep holding the object without acting. |
 | LIFT | ![LIFT](images/icons/lift.svg) | Lift an object from the target position. |
 | LEAVE | ![LEAVE](images/icons/leave.svg) | Leave an object at the target position. |
-| BOUNCE | ![BOUNCE](images/icons/bounce.svg) | Tap a position while holding an object. |
-| TAP | ![TAP](images/icons/tap.svg) | Tap a position with an empty hand. |
+| BOUNCE | ![BOUNCE](images/icons/bounce.svg) | Tap a position while holding an object. The held object remains in the hand. |
+| TAP | ![TAP](images/icons/tap.svg) | Tap a position with no object held in the fingers. |
 | EMPTY | ![EMPTY](images/icons/empty.svg) | No action. |
 
-SPECIAL represents an action not covered by the other types, such as a clap. A clap requires both hands to be free during that beat.
+BOUNCE is the same position tapping action as TAP, but performed while holding an object with the fingers. The held object is not released or bounced. TAP requires the fingers to be free. A ball balanced on the back of the hand does not prevent either action.
+
+SPECIAL represents an action not covered by the other types, such as a clap. A SPECIAL action requires the hand to have no object held with its fingers. A ball balanced on the back is allowed. A clap requires both hands to have free fingers; balanced balls on the backs of either hand are allowed.
+
+A ball balanced on the back of a hand does not prevent that hand from performing other actions. The usual requirements for the action still apply.
 
 ## 5. Ball Rectangles
 
@@ -64,7 +72,7 @@ The three symbols below combine to form one rectangle spanning three beats:
 
 ZIP can move this rectangle from one hand sequence to the other. The rectangle ends in the source hand and continues in the receiving hand at the same beat. The next section shows how this works.
 
-TAP is independent of a ball rectangle because it is performed with an empty hand. EMPTY has no action symbol.
+TAP is independent of a ball rectangle because it is performed with fingers that are not holding a ball. EMPTY has no action symbol.
 
 ## 6. ZIP
 
@@ -74,7 +82,9 @@ The symbols connect the ball rectangle to the appropriate edge of each hand sequ
 
 ![ZIP transfer from the upper hand lane to the lower hand lane](images/zip-transfer.svg)
 
-The source symbol closes the rectangle in the first hand. The receiving symbol opens it in the other hand at exactly the same beat. For the reverse transfer, the source and receiving symbols are mirrored: the rectangle leaves through the lower edge of the source cell and continues from the upper edge of the receiving cell. The two symbols must always be used together.
+The source symbol closes the rectangle in the first hand. The receiving symbol opens it in the other hand at exactly the same beat. Sending and receiving take effect simultaneously at the beginning of the beat. The two symbols must always be used together.
+
+A hand cannot receive one object and send another during the same beat.
 
 ## 7. Passing
 
@@ -109,7 +119,7 @@ The subscript on each action identifies the other performer. For example, a pass
 - In $a$'s right-hand row: LEAVE with circled $L$, subscript $b$.
 - In $b$'s left-hand row: LIFT with target $X$, subscript $a$.
 
-The sender's rectangle closes as the receiver's rectangle opens in the same beat. For a pass from the right hand of performer $a$ to the left hand of performer $b$, the two symbols are:
+The sender's rectangle closes as the receiver's rectangle opens in the same beat. Both actions take effect simultaneously at the beginning of the beat. A hand cannot receive one object and send another during the same beat.
 
 | Sender, performer $a$ | Receiver, performer $b$ |
 |---|---|

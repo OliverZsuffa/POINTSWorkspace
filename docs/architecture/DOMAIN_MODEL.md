@@ -48,7 +48,7 @@ The individual passing layout is either shared positions or per performer positi
 
 Every ball has a stable identity. Initial state maps each ball to exactly one location.
 
-A table position can contain zero or one ball. Each hand can hold at most one ball with its fingers and can simultaneously balance one separate ball on its back. A back balanced ball is not held by the fingers and does not make the hand occupied.
+Every position, including a table position and a hand back position, has a capacity of zero or one ball. Each hand can hold at most one ball with its fingers and can simultaneously balance one separate ball on its back. A back balanced ball is not held by the fingers and does not make the hand occupied for action eligibility. It does not prevent the hand from performing actions, subject to each action's normal requirements.
 
 Object locations distinguish table positions, finger held hand locations and hand back positions. The simulation layer derives hand state from these locations.
 
@@ -69,7 +69,7 @@ LIFT and LEAVE can target a normal position, a circle passing relative position 
 
 The domain model records notation. The validation and simulation package determines whether the actions are legal in the current state.
 
-All actions assigned to the same timeline position are simultaneous. A hand has one finger held object and one separate back balanced object. TAP requires the fingers to be free. BOUNCE is the position tap performed while holding an object with the fingers. A balanced object on the back does not prevent either action. SPECIAL also requires free fingers, while allowing a balanced object on the back.
+All actions assigned to the same timeline position are simultaneous. A hand has one finger held object and one separate back balanced object. TAP requires the fingers to be free. BOUNCE is the position tap performed while holding an object with the fingers. The held object remains in the hand. A balanced object on the back does not prevent TAP or BOUNCE. SPECIAL also requires free fingers, while allowing a balanced object on the back.
 
 A ZIP source and receiver share a link ID and occur at the same timeline position. An individual pass is represented by a sender LEAVE targeting the receiving performer's hand and a receiver LIFT targeting the source performer. The validation layer checks that the two sides correspond. A hand cannot receive and send an object during the same beat.
 
