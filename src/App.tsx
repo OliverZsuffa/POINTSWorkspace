@@ -191,14 +191,17 @@ function NotationMark({ action, sequence, hand }: { action: NotationAction; sequ
 
   let path = '';
   let label = '';
+  let subscript = '';
+  let circledTarget = false;
   switch (action.type) {
     case 'LIFT':
       path = 'M0 2H100 M0 2V52 M0 52H100';
-      label = action.target.kind === 'position'
-        ? positionName(sequence, action.target.positionId)
-        : action.target.kind === 'circle-position'
-          ? action.target.position + (action.target.distance > 1 ? String(action.target.distance) : '') + (action.target.direction === 'left' ? 'L' : 'R')
-          : 'X';
+      if (action.target.kind === 'position') label = positionName(sequence, action.target.positionId);
+      else if (action.target.kind === 'circle-position') label = action.target.position + (action.target.distance > 1 ? String(action.target.distance) : '') + (action.target.direction === 'left' ? 'L' : 'R');
+      else {
+        label = 'X';
+        subscript = sequence.performers.find((person) => person.id === action.target.performerId)?.identifier ?? '?';
+      }
       break;
     case 'HOLD':
       path = 'M0 2H100 M0 52H100';
@@ -206,11 +209,13 @@ function NotationMark({ action, sequence, hand }: { action: NotationAction; sequ
       break;
     case 'LEAVE':
       path = 'M0 2H100 M100 2V52 M0 52H100';
-      label = action.target.kind === 'position'
-        ? positionName(sequence, action.target.positionId)
-        : action.target.kind === 'circle-position'
-          ? action.target.position + (action.target.distance > 1 ? String(action.target.distance) : '') + (action.target.direction === 'left' ? 'L' : 'R')
-          : action.target.hand === 'left' ? 'L' : 'R';
+      if (action.target.kind === 'position') label = positionName(sequence, action.target.positionId);
+      else if (action.target.kind === 'circle-position') label = action.target.position + (action.target.distance > 1 ? String(action.target.distance) : '') + (action.target.direction === 'left' ? 'L' : 'R');
+      else {
+        label = action.target.hand === 'left' ? 'L' : 'R';
+        circledTarget = true;
+        subscript = sequence.performers.find((person) => person.id === action.target.performerId)?.identifier ?? '?';
+      }
       break;
     case 'BOUNCE':
       path = 'M0 2H100 M0 52H100';
@@ -233,7 +238,9 @@ function NotationMark({ action, sequence, hand }: { action: NotationAction; sequ
   return (
     <svg className="ball-segment" viewBox="0 0 100 54" preserveAspectRatio="none" aria-hidden="true">
       <path d={path} fill="none" stroke="#263238" strokeWidth="2.6" strokeLinecap="square" strokeLinejoin="miter" />
-      <text x="50" y="27" textAnchor="middle" dominantBaseline="middle" fontFamily="Arial,sans-serif" fontSize="12" fill="#263238">{label}</text>
+      {circledTarget && <circle cx="36" cy="27" r="8" fill="none" stroke="#263238" strokeWidth="1.8" />}
+      <text x={subscript ? 36 : 50} y="27" textAnchor="middle" dominantBaseline="middle" fontFamily="Arial,sans-serif" fontSize={subscript ? 12 : 12} fill="#263238">{label}</text>
+      {subscript && <text x="73" y="44" textAnchor="middle" dominantBaseline="middle" fontFamily="Arial,sans-serif" fontSize="12" fontWeight="bold" fill="#263238">{subscript}</text>}
     </svg>
   );
 }
