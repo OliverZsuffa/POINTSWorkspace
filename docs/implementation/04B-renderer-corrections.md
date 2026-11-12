@@ -28,6 +28,7 @@ Correct the outstanding visual and interaction defects in the existing Package 0
    - The hand reaches the target at the midpoint of the beat and returns to its resting position by the end.
    - For pickup transitions, the object remains at its source until hand contact, then follows the hand.
    - For placement transitions, the object follows the hand to the target and remains there while the hand returns.
+   - For individual passing, sender and receiver hands converge on the same intermediate meeting point, and the object passes through that point.
    - TAP and BOUNCE hands therefore visibly reach their target positions. BOUNCE continues to hold its object.
 
 5. **Regression coverage**
@@ -35,6 +36,7 @@ Correct the outstanding visual and interaction defects in the existing Package 0
    - Test table positions against the tabletop footprint.
    - Test full hand reach and return timing.
    - Test camera local panning direction.
+   - Test that both passing hands share one intermediate meeting point.
    - Keep existing hand position and object ownership tests.
 
 ## Explicitly unchanged
