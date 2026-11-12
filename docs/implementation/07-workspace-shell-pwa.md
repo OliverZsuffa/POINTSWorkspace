@@ -416,10 +416,10 @@ These requirements are part of Package 07 and are explicitly approved for implem
 
 The existing three dimensional arrangement is not acceptable while table positions or performers overlap. The renderer must be corrected rather than merely documented as visually pending.
 
-1. Table positions must never overlap one another when they represent distinct positions. The layout must account for the number of positions assigned to each performer and the actual usable tabletop area.
+1. Table positions must never overlap one another when they represent distinct positions. The layout must account for the number of positions assigned to each performer, the number of performers sharing each table edge, and the actual usable tabletop area. This applies to polygonal and rectangular tables.
 2. Performer bodies, arms and hands must not overlap neighbouring performers or table geometry in the resting pose. Increase the arrangement footprint as needed rather than compressing performers into an undersized circle.
 3. Move performers closer to the table than in the current implementation, while retaining enough clearance for their bodies and arms.
-4. For circle passing, render a true regular polygonal tabletop. Its number of sides must equal the number of people in the circle. Do not render a circular disk with a polygonal outline or approximate the polygon with a high segment count.
+4. For circle passing, render a true regular polygonal tabletop. Its number of sides must equal the number of people in the circle. Circle passing requires at least three participants. Do not render a circular disk with a polygonal outline or approximate the polygon with a high segment count.
 5. Each circle participant occupies one polygon edge. Their owned table positions must be laid out on the corresponding edge and remain inside the polygon.
 6. Add geometry tests for non overlap between distinct table positions, performer clearance, edge assignment and exact polygon side count. Manual review must include different participant counts, including larger circles.
 
@@ -433,6 +433,7 @@ Circle passing defines one pattern, not a separate independently authored patter
 4. Do not require duplicate performer notation rows or separate edits for each participant in circle passing mode.
 5. The editor must make clear that the displayed notation is the representative pattern and that the configured participant count controls how many times it is instantiated.
 6. Circle passing target distance and direction are interpreted relative to the participant's position in the circle. The same relative instruction applies consistently to every participant.
+7. The number of sides in the rendered polygon must update whenever the participant count changes. The editor must not permit a circle passing configuration with fewer than three participants.
 7. Circle passing validation must validate the representative pattern and its repeated interactions around the configured circle, including wraparound between the last and first participant.
 8. The sequence data model and renderer integration must represent this distinction explicitly. Do not simulate circle passing by asking the user to manually duplicate identical patterns.
 
