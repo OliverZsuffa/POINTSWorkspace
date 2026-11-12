@@ -32,7 +32,7 @@ Each main beat has a stable ID. Subdivisions are intervals within a main beat, e
 
 A notation entry identifies its performer, hand, action and timeline position. Timeline positions use exact rational offsets from the beginning of a main beat. This avoids using screen column numbers as time and supports repeated half subdivisions without floating point drift.
 
-The editor may rearrange the visual presentation of the timeline, but it must preserve these musical positions.
+The editor may rearrange the visual presentation of the timeline, but it must preserve these musical positions. Actions at the same timeline position are simultaneous and take effect at the beginning of that interval.
 
 ## Performers and positions
 
@@ -70,6 +70,8 @@ LIFT and LEAVE can target a normal position, a circle passing relative position 
 The domain model records notation. The validation and simulation package determines whether the actions are legal in the current state.
 
 All actions assigned to the same timeline position are simultaneous. A hand has one finger held object and one separate back balanced object. TAP requires the fingers to be free. BOUNCE is the position tap performed while holding an object with the fingers. A balanced object on the back does not prevent either action. SPECIAL also requires free fingers, while allowing a balanced object on the back.
+
+A ZIP source and receiver share a link ID and occur at the same timeline position. An individual pass is represented by a sender LEAVE targeting the receiving performer's hand and a receiver LIFT targeting the source performer. The validation layer checks that the two sides correspond. A hand cannot receive and send an object during the same beat.
 
 ## Shared contracts
 

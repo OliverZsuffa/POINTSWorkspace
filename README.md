@@ -19,7 +19,26 @@ See [Design Direction](docs/DESIGN_DIRECTION.md) for the agreed visual and techn
 - Vitest
 - React Testing Library
 
-The stack follows the relevant foundations used by [Bone008/jif-web](https://github.com/Bone008/jif-web). Exact dependency versions and project configuration will be established when the application scaffold is created.
+The project scaffold and shared domain model are being developed on the implementation/01-foundation-domain-model branch.
+
+## Local development
+
+Requires Node.js 20 or newer.
+
+```sh
+npm install
+npm run dev
+```
+
+Available checks:
+
+```sh
+npm run format:check
+npm run lint
+npm run typecheck
+npm test
+npm run build
+```
 
 ## Development workflow
 
