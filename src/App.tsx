@@ -129,7 +129,7 @@ function ActionSymbol({ action, sequence, hand }: { action: NotationAction; sequ
 
   let path = '';
   let target = '';
-  let subscript = '';
+  let subscript = '';\n  let circledTarget = false;
 
   switch (action.type) {
     case 'HOLD':
@@ -174,8 +174,64 @@ function ActionSymbol({ action, sequence, hand }: { action: NotationAction; sequ
     <svg className="notation-symbol" viewBox="0 0 48 48" aria-hidden="true">
       <rect x="1.5" y="1.5" width="45" height="45" rx="5" fill="#ffffff" stroke="#cbd5e1" strokeWidth="1.2" />
       <path d={path} fill="none" stroke="#263238" strokeWidth="2.6" strokeLinecap="square" strokeLinejoin="miter" />
-      {target && <text x="24" y="24" textAnchor="middle" dominantBaseline="middle" fontFamily="Arial,sans-serif" fontSize={target.length > 2 ? 10 : 15} fill="#263238">{target}</text>}
+      {circledTarget && <circle cx="20" cy="23" r="8" fill="none" stroke="#263238" strokeWidth="1.8" />}
+      {target && <text x={subscript ? 20 : 24} y={subscript ? 23 : 24} textAnchor="middle" dominantBaseline="middle" fontFamily="Arial,sans-serif" fontSize={target.length > 2 ? 10 : subscript ? 12 : 15} fill="#263238">{target}</text>}
       {subscript && <text x="35" y="36" textAnchor="middle" dominantBaseline="middle" fontFamily="Arial,sans-serif" fontSize="13" fontWeight="bold" fill="#263238">{subscript}</text>}
+    </svg>
+  );
+}
+
+
+function NotationMark({ action, sequence, hand }: { action: NotationAction; sequence: Sequence; hand: Hand }) {
+  if (action.type === 'EMPTY') return null;
+  if (action.type === 'SPECIAL') return <span className="special-symbol">{action.text || 'SPECIAL'}</span>;
+  if (action.type === 'TAP') return <ActionSymbol action={action} sequence={sequence} hand={hand} />;
+
+  let path = '';
+  let label = '';
+  switch (action.type) {
+    case 'LIFT':
+      path = 'M0 2H100 M0 2V52 M0 52H100';
+      label = action.target.kind === 'position'
+        ? positionName(sequence, action.target.positionId)
+        : action.target.kind === 'circle-position'
+          ? action.target.position + (action.target.distance > 1 ? String(action.target.distance) : '') + (action.target.direction === 'left' ? 'L' : 'R')
+          : 'X';
+      break;
+    case 'HOLD':
+      path = 'M0 2H100 M0 52H100';
+      label = 'HOLD';
+      break;
+    case 'LEAVE':
+      path = 'M0 2H100 M100 2V52 M0 52H100';
+      label = action.target.kind === 'position'
+        ? positionName(sequence, action.target.positionId)
+        : action.target.kind === 'circle-position'
+          ? action.target.position + (action.target.distance > 1 ? String(action.target.distance) : '') + (action.target.direction === 'left' ? 'L' : 'R')
+          : action.target.hand === 'left' ? 'L' : 'R';
+      break;
+    case 'BOUNCE':
+      path = 'M0 2H100 M0 52H100';
+      label = action.target.kind === 'position'
+        ? positionName(sequence, action.target.positionId)
+        : action.target.position + (action.target.distance > 1 ? String(action.target.distance) : '') + (action.target.direction === 'left' ? 'L' : 'R');
+      break;
+    case 'ZIP':
+      path = action.role === 'source'
+        ? hand === 'left' ? 'M0 2H100 M100 2V52' : 'M0 52H100 M100 2V52'
+        : hand === 'left' ? 'M0 2H100 M0 2V52' : 'M0 52H100 M0 2V52';
+      label = 'ZIP';
+      break;
+    case 'TAP':
+    case 'EMPTY':
+    case 'SPECIAL':
+      return null;
+  }
+
+  return (
+    <svg className="ball-segment" viewBox="0 0 100 54" preserveAspectRatio="none" aria-hidden="true">
+      <path d={path} fill="none" stroke="#263238" strokeWidth="2.6" strokeLinecap="square" strokeLinejoin="miter" />
+      <text x="50" y="27" textAnchor="middle" dominantBaseline="middle" fontFamily="Arial,sans-serif" fontSize="12" fill="#263238">{label}</text>
     </svg>
   );
 }
@@ -727,7 +783,7 @@ export default function App() {
                 {hands.map((hand) => {
                   const location = heldLocation(hand);
                   const ball = sequence.initialState.placements.find((placement) => sameLocation(placement.location, location));
-                  const back = backPositions.find((position) => position.hand === hand);
+                  const back = sequence.positions.find((position) => position.kind === 'hand-back' && position.performerId === performer.id && position.hand === hand);
                   const backLocation: ObjectLocation | undefined = back
                     ? { kind: 'hand-back', positionId: back.id, performerId: performer.id, hand }
                     : undefined;
@@ -828,7 +884,7 @@ export default function App() {
                         aria-label={performer.name + ' ' + hand + ' beat ' + (index + 1) + (entry ? ' ' + actionLabel(entry.action, sequence) : ' empty')}
                         title={errors.join(' ')}
                       >
-                        {entry ? <ActionSymbol action={entry.action} sequence={sequence} hand={hand} /> : null}
+                        {entry ? <NotationMark action={entry.action} sequence={sequence} hand={hand} /> : null}
                       </button>
                     );
                   })}
