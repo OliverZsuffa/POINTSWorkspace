@@ -416,7 +416,7 @@ export default function App() {
     if (event.key === 'ArrowDown') nextRow += 1;
     const row = rows[Math.max(0, Math.min(rows.length - 1, nextRow))];
     const slot = timelineSlots[Math.max(0, Math.min(timelineSlots.length - 1, nextSlot))];
-    if (row && slot) { selectCell({ performerId: row.performerId, hand: row.hand, beatId: slot.beatId, offset: slot.offset, duration: slot.duration }, event.shiftKey); if (!event.shiftKey) setShowActionMenu(!entryAt(row.performerId, row.hand, slot.beatId, slot.offset)); }
+    if (row && slot) { selectCell({ performerId: row.performerId, hand: row.hand, beatId: slot.beatId, offset: slot.offset, duration: slot.duration }, event.shiftKey); setShowActionMenu(!entryAt(row.performerId, row.hand, slot.beatId, slot.offset)); }
   };
 
   const addAction = (type: ActionName) => {
