@@ -13,6 +13,7 @@ import {
   getPerformerSpacingRadius,
   getTableFootprint,
   getTablePositionPosition,
+  isStationaryHandAction,
 } from './geometry';
 
 function sequence(
