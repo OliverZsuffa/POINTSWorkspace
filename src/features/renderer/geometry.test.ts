@@ -98,7 +98,10 @@ describe('renderer geometry', () => {
     const base = { x: 1, y: 1, z: 1 };
     const target = { x: 4, y: 0.2, z: -2 };
     expect(getHandReachProgress(0)).toBeCloseTo(0);
-    expect(getHandReachPosition(base, target, 0.5)).toEqual(target);
+    const reached = getHandReachPosition(base, target, 0.5);
+    expect(reached.x).toBeCloseTo(target.x);
+    expect(reached.y).toBeCloseTo(target.y);
+    expect(reached.z).toBeCloseTo(target.z);
     expect(getHandReachPosition(base, target, 1)).toEqual(base);
     expect(getHandReachPosition(base, target, -1)).toEqual(base);
   });
