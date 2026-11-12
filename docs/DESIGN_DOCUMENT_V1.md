@@ -360,4 +360,4 @@ This document records the product decisions made so far. It is not yet the final
 
 Detailed rules still need to be established for notation editing, keyboard shortcuts, validation, changing sequence structure after notation has been entered, renderer behaviour, generator conditions, data encoding, and many other interactions.
 
-These details will be clarified through further discussion. Implementation planning must not begin until the functional specification is sufficiently complete and the user explicitly approves moving to that stage.
+The detailed implementation has been divided into independent work packages in `docs/implementation/`. These plans are proposals for review, not approval to implement. Application implementation must not begin until the relevant work package has been explicitly approved.
