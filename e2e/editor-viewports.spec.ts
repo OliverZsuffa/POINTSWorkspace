@@ -35,11 +35,19 @@ for (const viewport of viewports) {
     await expect(symbol).toHaveAttribute('viewBox', '0 0 100 100');
     await expect(symbol.locator('text')).toHaveAttribute('font-size', '38');
 
-    if (viewport.width <= 900) {
+    if (viewport.width <= 1100) {
       for (const mode of ['Select', 'Draw', 'Move', 'Erase']) {
         const button = page.getByRole('button', { name: mode, exact: true });
         await expect(button).toBeVisible();
       }
+    }
+
+    if (viewport.width <= 700) {
+      const toolbarBounds = await page.locator('.editor-toolbar').boundingBox();
+      const gridBounds = await page.locator('.grid-head').boundingBox();
+      expect(toolbarBounds).not.toBeNull();
+      expect(gridBounds).not.toBeNull();
+      expect(gridBounds!.y - (toolbarBounds!.y + toolbarBounds!.height)).toBeLessThanOrEqual(24);
     }
 
     await page.screenshot({
