@@ -98,9 +98,10 @@ export interface PositionTarget {
 export interface CirclePassingTarget {
   readonly kind: 'circle-position';
   readonly position: 'A' | 'B' | 'C';
-  readonly direction: 'left' | 'right';
-  /** Distance to the other performer. One is the immediate neighbour. */
-  readonly distance: number;
+  /** Omitted together with distance when addressing the acting performer's own position. */
+  readonly direction?: 'left' | 'right';
+  /** Distance to another performer. One is the immediate neighbour. */
+  readonly distance?: number;
 }
 
 export interface IndividualPassRecipientTarget {
