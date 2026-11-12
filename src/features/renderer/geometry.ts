@@ -132,17 +132,23 @@ export function getTablePositionPosition(
   const inwardOffset = 0.42;
   let edgeDistance: number;
 
+  let maximumTangentOffset: number;
   if (footprint.round) {
-    edgeDistance = footprint.width / 2;
+    const sideCount = footprint.sideCount ?? 48;
+    const radius = footprint.width / 2;
+    edgeDistance = radius * Math.cos(Math.PI / sideCount);
+    maximumTangentOffset = radius * Math.sin(Math.PI / sideCount) - 0.2;
   } else {
     const xDistance = Math.abs(direction.x) > 0.0001 ? (footprint.width / 2) / Math.abs(direction.x) : Number.POSITIVE_INFINITY;
     const zDistance = Math.abs(direction.z) > 0.0001 ? (footprint.depth / 2) / Math.abs(direction.z) : Number.POSITIVE_INFINITY;
     edgeDistance = Math.min(xDistance, zDistance);
+    maximumTangentOffset = (xDistance < zDistance ? footprint.depth : footprint.width) / 2 - 0.2;
   }
 
   const edgePoint = scale(direction, Math.max(0, edgeDistance - inwardOffset));
   const tangent = { x: -direction.z, y: 0, z: direction.x };
-  return add(edgePoint, add(scale(tangent, positionOffset(position.name)), { x: 0, y: 0.19, z: 0 }));
+  const tangentOffset = Math.max(-maximumTangentOffset, Math.min(maximumTangentOffset, positionOffset(position.name)));
+  return add(edgePoint, add(scale(tangent, tangentOffset), { x: 0, y: 0.19, z: 0 }));
 }
 
 export function getObjectPosition(
