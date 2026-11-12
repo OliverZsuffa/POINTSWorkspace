@@ -336,7 +336,6 @@ html, body, #root { min-height: 100%; background: #90d0d5; }
 .target-control { align-items: flex-start; flex-direction: column; gap: 4px; }
 .target-control select, .target-control input { width: 100%; min-height: 34px; }
 .editor-scroll { min-width: 0; padding: 12px; }
-.grid-head, .hand-row { grid-template-columns: 82px repeat(var(--timeline-slot-count), 42px) 18px; }
 .grid-head { min-height: 42px; }
 .grid-head .row-label, .beat-head { min-height: 42px; }
 .hand-row { min-height: 42px; grid-auto-rows: 42px; }
