@@ -632,8 +632,8 @@ export default function App() {
         const first = tables.find((position) => position.name === name);
         return existing ?? (first ? { ...first, owner: { kind: 'shared' as const } } : undefined);
       }).filter((position): position is PositionDefinition & { kind: 'table' } => Boolean(position));
-      const byName = new Map(shared.map((position) => [position.name, position.id]));
-      const oldToNew = new Map(tables.map((position) => [position.id, byName.get(position.name)!]));
+      const byName = new Map<string, ReturnType<typeof asPositionId>>(shared.map((position): [string, ReturnType<typeof asPositionId>] => [position.name, position.id]));
+      const oldToNew = new Map<ReturnType<typeof asPositionId>, ReturnType<typeof asPositionId>>(tables.map((position): [ReturnType<typeof asPositionId>, ReturnType<typeof asPositionId>] => [position.id, byName.get(position.name)!]));
       const placements = sequence.initialState.placements.map((placement) => placement.location.kind === 'position' && oldToNew.has(placement.location.positionId)
         ? { ...placement, location: { kind: 'position' as const, positionId: oldToNew.get(placement.location.positionId)! } }
         : placement);
@@ -660,8 +660,8 @@ export default function App() {
         ? { ...existing, owner: { kind: 'performer' as const, performerId: performer.id } }
         : { kind: 'table' as const, id: asPositionId(id('position')), name, owner: { kind: 'performer' as const, performerId: performer.id } };
     }));
-    const firstPositions = new Map(perPerformer.filter((position) => position.owner.kind === 'performer' && position.owner.performerId === sequence.performers[0]?.id).map((position) => [position.name, position.id]));
-    const sharedToFirst = new Map(tables.filter((position) => position.owner.kind === 'shared').map((position) => [position.id, firstPositions.get(position.name)!]));
+    const firstPositions = new Map<string, ReturnType<typeof asPositionId>>(perPerformer.filter((position) => position.owner.kind === 'performer' && position.owner.performerId === sequence.performers[0]?.id).map((position): [string, ReturnType<typeof asPositionId>] => [position.name, position.id]));
+    const sharedToFirst = new Map<ReturnType<typeof asPositionId>, ReturnType<typeof asPositionId>>(tables.filter((position) => position.owner.kind === 'shared').map((position): [ReturnType<typeof asPositionId>, ReturnType<typeof asPositionId>] => [position.id, firstPositions.get(position.name)!]));
     const placements = sequence.initialState.placements.map((placement) => placement.location.kind === 'position' && sharedToFirst.has(placement.location.positionId)
       ? { ...placement, location: { kind: 'position' as const, positionId: sharedToFirst.get(placement.location.positionId)! } }
       : placement);
