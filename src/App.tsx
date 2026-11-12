@@ -286,6 +286,7 @@ export default function App() {
   const [clipboard, setClipboard] = useState<ClipboardItem[]>([]);
   const [eraseStart, setEraseStart] = useState<EditorCell | null>(null);
   const [moveStart, setMoveStart] = useState<EditorCell | null>(null);
+  const [touchMode, setTouchMode] = useState<'draw' | 'move' | 'erase' | null>(null);
   const [history, setHistory] = useState<Sequence[]>([]);
   const [future, setFuture] = useState<Sequence[]>([]);
   const [showSettings, setShowSettings] = useState(false);
@@ -314,7 +315,7 @@ export default function App() {
       : [cell]);
   };
 
-  const clearSelection = () => { setSelected(null); setSelectedCells([]); setDragStart(null); setEraseStart(null); setMoveStart(null); };
+  const clearSelection = () => { setSelected(null); setSelectedCells([]); setDragStart(null); setEraseStart(null); setMoveStart(null); setTouchMode(null); };
 
   const commit = (next: Sequence) => {
     setHistory((items) => [...items.slice(-99), sequence]);
@@ -1223,6 +1224,9 @@ export default function App() {
 
       <section className="editor-toolbar" aria-label="Notation actions">
         <div className="action-tools">
+          <button type="button" className={'tool mode-tool' + (touchMode === 'draw' ? ' active' : '')} onClick={() => { setTouchMode(touchMode === 'draw' ? null : 'draw'); setDragStart(null); }}>Draw</button>
+          <button type="button" className={'tool mode-tool' + (touchMode === 'move' ? ' active' : '')} onClick={() => { setTouchMode(touchMode === 'move' ? null : 'move'); setMoveStart(null); }}>Move</button>
+          <button type="button" className={'tool mode-tool' + (touchMode === 'erase' ? ' active' : '')} onClick={() => { setTouchMode(touchMode === 'erase' ? null : 'erase'); setEraseStart(null); }}>Erase</button>
           {actionNames.map((name) => (
             <button type="button" key={name} aria-label={name} title={name} className={'tool' + (name === 'ZIP' ? ' zip-tool' : '')} onClick={() => { if (selected) addAction(name); }} disabled={!selected}>
               {name === 'ZIP' ? <span className="zip-tool-preview"><ActionSymbol action={{ type: 'ZIP', role: 'source', linkId: asLinkId('zip-preview') }} sequence={sequence} hand="left" /><ActionSymbol action={{ type: 'ZIP', role: 'receiver', linkId: asLinkId('zip-preview') }} sequence={sequence} hand="right" /></span> : <ActionSymbol action={makeAction(name, sequence)} sequence={sequence} hand={selected?.hand ?? 'left'} />}
@@ -1307,6 +1311,7 @@ export default function App() {
                         key={beat.id + ':' + slot.offset.numerator + '/' + slot.offset.denominator}
                         className={'notation-cell' + (selectedCell ? ' selected' : '') + (errors.length ? ' invalid' : '') + (entry ? ' occupied' : '') + (beatIndex % sequence.timeSignature.beatGrouping.length === 0 && compareRational(slot.offset, rational(0)) === 0 ? ' bar-start' : '')}
                         onMouseDown={(event) => {
+                          if (touchMode) return;
                           const cell = { performerId: performer.id, hand, beatId: beat.id, offset: slot.offset, duration: slot.duration };
                           if (event.ctrlKey) {
                             event.preventDefault();
@@ -1320,14 +1325,32 @@ export default function App() {
                           }
                         }}
                         onMouseUp={() => {
+                          if (touchMode) return;
                           const cell = { performerId: performer.id, hand, beatId: beat.id, offset: slot.offset, duration: slot.duration };
                           if (eraseStart) { eraseRectangle(eraseStart, cell); setEraseStart(null); return; }
                           if (dragStart) { drawRectangle(dragStart, cell); setDragStart(null); return; }
                           if (moveStart) { moveRectangle(moveStart, cell); setMoveStart(null); }
                         }}
                         onClick={(event) => {
+                          const cell = { performerId: performer.id, hand, beatId: beat.id, offset: slot.offset, duration: slot.duration };
+                          if (touchMode === 'draw') {
+                            if (!dragStart) { selectCell(cell); setDragStart(cell); }
+                            else { drawRectangle(dragStart, cell); setDragStart(null); setTouchMode(null); }
+                            return;
+                          }
+                          if (touchMode === 'erase') {
+                            if (!eraseStart) setEraseStart(cell);
+                            else { eraseRectangle(eraseStart, cell); setEraseStart(null); setTouchMode(null); }
+                            return;
+                          }
+                          if (touchMode === 'move') {
+                            if (!moveStart) {
+                              if (entry) { selectCell(cell); setMoveStart(cell); }
+                            } else { moveRectangle(moveStart, cell); setMoveStart(null); setTouchMode(null); }
+                            return;
+                          }
                           if (dragStart || eraseStart || moveStart) return;
-                          selectCell({ performerId: performer.id, hand, beatId: beat.id, offset: slot.offset, duration: slot.duration }, event.shiftKey);
+                          selectCell(cell, event.shiftKey);
                         }}
                         onDoubleClick={() => entry && entry.action.type === 'SPECIAL' && editSpecial(entry, { performerId: performer.id, hand, beatId: beat.id, offset: slot.offset, duration: slot.duration })}
                         onContextMenu={(event) => { if (entry?.action.type === 'SPECIAL') { event.preventDefault(); editSpecial(entry, { performerId: performer.id, hand, beatId: beat.id, offset: slot.offset, duration: slot.duration }); } }}
