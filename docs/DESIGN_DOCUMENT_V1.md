@@ -250,31 +250,64 @@ Manual scrubbing snaps to beat or subdivision positions. Showing arbitrary inter
 
 ## 3. Sequence Generator
 
-The Sequence Generator creates legal POINTS patterns automatically based on conditions supplied by the user.
+The Sequence Generator creates complete, valid POINTS sequences automatically based on conditions supplied by the user. It serves two equally important purposes: discovering new patterns and finding valid completions or variations that fit a pattern or part of a pattern the user already likes.
 
-### 3.1 Presentation and selection
+The generator supports solo, circle passing, and individual passing sequences. The user chooses which sequence type to generate.
 
-Generated sequences are displayed in a visual gallery. Each result is represented visually so the user can inspect the pattern without opening it separately.
+### 3.1 Generation modes
 
-The user does not need a separate renderer preview for each candidate.
+The generator supports two main modes:
 
-When the user chooses a generated sequence, it replaces the current sequence in the Sequence Editor. The renderer then displays the selected sequence.
+- Generate complete sequences from scratch.
+- Generate variations or completions based on an existing sequence.
 
-### 3.2 Generation parameters
+The user can also select a part of an existing sequence and use it as a required or forbidden subsequence.
 
-The user can specify important properties of the patterns to be generated, including:
+Generated results must always be complete and valid sequences. The generator must not return incomplete or invalid candidates.
+
+### 3.2 Generation parameters and constraints
+
+The user can specify:
 - Number of beats.
 - Number of jugglers.
-- Types or categories of sequences to include.
-- Types or categories of sequences to exclude.
+- Number of objects.
+- Available positions.
+- Time signature.
+- Initial object distribution.
+- Whether the sequence must loop cleanly, must not loop cleanly, or either is acceptable.
+- Sequence type: solo, circle passing, or individual passing.
 
-The generator should find or generate all legal patterns that satisfy the selected conditions.
+The user can require or forbid particular actions. Requirements can specify that an action occurs at least once or occurs an exact number of times. The generator must support both inclusion and exclusion conditions.
 
-### 3.3 Pattern inclusion and exclusion
+The generator must also support short sequence codes as constraints. A supplied sequence code can require a particular subsequence to occur somewhere in the generated result, or forbid it.
 
-Users should be able to define which patterns are acceptable and which should be excluded.
+### 3.3 Subsequence matching
 
-One possible way to specify these conditions is through compact sequence codes. For example, a user could enter a code and ask the generator to find patterns that contain the corresponding pattern or element. The exact meaning and matching behaviour of such codes still needs to be defined.
+A required or forbidden subsequence must match the same structure and actions. Matching includes the same source position, destination position, and hand. Merely using similar actions in a different arrangement does not count as a match.
+
+The user can provide a subsequence by entering its compact sequence code or by selecting part of an existing sequence.
+
+### 3.4 Results and ordering
+
+Generated sequences appear in a visual gallery. Each result shows a notation preview. A separate renderer preview is not required.
+
+Results are unranked. Their order must nevertheless be deterministic: identical inputs must produce the same result order every time. If two sequences differ anywhere in their structure or notation, they count as different sequences.
+
+Duplicate results must be removed.
+
+Selecting a generated sequence replaces the current sequence in the Sequence Editor. The renderer then displays the selected sequence.
+
+Comparing multiple candidates side by side is not required.
+
+### 3.5 Generation process and result limits
+
+The user explicitly starts generation by pressing a Generate control. Results appear progressively as they are found.
+
+The generator should attempt to find all valid sequences up to a configured or defined maximum result limit. It must communicate how many results are available and divide them into pages rather than displaying an unbounded gallery at once.
+
+The user can continue searching for additional results when more are available. The exact maximum result limit, page size, and behaviour when the search space is extremely large remain to be defined.
+
+The generator should be able to indicate when it has exhausted the search space within the applicable limits.
 
 ## Status and scope
 
