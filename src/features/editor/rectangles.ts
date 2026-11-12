@@ -20,6 +20,9 @@ function linkedCounterpart(sequence: Sequence, entry: NotationEntry): NotationEn
   if (entry.action.type === 'LIFT' && entry.action.target.kind === 'pass-source') {
     return sequence.notation.find((item) => item.id !== entry.id && item.action.type === 'LEAVE' && item.action.linkId === entry.action.linkId);
   }
+  if (entry.action.type === 'SPECIAL') {
+    return sequence.notation.find((item) => item.id !== entry.id && item.action.type === 'SPECIAL' && item.action.linkId === entry.action.linkId);
+  }
   return undefined;
 }
 
