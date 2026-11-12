@@ -391,20 +391,22 @@ Package 07 is complete only when:
 4. Package 05 is not yet approved. Generator search and functionality are not a dependency for the shell integration point.
 5. Package 06 is not yet approved. PWA caching must remain independent of its final persistence implementation.
 
-## Risks and open decisions
+## Resolved design decisions
 
-The following decisions must be resolved during review or explicitly left as documented defaults before implementation:
+1. Desktop uses side by side panels above 1100 px. Tablet and phone use Editor and Renderer tabs at 1100 px and below.
+2. Phone notation cells are 44 px square, tablet cells are 52 px square and desktop cells are 56 px square.
+3. The initial workspace palette uses a neutral background of #f3f5f8 and blue accent of #3569bd. Feature controls use shared panel headers and shared interaction styles.
+4. Desktop panels can be resized, swapped, hidden and restored. The default split is equal. Layout choices are not persisted between sessions.
+5. PWA updates use a waiting service worker. A compact notice informs the user that an update is ready. The current page is never reloaded automatically, and the update activates only after all existing POINTS tabs have closed.
+6. The editor toolbar sits above the notation grid. Initial object distribution is collapsed by default.
+7. Circle passing uses one authored pattern and a participant count. The renderer uses a regular polygon with one side per participant.
 
-1. Exact desktop, tablet and phone breakpoints. Determine them from content behaviour and testing, not arbitrary device labels.
-2. Whether the visual system should retain the current palette or move closer to one of the reference applications.
-3. Exact typography and notation cell sizing.
-4. Whether the editor and renderer should have identical panel headers or feature specific headers using shared primitives.
-5. How the generator panel is opened on phone and tablet without adding a third primary tab.
-6. Whether workspace panel state should ever persist between sessions. Default for this package: do not persist it.
-7. Exact PWA update prompt and activation behaviour. Updates must not discard active work.
-8. Supported browser matrix for offline installation and testing.
-9. Whether reduced motion should disable or shorten renderer animation. The renderer must remain understandable either way.
-10. Any proposed functional interaction change discovered during the visual audit must be presented separately for approval rather than silently included as a styling correction.
+## Remaining open decisions
+
+1. Generator access on phone and tablet will be finalised with Package 05. The current shell does not add a third primary tab or fake generator controls.
+2. The full supported browser matrix for installation and offline operation still needs verification beyond the Chromium based CI browser.
+3. Reduced motion behaviour for renderer animation remains to be decided. Any reduced motion treatment must preserve the ability to understand object movement.
+4. Any further functional interaction change discovered during visual review must be presented separately for approval rather than silently included as a styling correction.
 
 
 
