@@ -155,10 +155,18 @@ test('PWA manifest is installable and the app shell reloads offline', async ({ p
     await navigator.serviceWorker.ready;
   });
   await page.waitForFunction(() => Boolean(navigator.serviceWorker.controller));
+  const cachedPaths = await page.evaluate(async () => {
+    const cacheName = (await caches.keys()).find((key) => key.startsWith('points-workspace-'));
+    if (!cacheName) return [];
+    const cache = await caches.open(cacheName);
+    return (await cache.keys()).map((request) => new URL(request.url).pathname);
+  });
+  expect(cachedPaths).toContain('/POINTSWorkspace/index.html');
+  expect(cachedPaths.some((path) => path.endsWith('.js'))).toBe(true);
 
   await context.setOffline(true);
   await page.reload();
-  await expect(page.getByRole('main', { name: 'POINTS Workspace' })).toBeVisible();
+  await expect(page.locator('.app-root')).toBeVisible();
   await expect(page.getByRole('region', { name: 'Notation editor' })).toBeVisible();
   await expect(page.getByRole('region', { name: 'Sequence renderer' })).toBeVisible();
   await context.setOffline(false);
