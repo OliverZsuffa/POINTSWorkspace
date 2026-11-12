@@ -26,6 +26,20 @@ describe('sequence editor', () => {
     expect(screen.getByRole('button', { name: 'Juggler 1 left beat 1 empty' })).toBeInTheDocument();
   });
 
+  it('leaves the other linked SPECIAL action standalone when one side is deleted', async () => {
+    const user = userEvent.setup();
+    render(<App />);
+
+    await user.click(screen.getByRole('button', { name: 'Juggler 1 left beat 1 empty' }));
+    await user.click(screen.getByRole('button', { name: 'CLAP' }));
+    expect(screen.getByRole('button', { name: 'Juggler 1 right beat 1 Clap' })).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Delete' }));
+
+    expect(screen.getByRole('button', { name: 'Juggler 1 right beat 1 Clap' })).toBeInTheDocument();
+    expect(screen.getByText('Sequence valid')).toBeInTheDocument();
+  });
+
   it('exposes sequence settings and initial object distribution', async () => {
     const user = userEvent.setup();
     render(<App />);
