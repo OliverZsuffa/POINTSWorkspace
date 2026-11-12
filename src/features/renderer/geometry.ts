@@ -96,12 +96,9 @@ export function getPerformerAnchor(
   }
 
   if (assignment?.seat.kind === 'rectangle-side' && sequence.tableLayout.type === 'rectangle') {
-    const maxOwnedPositions = Math.max(1, ...sequence.performers.map((performer) =>
-      sequence.positions.filter((position) => position.kind === 'table' && position.owner.kind === 'performer' && position.owner.performerId === performer.id).length,
-    ));
-    const positionSpan = (maxOwnedPositions - 1) * 0.72 + 0.8;
-    const width = Math.max(3.2, sequence.tableLayout.longSideSeatCount * 1.15, positionSpan);
-    const depth = Math.max(2.4, sequence.tableLayout.shortSideSeatCount * 1.15, positionSpan);
+    const tableFootprint = getTableFootprint(sequence);
+    const width = tableFootprint.width;
+    const depth = tableFootprint.depth;
     const seat = assignment.seat;
     if (seat.side === 'long-a' || seat.side === 'long-b') {
       const countOnSide = Math.max(1, sequence.tableLayout.longSideSeatCount);
@@ -176,8 +173,9 @@ export function getTableFootprint(sequence: Sequence): { width: number; depth: n
       sequence.positions.filter((position) => position.kind === 'table' && position.owner.kind === 'performer' && position.owner.performerId === performer.id).length,
     ));
     const positionSpan = (maxOwnedPositions - 1) * 0.72 + 0.8;
-    const width = Math.max(3.2, sequence.tableLayout.longSideSeatCount * 1.15, positionSpan);
-    const depth = Math.max(2.4, sequence.tableLayout.shortSideSeatCount * 1.15, positionSpan);
+    const seatPitch = positionSpan + 0.5;
+    const width = Math.max(3.2, Math.max(1, sequence.tableLayout.longSideSeatCount - 1) * seatPitch, positionSpan);
+    const depth = Math.max(2.4, Math.max(1, sequence.tableLayout.shortSideSeatCount - 1) * seatPitch, positionSpan);
     return { width, depth, round: false };
   }
   return { width: 3.6, depth: 2.5, round: false };
