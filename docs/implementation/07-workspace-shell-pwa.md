@@ -507,7 +507,7 @@ The following must be treated as release blocking:
 
 Status: In progress on `implementation/07-renderer-editor-corrections`.
 
-The first implementation pass covers the approved circle layout, single authored circle pattern, square edge based notation cells, HOLD behaviour, target entry, performer specific hand back targets, Ctrl click selection and deletion controls. Automated verification and manual visual review remain in progress. No verification item is considered complete until its corresponding check has passed.
+The first implementation pass covers the approved circle layout, single authored circle pattern, square edge based notation cells, HOLD behaviour, target entry, performer specific hand back targets, Ctrl click selection and deletion controls. Automated verification is being rerun after the first lint correction. Manual visual review remains pending. No verification item is considered complete until its corresponding check has passed.
 
 ## Approval
 
