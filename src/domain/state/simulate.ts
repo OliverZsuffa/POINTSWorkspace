@@ -52,10 +52,14 @@ function resolvePosition(sequence: Sequence, performerId: PerformerId, target: T
   }
   if (target.kind !== 'circle-position' || sequence.sequenceType !== 'circle-passing') return undefined;
   const index = sequence.performers.findIndex((performer) => performer.id === performerId);
-  if (index < 0 || sequence.performers.length < 2 || !Number.isSafeInteger(target.distance) || target.distance < 1 || target.distance >= sequence.performers.length) return undefined;
-  const direction = target.direction === 'left' ? -1 : 1;
-  const count = sequence.performers.length;
-  const targetPerformer = sequence.performers[((index + direction * target.distance) % count + count) % count];
+  if (index < 0) return undefined;
+  let targetPerformer = sequence.performers[index];
+  if (target.direction !== undefined || target.distance !== undefined) {
+    if (sequence.performers.length < 2 || !target.direction || !Number.isSafeInteger(target.distance) || target.distance! < 1 || target.distance! >= sequence.performers.length) return undefined;
+    const direction = target.direction === 'left' ? -1 : 1;
+    const count = sequence.performers.length;
+    targetPerformer = sequence.performers[((index + direction * target.distance!) % count + count) % count];
+  }
   if (!targetPerformer) return undefined;
   return sequence.positions.find((position) =>
     position.kind === 'table' &&
