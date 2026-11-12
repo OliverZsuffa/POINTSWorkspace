@@ -1276,7 +1276,7 @@ export default function App() {
               const beat = sequence.beats[beatIndex]!;
               const isBeatStart = compareRational(slot.offset, rational(0)) === 0;
               const isBeatEnd = timelineSlots[index + 1]?.beatId !== slot.beatId;
-              return <div className={'beat-head' + (isBeatStart ? ' beat-start' : '')} key={beat.id + ':' + slot.offset.numerator + '/' + slot.offset.denominator}>
+              return <div className={'beat-head' + (isBeatStart ? ' beat-start' : '') + (isBeatStart && beatIndex % sequence.timeSignature.beatGrouping.length === 0 ? ' bar-start' : '')} key={beat.id + ':' + slot.offset.numerator + '/' + slot.offset.denominator}>
                 <button type="button" className="beat-select" onClick={() => isBeatStart ? selectBeat(beat.id) : selectInterval(beat.id, slot.offset, slot.duration)} aria-label={isBeatStart ? 'Select beat ' + (beatIndex + 1) : 'Select beat ' + (beatIndex + 1) + ' subdivision ' + slot.label}>
                   <span>{slot.label}</span><small>{isBeatStart ? Math.floor(beatIndex / sequence.timeSignature.beatGrouping.length) + 1 + '.' + (beatIndex % sequence.timeSignature.beatGrouping.length + 1) : ' '}</small>
                 </button>
@@ -1305,7 +1305,7 @@ export default function App() {
                       <button
                         type="button"
                         key={beat.id + ':' + slot.offset.numerator + '/' + slot.offset.denominator}
-                        className={'notation-cell' + (selectedCell ? ' selected' : '') + (errors.length ? ' invalid' : '') + (entry ? ' occupied' : '')}
+                        className={'notation-cell' + (selectedCell ? ' selected' : '') + (errors.length ? ' invalid' : '') + (entry ? ' occupied' : '') + (beatIndex % sequence.timeSignature.beatGrouping.length === 0 && compareRational(slot.offset, rational(0)) === 0 ? ' bar-start' : '')}
                         onMouseDown={(event) => {
                           const cell = { performerId: performer.id, hand, beatId: beat.id, offset: slot.offset, duration: slot.duration };
                           if (event.ctrlKey) {
