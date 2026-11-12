@@ -149,6 +149,11 @@ function makeSnapshot(
 
 function evaluateBeat(sequence: Sequence, entries: readonly NotationEntry[], state: State): ValidationIssue[] {
   const issues: ValidationIssue[] = [];
+  const orderedEntries = [...entries].sort((left, right) =>
+    String(left.performerId).localeCompare(String(right.performerId)) ||
+    left.hand.localeCompare(right.hand) ||
+    String(left.id).localeCompare(String(right.id)),
+  );
   const handActions = new Map<string, NotationEntry>();
   const links = new Map<string, NotationEntry[]>();
   const transfers = new Map<BallId, ObjectLocation>();
@@ -162,7 +167,7 @@ function evaluateBeat(sequence: Sequence, entries: readonly NotationEntry[], sta
     }
   };
 
-  for (const entry of entries) {
+  for (const entry of orderedEntries) {
     if (!sequence.performers.some((performer) => performer.id === entry.performerId)) {
       issues.push(problem('unknown-action-performer', 'Action references an unknown performer.', [entry]));
     }
@@ -238,7 +243,7 @@ function evaluateBeat(sequence: Sequence, entries: readonly NotationEntry[], sta
     group.forEach((entry) => linkedEntries.add(entry.id));
   }
 
-  for (const entry of entries) {
+  for (const entry of orderedEntries) {
     if (linkedEntries.has(entry.id)) continue;
     const action = entry.action;
     const ballInHand = held(state, entry.performerId, entry.hand);
