@@ -291,7 +291,7 @@ function NotationMark({ action, sequence, hand }: { action: NotationAction; sequ
   }
   return (
     <svg className="ball-segment" viewBox="0 0 100 100" aria-hidden="true">
-      <path d={path} fill="none" stroke="#263238" strokeWidth="2.6" strokeLinecap="square" strokeLinejoin="miter" />
+      <path d={path} fill="none" stroke="#172033" strokeWidth="3.5" strokeLinecap="square" strokeLinejoin="miter" />
       {circledTarget && <circle cx="36" cy="50" r="13" fill="none" stroke="#263238" strokeWidth="1.8" />}
       {label && <text x={subscript ? 38 : 50} y="50" textAnchor="middle" dominantBaseline="middle" fontFamily="Arial,sans-serif" fontSize={label.length > 3 ? 38 : 46} fontWeight="700" fill="#172033">{label}{subscript && <tspan fontSize="28" baselineShift="sub">{subscript}</tspan>}</text>}
     </svg>
