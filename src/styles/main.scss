@@ -224,3 +224,10 @@ button:disabled { cursor: default; opacity: .35; }
 
 .mode-tool { display: none; min-width: 42px; padding: 4px 6px; font-size: 10px; }
 @media (max-width: 900px) { .mode-tool { display: grid; } }
+
+@media (max-width: 900px) {
+  .insert-beat, .subdivide-interval, .move-beat { opacity: .8; }
+  .insert-beat { width: 16px; height: 16px; line-height: 16px; background: #3569bd; }
+  .subdivide-interval { width: 16px; height: 16px; line-height: 16px; }
+  .move-beat { width: 14px; height: 16px; line-height: 16px; }
+}
