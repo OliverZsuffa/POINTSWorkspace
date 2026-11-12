@@ -48,6 +48,13 @@ function sequence(
 }
 
 describe('renderer geometry', () => {
+  it('keeps HOLD and EMPTY as stationary hand actions', () => {
+    expect(isStationaryHandAction('HOLD')).toBe(true);
+    expect(isStationaryHandAction('EMPTY')).toBe(true);
+    expect(isStationaryHandAction('BOUNCE')).toBe(false);
+    expect(isStationaryHandAction('TAP')).toBe(false);
+  });
+
   it('places a solo performer opposite their table positions', () => {
     const value = sequence();
     const performer = value.performers[0]!;
