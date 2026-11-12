@@ -2,7 +2,7 @@
 
 ## Status
 
-Approved by Oliver on 12 November 2026. Implementation complete, pending final CI verification.
+Approved by Oliver on 12 November 2026. CI passed and implementation was merged into main in commit 369fba88ff38268074ab0b3ce074925e699d602c.
 
 ## Goal
 
