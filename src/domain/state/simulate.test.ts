@@ -37,12 +37,12 @@ describe('object state simulation', () => {
     expect(result.snapshots).toHaveLength(8);
     expect(result.snapshots[0]?.phase).toBe('before');
     expect(result.snapshots[1]?.phase).toBe('after');
-    expect(result.snapshots[0]?.ballLocations['ball-1']).toEqual({
+    expect(result.snapshots[0]?.ballLocations[asBallId('ball-1')]).toEqual({
       kind: 'position',
       positionId: positionA,
     });
     expect(result.snapshots[1]?.handStates[performerId]?.right.heldBallId).toBe('ball-1');
-    expect(result.snapshots[5]?.ballLocations['ball-1']).toEqual({
+    expect(result.snapshots[5]?.ballLocations[asBallId('ball-1')]).toEqual({
       kind: 'position',
       positionId: positionB,
     });
@@ -130,7 +130,7 @@ describe('object state simulation', () => {
     const result = simulateSequence(sequence);
     expect(result.validation.isValid).toBe(false);
     expect(result.validation.issues.map((item) => item.code)).toContain('conflicting-position-actions');
-    expect(result.snapshots[1]?.ballLocations['ball-1']).toEqual({
+    expect(result.snapshots[1]?.ballLocations[asBallId('ball-1')]).toEqual({
       kind: 'position',
       positionId: positionA,
     });
