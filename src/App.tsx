@@ -676,14 +676,18 @@ export default function App() {
       const latest = simulation.snapshots[simulation.snapshots.length - 1];
       const unsafe = removed.some((ball) => {
         const initial = sequence.initialState.placements.find((placement) => placement.ballId === ball.id);
+        if (!initial) return false;
         const current = latest?.ballLocations[ball.id];
-        if (!initial || !current || initial.location.kind !== 'position') return true;
-        const initialPositionId = initial.location.positionId;
-        const referencedByNotation = sequence.notation.some((entry) =>
-          positionTargetId(entry.action) === initialPositionId,
+        if (!current) return true;
+        const location = initial.location;
+        const positionId = location.kind === 'position' || location.kind === 'hand-back' ? location.positionId : undefined;
+        const referencedByPosition = positionId !== undefined && sequence.notation.some((entry) => positionTargetId(entry.action) === positionId);
+        const referencedByHand = location.kind === 'hand-held' && sequence.notation.some((entry) =>
+          entry.performerId === location.performerId && entry.hand === location.hand &&
+          ['HOLD', 'LIFT', 'LEAVE', 'BOUNCE', 'ZIP', 'SPECIAL'].includes(entry.action.type),
         );
-        return referencedByNotation || simulation.snapshots.some((snapshot) =>
-          !snapshot.ballLocations[ball.id] || !sameLocation(initial.location, snapshot.ballLocations[ball.id]!),
+        return referencedByPosition || referencedByHand || simulation.snapshots.some((snapshot) =>
+          !snapshot.ballLocations[ball.id] || !sameLocation(location, snapshot.ballLocations[ball.id]!),
         );
       });
       if (unsafe) { window.alert('The selected balls are in use. Move them back to their initial table positions before reducing the count.'); return; }
