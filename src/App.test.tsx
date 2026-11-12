@@ -362,4 +362,25 @@ describe('sequence editor', () => {
     fireEvent.blur(identifier);
     expect(screen.getByText('z')).toBeInTheDocument();
   });
+
+  it('moves multiple selected ball rectangles together', () => {
+    render(<App />);
+    const draw = (startName: string, endName: string) => {
+      fireEvent.mouseDown(screen.getByRole('button', { name: startName }), { shiftKey: true });
+      fireEvent.mouseUp(screen.getByRole('button', { name: endName }));
+    };
+    draw('Juggler 1 left beat 1 empty', 'Juggler 1 left beat 2 empty');
+    draw('Juggler 1 left beat 4 empty', 'Juggler 1 left beat 5 empty');
+    const first = screen.getByRole('button', { name: 'Juggler 1 left beat 1 LIFT A' });
+    fireEvent.click(first);
+    fireEvent.keyDown(first, { key: 'ArrowRight', shiftKey: true });
+    fireEvent.keyDown(first, { key: 'ArrowRight', shiftKey: true });
+    fireEvent.keyDown(first, { key: 'ArrowRight', shiftKey: true });
+    fireEvent.mouseDown(first);
+    fireEvent.mouseUp(screen.getByRole('button', { name: 'Juggler 1 left beat 2 LEAVE A' }));
+    expect(screen.getByRole('button', { name: 'Juggler 1 left beat 2 LIFT A' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Juggler 1 left beat 3 LEAVE A' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Juggler 1 left beat 5 LIFT A' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Juggler 1 left beat 6 LEAVE A' })).toBeInTheDocument();
+  });
 });
