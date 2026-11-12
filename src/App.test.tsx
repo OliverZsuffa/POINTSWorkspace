@@ -580,6 +580,7 @@ describe('sequence editor', () => {
     await user.click(screen.getByRole('button', { name: 'Subdivide beat 1 interval 1' }));
     await user.click(screen.getByRole('button', { name: 'Juggler 1 left beat 1 & empty' }));
     await user.click(screen.getByRole('button', { name: 'LIFT' }));
+    fireEvent.keyDown(screen.getByRole('main', { name: 'POINTS Workspace' }), { key: 'B' });
 
     expect(screen.queryByText('Sequence valid')).not.toBeInTheDocument();
     const invalidCell = screen.getByRole('button', { name: 'Juggler 1 left beat 1 & LIFT A' });
