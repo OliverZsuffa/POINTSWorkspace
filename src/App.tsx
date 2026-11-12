@@ -498,7 +498,7 @@ export default function App() {
     const entries = cells.map((cell) => entryAt(cell.performerId, cell.hand, cell.beatId)).filter((entry): entry is NotationEntry => Boolean(entry));
     if (!entries.length) return;
     const removeIds = new Set(entries.map((entry) => entry.id));
-    const zipLinks = new Set(entries.filter((entry) => entry.action.type === 'ZIP').map((entry) => entry.action.linkId));
+    const zipLinks = new Set(entries.flatMap((entry) => entry.action.type === 'ZIP' ? [entry.action.linkId] : []));
     for (const linkId of zipLinks) {
       for (const entry of sequence.notation) if (entry.action.type === 'ZIP' && entry.action.linkId === linkId) removeIds.add(entry.id);
     }
