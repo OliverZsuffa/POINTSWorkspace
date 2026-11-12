@@ -639,6 +639,7 @@ export default function App() {
     });
     commit({ ...sequence, notation: [...sequence.notation, ...pasted] });
     selectCell({ performerId: selected.performerId, hand: selected.hand, beatId: selected.beatId });
+    setShowActionMenu(false);
   };
 
   const selectInterval = (beatId: string, offset: Rational, duration: Rational) => {
@@ -1348,10 +1349,12 @@ export default function App() {
                           if (event.ctrlKey) {
                             event.preventDefault();
                             setEraseStart(cell);
+                            setShowActionMenu(false);
                           } else if (event.shiftKey) {
                             event.preventDefault();
                             selectCell(cell);
                             setDragStart(cell);
+                            setShowActionMenu(false);
                           } else if (entry) {
                             setMoveStart(cell);
                           }
