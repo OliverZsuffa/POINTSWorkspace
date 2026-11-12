@@ -366,6 +366,20 @@ export default function App() {
     }
     return map;
   }, [simulation, simulationModel]);
+  const displayedIssues = useMemo(() => {
+    const grouped = new Map<string, (typeof simulation.validation.issues)[number]>();
+    for (const issue of simulation.validation.issues) {
+      const key = issue.code + '|' + issue.description;
+      const affectedEntries = [...new Set(issue.affectedEntries.map((entryId) =>
+        simulationModel.sourceEntryById.get(entryId) ?? entryId,
+      ))];
+      const existing = grouped.get(key);
+      grouped.set(key, existing
+        ? { ...existing, affectedEntries: [...new Set([...existing.affectedEntries, ...affectedEntries])] }
+        : { ...issue, affectedEntries });
+    }
+    return [...grouped.values()];
+  }, [simulation, simulationModel]);
 
   const selectCell = (cell: EditorCell, extend = false) => {
     setSelected(cell);
@@ -1639,8 +1653,8 @@ export default function App() {
 
       <section className="bottom-panels">
         <div className="validation-panel" role="region" aria-label="Validation">
-          <div className="panel-heading"><strong>Validation</strong><span className={simulation.validation.isValid ? 'valid-count' : 'error-count'}>{simulation.validation.issues.length} {simulation.validation.issues.length === 1 ? 'issue' : 'issues'}</span></div>
-          {simulation.validation.issues.length === 0 ? <p className="no-issues">Sequence valid</p> : <ul>{simulation.validation.issues.map((issue, index) => (
+          <div className="panel-heading"><strong>Validation</strong><span className={simulation.validation.isValid ? 'valid-count' : 'error-count'}>{displayedIssues.length} {displayedIssues.length === 1 ? 'issue' : 'issues'}</span></div>
+          {displayedIssues.length === 0 ? <p className="no-issues">Sequence valid</p> : <ul>{displayedIssues.map((issue, index) => (
             <li key={issue.code + index}><span>{issue.description}</span>{issue.affectedEntries[0] && <button type="button" onClick={() => {
               const affectedEntryId = issue.affectedEntries[0];
               if (!affectedEntryId) return;
