@@ -500,6 +500,7 @@ html, body, #root { min-height: 100%; background: #90d0d5; }
 .editor-toolbar {
   display: flex;
   flex: 0 0 auto;
+  min-height: 0;
   flex-direction: row;
   align-items: center;
   justify-content: space-between;
