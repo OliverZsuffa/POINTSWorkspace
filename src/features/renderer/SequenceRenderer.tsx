@@ -241,8 +241,8 @@ export default function SequenceRenderer({ sequence, simulation, onSelectHand }:
 
     const footprint = getTableFootprint(sequence);
     const tableGeometry = footprint.round
-      ? new THREE.CylinderGeometry(footprint.width / 2, footprint.width / 2, 0.2, footprint.sideCount ?? 48)
-      : new THREE.BoxGeometry(footprint.width, 0.2, footprint.depth);
+      ? new THREE.CylinderGeometry(footprint.width / 2, footprint.width / 2, 0.08, footprint.sideCount ?? 48)
+      : new THREE.BoxGeometry(footprint.width, 0.08, footprint.depth);
     const table = new THREE.Mesh(tableGeometry, makeMaterial('#b9c8db'));
     table.position.y = -0.04;
     table.castShadow = true;
