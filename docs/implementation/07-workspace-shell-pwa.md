@@ -406,8 +406,102 @@ The following decisions must be resolved during review or explicitly left as doc
 9. Whether reduced motion should disable or shorten renderer animation. The renderer must remain understandable either way.
 10. Any proposed functional interaction change discovered during the visual audit must be presented separately for approval rather than silently included as a styling correction.
 
+
+
+## Additional requirements from the visual and interaction review
+
+These requirements are part of Package 07 and are explicitly approved for implementation.
+
+### Renderer layout and circle table geometry
+
+The existing three dimensional arrangement is not acceptable while table positions or performers overlap. The renderer must be corrected rather than merely documented as visually pending.
+
+1. Table positions must never overlap one another when they represent distinct positions. The layout must account for the number of positions assigned to each performer and the actual usable tabletop area.
+2. Performer bodies, arms and hands must not overlap neighbouring performers or table geometry in the resting pose. Increase the arrangement footprint as needed rather than compressing performers into an undersized circle.
+3. Move performers closer to the table than in the current implementation, while retaining enough clearance for their bodies and arms.
+4. For circle passing, render a true regular polygonal tabletop. Its number of sides must equal the number of people in the circle. Do not render a circular disk with a polygonal outline or approximate the polygon with a high segment count.
+5. Each circle participant occupies one polygon edge. Their owned table positions must be laid out on the corresponding edge and remain inside the polygon.
+6. Add geometry tests for non overlap between distinct table positions, performer clearance, edge assignment and exact polygon side count. Manual review must include different participant counts, including larger circles.
+
+### Circle passing pattern semantics
+
+Circle passing defines one pattern, not a separate independently authored pattern for every participant.
+
+1. The user authors the notation for one representative participant.
+2. The circle participant count is a separate sequence property. For example, a pattern defined once can be instantiated for ten people arranged around the circle.
+3. The renderer repeats the same authored pattern for every participant, rotated or mapped consistently around the circle.
+4. Do not require duplicate performer notation rows or separate edits for each participant in circle passing mode.
+5. The editor must make clear that the displayed notation is the representative pattern and that the configured participant count controls how many times it is instantiated.
+6. Circle passing target distance and direction are interpreted relative to the participant's position in the circle. The same relative instruction applies consistently to every participant.
+7. Circle passing validation must validate the representative pattern and its repeated interactions around the configured circle, including wraparound between the last and first participant.
+8. The sequence data model and renderer integration must represent this distinction explicitly. Do not simulate circle passing by asking the user to manually duplicate identical patterns.
+
+### Notation grid rendering: spreadsheet cell model
+
+The notation grid must use a strict square cell model similar to a spreadsheet.
+
+1. Every timeline cell is a square with fixed dimensions. The cell must not stretch horizontally or vertically to fit its contents.
+2. The visual notation is constructed from the four edges of each square cell. Each action turns the relevant top, right, bottom or left edge on or off to create continuous ball rectangles and other notation structures.
+3. Adjacent cells must join exactly at their shared boundaries. Shared internal edges must not become doubled, misaligned or separated by gaps.
+4. Notation must be rendered as edge geometry, not as tiny action words placed inside cells. Action labels may exist in accessible names or contextual editing UI, but must not replace the graphical notation.
+5. HOLD is represented by the continuation of the ball rectangle through the cell. It means the ball remains held and no new physical action occurs. HOLD must not animate a reach, pickup, release, tap or other movement in the renderer.
+6. LIFT, LEAVE, BOUNCE, TAP, EMPTY, ZIP, passing and SPECIAL must retain their distinct notation semantics while using the same square cell geometry.
+7. Linked and continuous edges must remain aligned across performers, hands, beats and subdivisions.
+8. The selected cell, invalid cell and linked action states must be visible without obscuring the edge notation.
+9. Add geometry and rendering tests that assert exact square dimensions and expected edge combinations for every action type, including sequences of adjacent cells. Add screenshot based visual verification at realistic zoom levels.
+
+### Editor target and action entry corrections
+
+1. Position names shown in target selectors must include the owning performer identifier or name wherever positions are performer owned. Use the same owner naming convention as the rest of the editor. Do not show ambiguous bare names when multiple performers can each own a position named A or B.
+2. When multiple performers are present, each performer must have their own L and R hand back positions available as targets wherever the selected action supports hand back positions. Do not expose only one global L and R pair.
+3. Changing the sequence mode must immediately refresh all target options and mode specific controls. Switching to or from circle passing or individual passing must not leave stale or missing target options.
+4. Target keyboard entry must work whenever a cell is selected, not only during LIFT and LEAVE creation. Typing a valid position letter or identifier updates the selected cell's target.
+5. If the selected action does not support that target entry directly, convert the action to the corresponding target action and then apply the target. In particular, HOLD plus a valid table position key becomes BOUNCE, and EMPTY plus a valid table position key becomes TAP.
+6. The same target key handling must support changing an existing LIFT, LEAVE, BOUNCE or TAP target without requiring the user to reopen a target field.
+7. The resulting action may be invalid in the current object state. The editor must still allow the notation change and let the normal validator report the error. Keyboard entry must not silently block an action merely because it is currently invalid.
+8. Target key handling must respect the active performer and position ownership. Duplicate position names belonging to different performers must remain unambiguous.
+
+### Selection, deletion and keyboard controls
+
+1. Ctrl plus clicking a cell adds that cell to the current selection. Further Ctrl clicks add further cells. This is additive multi selection and must not trigger the existing Ctrl drag erase behaviour.
+2. A normal click without Ctrl replaces the selection with the clicked cell, subject to the existing empty cell action menu behaviour.
+3. Shift plus arrow keyboard selection remains supported. Ctrl click selection must work consistently with touch and mouse selection modes without breaking drag drawing or moving.
+4. Deleting selected notation is available only through the Delete button, Delete key or Backspace key. Remove other deletion shortcuts or gesture mappings that conflict with this rule.
+5. Deleting multiple selected cells is one undoable operation. Existing linked action deletion rules remain intact.
+6. Update the keyboard shortcut help and interaction tests to match the final controls.
+
+### Workspace ergonomics
+
+Workspace ergonomics are explicitly part of Package 07. Review and improve the placement, grouping, reachability, density and discoverability of the editor and renderer controls. The workspace should make the primary workflow obvious and keep secondary settings out of the way.
+
+The ergonomics pass must include:
+1. A clear hierarchy between workspace navigation, panel controls, sequence settings, notation editing controls and renderer playback controls.
+2. Controls placed next to the content they affect.
+3. Avoidance of excessive scrolling, redundant headers and repeated labels.
+4. Comfortable notation editing at realistic desktop and phone sizes.
+5. Consistent interaction patterns and control placement across editor and renderer.
+6. A deliberate review of the complete workflow from changing sequence mode, to entering notation, to selecting targets, to inspecting the result in the renderer.
+7. Any proposed workflow change that changes established behaviour must be documented and approved rather than silently introduced.
+
+## Additional implementation and acceptance gates
+
+The following must be treated as release blocking:
+
+- No overlapping table positions or performer bodies in supported renderer layouts.
+- Circle table is a true regular polygon with exactly one side per configured participant.
+- Circle passing notation is authored once and instantiated consistently for the configured participant count.
+- Notation cells are square and their four edge states produce the intended spreadsheet style notation.
+- HOLD causes no hand or object movement and visually continues the held ball rectangle.
+- Performer owned L and R targets are available for every performer where applicable.
+- Target labels identify their owner.
+- Changing sequence mode refreshes all mode specific target controls.
+- Target keyboard entry works on selected cells and performs the specified action conversions.
+- Ctrl click adds cells to the selection.
+- Deletion is limited to the Delete button, Delete key and Backspace.
+- Workspace ergonomics have been reviewed and the complete editing workflow is usable.
+
 ## Approval
 
-Status: Awaiting approval.
+Status: Approved for implementation by Oliver on 12 November 2026.
 
-No implementation code changes are authorised until Oliver explicitly approves this revised plan.
+The additional renderer, notation grid, circle passing, target entry, selection and ergonomics requirements above are included in this approval.
