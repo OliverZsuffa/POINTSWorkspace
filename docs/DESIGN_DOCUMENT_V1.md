@@ -32,11 +32,11 @@ There is one predefined default layout. Additional predefined layout presets are
 
 The Sequence Generator is located below the two main panels in a panel that the user can pull up when needed.
 
-Remembering the user's chosen layout between sessions is undecided.
+Remembering the user's chosen layout between sessions is undecided. Multiple browser tabs operate independently. Changes in one tab do not automatically update another tab.
 
 ### Mobile and tablet
 
-The application must be fully usable on mobile devices and tablets as well as desktop computers. Mobile support is a core requirement, not a reduced or secondary version of the application.
+The application must be fully usable on mobile devices and tablets as well as desktop computers. It should be installable as a Progressive Web App and work fully offline after the first successful load, including the editor, renderer, and generator. Mobile support is a core requirement, not a reduced or secondary version of the application.
 
 On phones, the Editor and Renderer are accessed through separate tabs. Tablets use the phone layout model. All editing and rendering functionality must remain available on these devices, including advanced notation operations. The interface must adapt to the available screen size without removing functionality.
 
@@ -151,9 +151,9 @@ Keyboard shortcuts are a core part of the editor. A dedicated help section must 
 
 The Godot interaction model is the starting point for the web editor, subject to usability testing. Retain the existing click, drag, modifier key, and right click interactions where practical. Dragging must construct the ball rectangle notation, including LIFT, HOLD, LEAVE, and ZIP actions, rather than merely stamping the same symbol into every traversed cell.
 
-The default interaction should minimise friction. Clicking an existing notation cell opens its properties for editing rather than immediately replacing the action. The exact presentation of the editing controls remains to be designed. Selecting multiple cells and applying one action to all selected cells is supported. Arrow keys move the selection between cells, and Shift plus arrow keys extends the selection. Clicking an empty area of the editor clears the selection. The behaviour of double click and Enter remains undecided.
+Cell selection follows one consistent rule: the first click selects the cell. If the cell is empty, its action menu opens immediately as the next step because there is no existing notation to inspect. If the cell already contains notation, the first click only selects it. Its properties can then be opened through a subsequent click or another explicit editing action. This prevents accidental replacement while keeping empty cell entry direct. The exact gesture for opening properties after selection remains to be designed. Selecting multiple cells and applying one action to all selected cells is supported. Arrow keys move the selection between cells, and Shift plus arrow keys extends the selection. Clicking an empty area of the editor clears the selection. The special behaviour of double click remains undecided.
 
-Dragging notation starts with a LIFT at the starting cell and ends with a LEAVE at the ending cell. The drag can and must cross hand lanes when needed to construct linked actions such as ZIP. The editor previews the notation during the drag. Drawing over existing notation must not overwrite it. If the proposed drawing conflicts with existing notation, the existing notation is preserved and the new operation is prevented. A complete drag operation is one undoable edit, including any linked symbols it creates. Existing notation can also be dragged to a different position in the timeline. Users can move an individual symbol, an entire ball rectangle, or multiple selected rectangles together.
+Dragging notation starts with a LIFT at the starting cell and ends with a LEAVE at the ending cell. The drag can and must cross hand lanes when needed to construct linked actions such as ZIP. The editor previews the notation during the drag. Drawing over existing notation must not overwrite it. If the proposed drawing conflicts with existing notation, the existing notation is preserved and the new operation is prevented. A complete drag operation is one undoable edit, including any linked symbols it creates. Existing notation can also be dragged to a different position in the timeline. Dragging any part of a ball rectangle moves the complete rectangle together, including its LIFT, HOLD, and LEAVE notation. Multiple selected rectangles can also be moved together.
 
 Action menus show only actions that are valid for the current state. All available valid actions should be directly accessible rather than hidden in submenus. Menus close after an action is chosen. They do not remember the last used action or target. The exact menu placement remains undecided.
 
@@ -193,9 +193,9 @@ Every sequence has a compact, machine oriented code represented as one continuou
 
 The code is generated automatically and can be copied explicitly at any time. Pasting a code loads the sequence immediately when there is no existing sequence that would be overwritten. If a sequence is already present, the application asks the user to confirm before replacing it. Replacing a sequence can be undone through the editor's undo history.
 
-There is one current working sequence rather than a collection of named sequences. Multiple saved sequences, editable sequence names, and a duplicate sequence management feature are not required. The most recent working sequence is restored when the application is reopened, including when it is incomplete or invalid.
+There is one current working sequence rather than a collection of named sequences. Multiple saved sequences, editable sequence names, and a duplicate sequence management feature are not required. The most recent working sequence is restored when the application is reopened, including when it is incomplete or invalid. Undo history does not need to survive closing the browser. If browser local storage is cleared, the locally stored working sequence is lost; no additional recovery mechanism is required.
 
-A code that cannot be parsed or is otherwise invalid as an import must be rejected. The current sequence remains untouched. The application must not partially import an unreadable or unsupported code. A successfully parsed sequence is then checked by the normal notation validator. Import replaces the entire current sequence structure, including its beat count, jugglers, positions, and other settings. The import control is accessible from the main editor. Pasting a code initiates loading immediately; confirmation is required only when existing work would be overwritten. Sequence codes do not need an explicit format version.
+A code that cannot be parsed or is otherwise invalid as an import must be rejected. The current sequence remains untouched. The application must not partially import an unreadable or unsupported code. A successfully parsed sequence is then checked by the normal notation validator. Import restores all sequence properties encoded in the code, including BPM and the initial object distribution. Import replaces the entire current sequence structure, including its beat count, jugglers, positions, and other settings. The import control is accessible from the main editor. Pasting a code initiates loading immediately; confirmation is required only when existing work would be overwritten. Sequence codes do not need an explicit format version.
 
 ### 1.8 Image export
 
@@ -203,7 +203,7 @@ The user can export the sequence as one continuous image or as multiple image se
 
 The export includes all sequence information by default. Before exporting, the user can open an options window to include or exclude individual parts of the output. The sequence code is an optional export element. If the object state overview is enabled for export, show the initial state and, only when it differs, the final state. Do not include intermediate object states.
 
-The export uses a cleaner presentation than the live editor, while retaining meaningful notation colours such as red error markings and yellow linked SPECIAL markings. The user can choose black or white text and background, or a transparent background. Image resolution and scale are selected automatically to produce a good result. The notation keeps a fixed cell size, so long sequences produce wider images rather than shrinking all notation to fit a fixed width. Sequence settings and performer names are included by default. When an image is split into segments, performer sections must remain together and must not be split between segments. Segments must not overlap or duplicate content. The exact export options interface remains to be designed.
+The export uses a cleaner presentation than the live editor, while retaining meaningful notation colours such as red error markings and yellow linked SPECIAL markings. Invalid sequences remain exportable, and their errors must be visibly marked in red. The user can choose black or white text and background, or a transparent background. Image resolution and scale are selected automatically to produce a good result. The notation keeps a fixed cell size, so long sequences produce wider images rather than shrinking all notation to fit a fixed width. Sequence settings and performer names are included by default. When an image is split into segments, performer sections must remain together and must not be split between segments. Segments must not overlap or duplicate content. The exact export options interface remains to be designed.
 
 
 ### 1.9 Curated sequence presets
@@ -236,7 +236,7 @@ All objects use the same spherical shape. Every ball has a unique colour. The us
 
 Object trajectories are calculated automatically. A transfer between hands should be animated as a coordinated handoff: the source hand moves the ball toward the receiving hand, and the receiving hand moves to take it. It should not simply look like an unexplained teleport or an arbitrary thrown arc. Custom trajectory editing and manual trajectory height or shape controls are not required at this stage.
 
-The table and juggler arrangement depend on the sequence type. The program initially assigns performers to seats automatically. The user can override these assignments by changing individual seat positions. A manual change takes precedence over automatic placement.
+The table and juggler arrangement depend on the sequence type. The program initially assigns performers to seats automatically. The user can override these assignments by changing individual seat positions. A manual change takes precedence over automatic placement. The interaction for manually changing seat assignments remains undecided.
 
 **Circle juggling and circle passing**
 
@@ -260,7 +260,7 @@ The renderer must support:
 - Repeating the sequence continuously.
 - Setting playback tempo in beats per minute (BPM), stored as part of the sequence.
 
-In step mode, moving from one beat state to the next is animated over 0.5 seconds, after which playback stops at the new beat. In continuous playback, the animation runs smoothly without pauses at beat boundaries. The duration of each beat is determined by the BPM, and subdivisions take proportionally less time. For example, a half beat takes half the duration of a full beat. Every action within the same beat or subdivision uses the same available time interval. Actions do not receive different durations based on their type or physical distance. The proposed default tempo is 120 BPM, subject to confirmation.
+In step mode, moving from one beat state to the next is animated over 0.5 seconds, after which playback stops at the new beat. In continuous playback, the animation runs smoothly without pauses at beat boundaries. The duration of each beat is determined by the BPM, and subdivisions take proportionally less time. For example, a half beat takes half the duration of a full beat. Every action within the same beat or subdivision uses the same available time interval. Actions do not receive different durations based on their type or physical distance. The default tempo is 120 BPM. Changing BPM during playback takes effect immediately.
 
 When continuous repetition is enabled, a sequence whose final object state matches its initial object state can loop seamlessly. If the states do not match, the renderer jumps back to the initial state between runs. The user can choose between one run through and continuous repetition.
 - Camera rotation.
@@ -275,7 +275,7 @@ Selecting a table position in the renderer should visibly mark that position. Th
 
 The current playback position should be indicated in the Sequence Editor, so the user can see which point in the notation is currently being animated. A corresponding current beat or subdivision indicator inside the renderer is not required at this stage.
 
-Both hands and objects are animated simultaneously when their actions occur at the same time. If the sequence contains any validation errors, rendering and playback stop and remain disabled. The renderer does not attempt to animate an invalid sequence and does not display a separate error message. Only hands are selectable in the renderer. Selecting a hand highlights its corresponding notation cell in the editor. Clicking the currently selected hand again deselects it. Balls are not selectable.
+Both hands and objects are animated simultaneously when their actions occur at the same time. If the sequence contains any validation errors, rendering and playback stop and remain disabled. The renderer does not attempt to animate an invalid sequence and does not display a separate error message. Only hands are selectable in the renderer. Selecting a hand highlights its corresponding notation cell in the editor at the relevant beat or subdivision. Since each hand has at most one action at a given time position, the selection identifies that action rather than highlighting every action performed by that hand throughout the sequence. Clicking the currently selected hand again deselects it. Balls are not selectable.
 
 Changes made in the Sequence Editor update the renderer immediately, including during playback. Selecting a notation cell should highlight the corresponding hand or object in the renderer. Selecting an object or hand in the renderer should highlight the corresponding notation cell in the editor. During playback, the editor indicates both the current beat and the exact subdivision.
 
@@ -293,6 +293,8 @@ The generator supports two main modes:
 
 - Generate complete sequences from scratch.
 - Generate variations or completions based on an existing sequence.
+
+When generating variations, the original sequence itself must be excluded from the results.
 
 The user can also select a part of an existing sequence and use it as a required or forbidden subsequence.
 
@@ -318,7 +320,7 @@ The generator must also support short sequence codes as constraints. A supplied 
 
 ### 3.3 Subsequence matching
 
-A required or forbidden subsequence must match the same structure and actions. Matching includes the same source position, destination position, and hand. Merely using similar actions in a different arrangement does not count as a match.
+A required or forbidden subsequence must match the same structure and actions. Matching includes the same source position, destination position, and hand. Merely using similar actions in a different arrangement does not count as a match. A required subsequence only needs to occur once; additional occurrences do not affect whether the requirement is satisfied.
 
 The user can provide a subsequence by entering its compact sequence code or by selecting part of an existing sequence.
 
@@ -336,9 +338,9 @@ Comparing multiple candidates side by side is not required.
 
 ### 3.5 Generation process and result limits
 
-The user explicitly starts generation by pressing a Generate control. Results appear progressively as they are found.
+The user explicitly starts generation by pressing a Generate control. Results appear progressively as they are found. A generation run taking approximately 20 to 30 seconds is acceptable, provided the interface remains responsive and results are shown as they become available.
 
-The generator should attempt to find all valid sequences up to a fixed application defined maximum result limit. It must communicate how many results are available and divide them into pages rather than displaying an unbounded gallery at once. The user can continue searching for additional results when more are available. The maximum result limit is fixed by the application rather than configurable by the user. When the generator reaches its limit, it must communicate that additional results may exist.
+The generator should attempt to find all valid sequences up to a fixed application defined maximum result limit. It must communicate how many results are available and divide them into pages rather than displaying an unbounded gallery at once. The user can continue searching for additional results when more are available by explicitly requesting another search. The maximum result limit is fixed by the application rather than configurable by the user. When the generator reaches its limit, it stops automatically and communicates that additional results may exist. The user can then choose to continue searching.
 
 The user can stop generation while it is running. Results already found remain available after stopping, but a stopped search cannot be resumed. Changing any generation constraint clears the existing results. Generator settings persist when the generator panel is closed and reopened. Selecting a result does not remove the other results from the gallery and does not automatically stop an active generation run. The exact maximum result limit, page size, and behaviour when the search space is extremely large remain to be defined.
 
