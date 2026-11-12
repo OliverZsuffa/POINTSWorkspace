@@ -249,7 +249,7 @@ function ActionSymbol({ action, sequence, hand }: { action: NotationAction; sequ
       <rect x="1.5" y="1.5" width="45" height="45" rx="5" fill="#ffffff" stroke="#cbd5e1" strokeWidth="1.2" />
       <path d={path} fill="none" stroke="#263238" strokeWidth="2.6" strokeLinecap="square" strokeLinejoin="miter" />
       {circledTarget && <circle cx="20" cy="23" r="8" fill="none" stroke="#263238" strokeWidth="1.8" />}
-      {target && <text x={subscript ? 20 : 24} y={subscript ? 23 : 24} textAnchor="middle" dominantBaseline="middle" fontFamily="Arial,sans-serif" fontSize={target.length > 2 ? 10 : subscript ? 12 : 15} fill="#263238">{target}{subscript && <tspan fontSize="9" baselineShift="sub">{subscript}</tspan>}</text>}
+      {target && <text x={subscript ? 20 : 24} y={subscript ? 23 : 24} textAnchor="middle" dominantBaseline="middle" fontFamily="Arial,sans-serif" fontSize={target.length > 3 ? 18 : subscript ? 22 : 25} fill="#263238">{target}{subscript && <tspan fontSize="14" baselineShift="sub">{subscript}</tspan>}</text>}
     </svg>
   );
 }
@@ -291,7 +291,7 @@ function NotationMark({ action, sequence, hand }: { action: NotationAction; sequ
     <svg className="ball-segment" viewBox="0 0 100 100" aria-hidden="true">
       <path d={path} fill="none" stroke="#263238" strokeWidth="2.6" strokeLinecap="square" strokeLinejoin="miter" />
       {circledTarget && <circle cx="36" cy="50" r="13" fill="none" stroke="#263238" strokeWidth="1.8" />}
-      {label && <text x={subscript ? 38 : 50} y="50" textAnchor="middle" dominantBaseline="middle" fontFamily="Arial,sans-serif" fontSize={label.length > 3 ? 28 : 38} fontWeight="600" fill="#172033">{label}{subscript && <tspan fontSize="25" baselineShift="sub">{subscript}</tspan>}</text>}
+      {label && <text x={subscript ? 38 : 50} y="50" textAnchor="middle" dominantBaseline="middle" fontFamily="Arial,sans-serif" fontSize={label.length > 3 ? 34 : 38} fontWeight="600" fill="#172033">{label}{subscript && <tspan fontSize="25" baselineShift="sub">{subscript}</tspan>}</text>}
     </svg>
   );
 }
