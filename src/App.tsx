@@ -333,13 +333,16 @@ export default function App() {
           linkIds.set(action.linkId, mapped);
           action = { ...action, linkId: mapped } as NotationAction;
         }
-        if ('target' in action && action.target.kind === 'position') {
-          const targetPosition = sequence.positions.find((position) => position.id === action.target.positionId);
-          const matchingPosition = targetPosition?.kind === 'table'
-            ? sequence.positions.find((position) => position.kind === 'table' && position.name === targetPosition.name &&
-              position.owner.kind === 'performer' && position.owner.performerId === performer.id)
-            : undefined;
-          if (matchingPosition) action = { ...action, target: { kind: 'position', positionId: matchingPosition.id } } as NotationAction;
+        if ('target' in action) {
+          const sourceTarget = action.target;
+          if (sourceTarget.kind === 'position') {
+            const targetPosition = sequence.positions.find((position) => position.id === sourceTarget.positionId);
+            const matchingPosition = targetPosition?.kind === 'table'
+              ? sequence.positions.find((position) => position.kind === 'table' && position.name === targetPosition.name &&
+                position.owner.kind === 'performer' && position.owner.performerId === performer.id)
+              : undefined;
+            if (matchingPosition) action = { ...action, target: { kind: 'position', positionId: matchingPosition.id } } as NotationAction;
+          }
         }
         const cloneId = asActionEntryId('circle-' + entry.id + '-' + performer.id);
         sourceEntryById.set(cloneId, entry.id);
@@ -1044,11 +1047,14 @@ export default function App() {
             linkIds.set(action.linkId, mapped);
             action = { ...action, linkId: mapped } as NotationAction;
           }
-          if ('target' in action && action.target.kind === 'circle-position') {
-            const targetPosition = positions.find((position) => position.kind === 'table' &&
-              position.name === action.target.position &&
-              position.owner.kind === 'performer' && position.owner.performerId === performer.id);
-            if (targetPosition) action = { ...action, target: { kind: 'position', positionId: targetPosition.id } } as NotationAction;
+          if ('target' in action) {
+            const sourceTarget = action.target;
+            if (sourceTarget.kind === 'circle-position') {
+              const targetPosition = positions.find((position) => position.kind === 'table' &&
+                position.name === sourceTarget.position &&
+                position.owner.kind === 'performer' && position.owner.performerId === performer.id);
+              if (targetPosition) action = { ...action, target: { kind: 'position', positionId: targetPosition.id } } as NotationAction;
+            }
           }
           return { ...entry, id: asActionEntryId('mode-' + entry.id + '-' + performer.id), performerId: performer.id, action };
         });
@@ -1059,14 +1065,15 @@ export default function App() {
     notation = notation.map((entry) => {
       const action = entry.action;
       if (!('target' in action)) return entry;
-      if (type === 'circle-passing' && action.target.kind === 'position') {
-        const targetPosition = positions.find((position) => position.id === action.target.positionId);
+      const currentTarget = action.target;
+      if (type === 'circle-passing' && currentTarget.kind === 'position') {
+        const targetPosition = positions.find((position) => position.id === currentTarget.positionId);
         if (targetPosition?.kind === 'table' && ['A', 'B', 'C'].includes(targetPosition.name)) {
           return { ...entry, action: { ...action, target: { kind: 'circle-position' as const, position: targetPosition.name as 'A' | 'B' | 'C' } } as NotationAction };
         }
       }
-      if (type !== 'circle-passing' && action.target.kind === 'circle-position') {
-        const targetPosition = positions.find((position) => position.kind === 'table' && position.name === action.target.position &&
+      if (type !== 'circle-passing' && currentTarget.kind === 'circle-position') {
+        const targetPosition = positions.find((position) => position.kind === 'table' && position.name === currentTarget.position &&
           (position.owner.kind === 'shared' || (position.owner.kind === 'performer' && position.owner.performerId === entry.performerId)));
         if (targetPosition) return { ...entry, action: { ...action, target: { kind: 'position' as const, positionId: targetPosition.id } } as NotationAction };
       }
