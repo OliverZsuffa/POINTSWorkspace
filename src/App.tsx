@@ -187,9 +187,10 @@ export default function App() {
     const existing = entryAt(selected.performerId, selected.hand, selected.beatId);
     if (!existing) return;
     const removeIds = new Set([existing.id]);
-    if ('linkId' in existing.action && existing.action.linkId) {
+    const linkId = 'linkId' in existing.action ? existing.action.linkId : undefined;
+    if (linkId) {
       const linked = sequence.notation.filter((entry) =>
-        'linkId' in entry.action && entry.action.linkId === existing.action.linkId &&
+        'linkId' in entry.action && entry.action.linkId === linkId &&
         entry.action.type === 'ZIP',
       );
       linked.forEach((entry) => removeIds.add(entry.id));
@@ -283,6 +284,12 @@ export default function App() {
   const selectedEntry = selected
     ? entryAt(selected.performerId, selected.hand, selected.beatId)
     : undefined;
+  const targetableEntry = selectedEntry && (
+    selectedEntry.action.type === 'LIFT' ||
+    selectedEntry.action.type === 'LEAVE' ||
+    selectedEntry.action.type === 'TAP' ||
+    selectedEntry.action.type === 'BOUNCE'
+  ) ? selectedEntry : undefined;
 
   return (
     <main className="app-root" aria-label="POINTS Workspace">
@@ -311,7 +318,7 @@ export default function App() {
             <select value={sequence.timeSignature.numerator + '/' + sequence.timeSignature.denominator} onChange={(event) => {
               const value = event.target.value;
               const [n, d] = value.split('/').map(Number);
-              const grouping = n === 6 && d === 8 ? [3, 3] : Array.from({ length: n }, () => 1);
+              const grouping = n === 6 && d === 8 ? [3, 3] : Array.from({ length: n! }, () => 1);
               commit({ ...sequence, timeSignature: { numerator: n!, denominator: d as 1 | 2 | 4 | 8 | 16 | 32 | 64, beatGrouping: grouping } });
             }}>
               <option value="4/4">4/4</option><option value="3/4">3/4</option><option value="6/8">6/8</option><option value="2/4">2/4</option>
@@ -332,9 +339,9 @@ export default function App() {
           <button type="button" className="tool delete-tool" onClick={removeSelected} disabled={!selected || !entryAt(selected.performerId, selected.hand, selected.beatId)}>Delete</button>
         </div>
         <span className="selection-label">{selected ? sequence.performers.find((item) => item.id === selected.performerId)?.name + ' · ' + selected.hand + ' · beat ' + (sequence.beats.findIndex((beat) => beat.id === selected.beatId) + 1) : 'Select a cell'}</span>
-        {selectedEntry && ['LIFT', 'LEAVE', 'TAP', 'BOUNCE'].includes(selectedEntry.action.type) && selectedEntry.action.target.kind === 'position' && (
+        {targetableEntry && targetableEntry.action.target.kind === 'position' && (
           <label className="target-control">Target
-            <select value={selectedEntry.action.target.positionId} onChange={(event) => changeTarget(selectedEntry, event.target.value)}>
+            <select value={targetableEntry.action.target.positionId} onChange={(event) => changeTarget(targetableEntry, event.target.value)}>
               {sequence.positions.filter((position) => position.kind === 'table').map((position) => (
                 <option key={position.id} value={position.id}>{position.name}</option>
               ))}
