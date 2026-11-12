@@ -303,9 +303,8 @@ export default function App() {
   const [selected, setSelected] = useState<EditorCell | null>(null);
   const [selectedCells, setSelectedCells] = useState<EditorCell[]>([]);
   const [clipboard, setClipboard] = useState<ClipboardItem[]>([]);
-  const [eraseStart, setEraseStart] = useState<EditorCell | null>(null);
   const [moveStart, setMoveStart] = useState<EditorCell | null>(null);
-  const [touchMode, setTouchMode] = useState<'select' | 'draw' | 'move' | 'erase' | null>(null);
+  const [touchMode, setTouchMode] = useState<'select' | 'draw' | 'move' | null>(null);
   const [history, setHistory] = useState<Sequence[]>([]);
   const [future, setFuture] = useState<Sequence[]>([]);
   const [showSettings, setShowSettings] = useState(false);
@@ -372,7 +371,7 @@ export default function App() {
       : [cell]);
   };
 
-  const clearSelection = () => { setSelected(null); setSelectedCells([]); setDragStart(null); setEraseStart(null); setMoveStart(null); setTouchMode(null); setShowActionMenu(false); };
+  const clearSelection = () => { setSelected(null); setSelectedCells([]); setDragStart(null); setMoveStart(null); setTouchMode(null); setShowActionMenu(false); };
 
   const commit = (next: Sequence) => {
     setHistory((items) => [...items.slice(-99), sequence]);
@@ -689,23 +688,6 @@ export default function App() {
     };
     setSelectedCells((cells) => cells.map(shiftCell));
     if (selected) setSelected(shiftCell(selected));
-  };
-
-  const eraseRectangle = (first: EditorCell, last: EditorCell) => {
-    const rows = editorPerformers.flatMap((performer) => hands.map((hand) => ({ performerId: performer.id, hand })));
-    const firstRow = rows.findIndex((row) => row.performerId === first.performerId && row.hand === first.hand);
-    const lastRow = rows.findIndex((row) => row.performerId === last.performerId && row.hand === last.hand);
-    const firstSlot = timelineSlots.findIndex((slot) => slot.beatId === first.beatId && compareRational(slot.offset, first.offset ?? rational(0)) === 0);
-    const lastSlot = timelineSlots.findIndex((slot) => slot.beatId === last.beatId && compareRational(slot.offset, last.offset ?? rational(0)) === 0);
-    const cells: EditorCell[] = [];
-    for (let row = Math.min(firstRow, lastRow); row <= Math.max(firstRow, lastRow); row += 1) {
-      for (let index = Math.min(firstSlot, lastSlot); index <= Math.max(firstSlot, lastSlot); index += 1) {
-        const targetRow = rows[row];
-        const slot = timelineSlots[index];
-        if (targetRow && slot) cells.push({ ...targetRow, beatId: slot.beatId, offset: slot.offset, duration: slot.duration });
-      }
-    }
-    removeCells(cells);
   };
 
   const copySelected = () => {
@@ -1416,7 +1398,6 @@ export default function App() {
           <button type="button" className="tool clipboard-tool" onClick={pasteSelected} disabled={!selected || clipboard.length === 0}>Paste</button>
           <button type="button" className={'tool mode-tool' + (touchMode === 'draw' ? ' active' : '')} onClick={() => { setTouchMode(touchMode === 'draw' ? null : 'draw'); setDragStart(null); setShowActionMenu(false); }}>Draw</button>
           <button type="button" className={'tool mode-tool' + (touchMode === 'move' ? ' active' : '')} onClick={() => { setTouchMode(touchMode === 'move' ? null : 'move'); setMoveStart(null); setShowActionMenu(false); }}>Move</button>
-          <button type="button" className={'tool mode-tool' + (touchMode === 'erase' ? ' active' : '')} onClick={() => { setTouchMode(touchMode === 'erase' ? null : 'erase'); setEraseStart(null); setShowActionMenu(false); }}>Erase</button>
           {selectedEntry && <button type="button" className="tool change-action-tool" onClick={() => setShowActionMenu((open) => !open)}>Change action</button>}
           {showActionMenu && actionNames.map((name) => (
             <button type="button" key={name} aria-label={name} title={name} className={'tool' + (name === 'ZIP' ? ' zip-tool' : '')} onClick={() => { if (selected) addAction(name); }}>
@@ -1513,7 +1494,6 @@ export default function App() {
                           const cell = { performerId: performer.id, hand, beatId: beat.id, offset: slot.offset, duration: slot.duration };
                           if (event.ctrlKey) {
                             event.preventDefault();
-                            setEraseStart(cell);
                             setShowActionMenu(false);
                           } else if (event.shiftKey) {
                             event.preventDefault();
@@ -1527,7 +1507,6 @@ export default function App() {
                         onMouseUp={() => {
                           if (touchMode) return;
                           const cell = { performerId: performer.id, hand, beatId: beat.id, offset: slot.offset, duration: slot.duration };
-                          if (eraseStart) { eraseRectangle(eraseStart, cell); setEraseStart(null); return; }
                           if (dragStart) { drawRectangle(dragStart, cell); setDragStart(null); return; }
                           if (moveStart) {
                             const sameCell = moveStart.performerId === cell.performerId && moveStart.hand === cell.hand && moveStart.beatId === cell.beatId && compareRational(moveStart.offset ?? rational(0), cell.offset ?? rational(0)) === 0;
@@ -1537,15 +1516,11 @@ export default function App() {
                         }}
                         onClick={(event) => {
                           const cell = { performerId: performer.id, hand, beatId: beat.id, offset: slot.offset, duration: slot.duration };
+                          if (event.ctrlKey) { selectCell(cell, true); setShowActionMenu(false); return; }
                           if (touchMode === 'select') { selectCell(cell, true); setShowActionMenu(false); return; }
                           if (touchMode === 'draw') {
                             if (!dragStart) { selectCell(cell); setDragStart(cell); }
                             else { drawRectangle(dragStart, cell); setDragStart(null); setTouchMode(null); }
-                            return;
-                          }
-                          if (touchMode === 'erase') {
-                            if (!eraseStart) setEraseStart(cell);
-                            else { eraseRectangle(eraseStart, cell); setEraseStart(null); setTouchMode(null); }
                             return;
                           }
                           if (touchMode === 'move') {
@@ -1554,7 +1529,7 @@ export default function App() {
                             } else { moveRectangle(moveStart, cell); setMoveStart(null); setTouchMode(null); }
                             return;
                           }
-                          if (dragStart || eraseStart || moveStart) return;
+                          if (dragStart || moveStart) return;
                           selectCell(cell, event.shiftKey);
                           if (!event.shiftKey) setShowActionMenu(!entry);
                         }}
@@ -1633,7 +1608,7 @@ export default function App() {
           <div><kbd>Escape</kbd><span>Clear selection or close this help</span></div>
           <div><kbd>?</kbd><span>Show this reference</span></div>
           <div><kbd>Shift + drag</kbd><span>Draw a ball rectangle</span></div>
-          <div><kbd>Ctrl + drag</kbd><span>Erase a ball rectangle</span></div>
+          <div><kbd>Ctrl + click</kbd><span>Add a cell to the selection</span></div>
         </div>
       </section>
     </div>}
