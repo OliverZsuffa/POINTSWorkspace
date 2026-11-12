@@ -76,11 +76,13 @@ The settings include, at minimum:
 - Sequence type, including solo, circle passing, and individual passing.
 - Other structural and notation properties defined by POINTS notation.
 
-Adding a juggler creates a new juggler section with empty left and right hand rows. Removing a juggler does not silently delete or rewrite passing references to that juggler. Such references become invalid and are shown through the normal validation system.
+Adding a juggler creates a new juggler section with empty left and right hand rows. Removing a juggler who is referenced by existing notation requires confirmation. If confirmed, the juggler and their notation are removed, while notation elsewhere that refers to that juggler is retained and marked invalid.
 
-Adding a position makes it immediately available as a target wherever that position is valid. The initial state editor should reuse the same components and interaction patterns as other relevant position editing controls wherever possible.
+Adding a position makes it immediately available as a target wherever that position is valid. Removing a position that is still referenced by notation is allowed, but affected notation is retained and marked invalid. Renaming a position updates all existing references to that position automatically. The initial state editor should reuse the same components and interaction patterns as other relevant position editing controls wherever possible.
 
-Changing a setting must update the sequence editor and renderer to reflect the new sequence structure. The exact behaviour for other changes that would invalidate existing notation remains to be specified.
+Changing the sequence type does not automatically rewrite or delete incompatible notation. Existing notation that is incompatible with the newly selected type is retained and marked invalid. Changing the time signature preserves the existing beat and notation positions. Only the bar boundaries and their labels change according to the new time signature.
+
+Changing a setting must update the sequence editor and renderer to reflect the new sequence structure.
 
 The complete set of supported sequence properties and their valid values must be derived from the POINTS notation specification in `docs/POINTS_NOTATION.md`. The design must not silently omit a notation feature.
 
@@ -129,7 +131,9 @@ The numerator of the time signature determines the number of beats in each bar. 
 
 A subdivision always splits an existing interval in half. Labels follow conventional musical counting: beat numbers for quarter note beats, `&` for eighth note subdivisions, and `e` and `a` for sixteenth note subdivisions. Labels beyond sixteenth notes remain to be defined.
 
-Users can remove beats and subdivisions, move individual time positions, and select multiple positions to move them together. Multiple selection can include nonadjacent positions. When a time position is moved, the notation values in its column move with it across all juggler hand rows.
+Users can remove beats and subdivisions, move individual time positions, and select multiple positions to move them together. Multiple selection can include nonadjacent positions. When a beat or subdivision is moved, all notation within that time position moves with it across every juggler hand row. A beat and its subdivisions are treated as one group when the beat is moved.
+
+Clicking a beat label selects the complete beat, including all of its subdivisions, across every juggler hand row. Clicking a subdivision label selects that subdivision across every juggler hand row.
 
 Moving a subdivision is also supported, provided it is placed in a logically valid position within the timeline. The visual distinction between main beats and subdivision columns remains to be designed.
 
@@ -149,11 +153,11 @@ The Godot interaction model is the starting point for the web editor, subject to
 
 The default interaction should minimise friction. Clicking an existing notation cell opens its properties for editing rather than immediately replacing the action. The exact presentation of the editing controls remains to be designed. Selecting multiple cells and applying one action to all selected cells is supported. Arrow keys move the selection between cells, and Shift plus arrow keys extends the selection. Clicking an empty area of the editor clears the selection. The behaviour of double click and Enter remains undecided.
 
-Dragging notation starts with a LIFT at the starting cell and ends with a LEAVE at the ending cell. The drag can and must cross hand lanes when needed to construct linked actions such as ZIP. The editor previews the notation during the drag. Drawing over existing notation must not overwrite it. If the proposed drawing conflicts with existing notation, the existing notation is preserved and the new operation is prevented. A complete drag operation is one undoable edit, including any linked symbols it creates. Existing notation can also be dragged to a different position in the timeline.
+Dragging notation starts with a LIFT at the starting cell and ends with a LEAVE at the ending cell. The drag can and must cross hand lanes when needed to construct linked actions such as ZIP. The editor previews the notation during the drag. Drawing over existing notation must not overwrite it. If the proposed drawing conflicts with existing notation, the existing notation is preserved and the new operation is prevented. A complete drag operation is one undoable edit, including any linked symbols it creates. Existing notation can also be dragged to a different position in the timeline. Users can move an individual symbol, an entire ball rectangle, or multiple selected rectangles together.
 
 Action menus show only actions that are valid for the current state. All available valid actions should be directly accessible rather than hidden in submenus. Menus close after an action is chosen. They do not remember the last used action or target. The exact menu placement remains undecided.
 
-Keyboard input is a primary editing method. Actions should have single key shortcuts where practical. After choosing an action, the user can type its target immediately to complete the entry. Typing a new target while an existing action is selected replaces that action's target. Escape cancels the current operation and clears the selection. Backspace deletes the selected notation. Arrow key navigation and Shift selection extension are supported. Ctrl+C and Ctrl+V copy and paste selected notation, including multiple cells and linked actions. The exact shortcut mapping remains to be documented.
+Keyboard input is a primary editing method. Actions should have single key shortcuts where practical. After choosing an action, the user can type its target immediately to complete the entry. Typing a new target while an existing action is selected replaces that action's target. Escape cancels the current operation and clears the selection. Backspace deletes the selected notation. Arrow key navigation and Shift selection extension are supported. Ctrl+C and Ctrl+V copy and paste selected notation, including multiple cells and linked actions. Copying a ZIP or linked SPECIAL action preserves the internal relationship in the copied content while creating a new, independent pair. Pasting is rejected without changing anything if it conflicts with existing notation. The exact shortcut mapping remains to be documented.
 
 Existing SPECIAL symbols can be opened directly for text editing.
 
