@@ -114,6 +114,72 @@ function makeAction(
   }
 }
 
+
+function sameLocation(a: ObjectLocation, b: ObjectLocation): boolean {
+  if (a.kind !== b.kind) return false;
+  if (a.kind === 'position' && b.kind === 'position') return a.positionId === b.positionId;
+  if (a.kind === 'hand-held' && b.kind === 'hand-held') return a.performerId === b.performerId && a.hand === b.hand;
+  if (a.kind === 'hand-back' && b.kind === 'hand-back') return a.positionId === b.positionId;
+  return false;
+}
+
+function ActionSymbol({ action, sequence, hand }: { action: NotationAction; sequence: Sequence; hand: Hand }) {
+  if (action.type === 'EMPTY') return null;
+  if (action.type === 'SPECIAL') return <span className="special-symbol">{action.text || 'SPECIAL'}</span>;
+
+  let path = '';
+  let target = '';
+  let subscript = '';
+
+  switch (action.type) {
+    case 'HOLD':
+      path = 'M7 9H41 M7 39H41';
+      break;
+    case 'LIFT':
+      path = 'M7 9H41 M7 9V39 M7 39H41';
+      if (action.target.kind === 'position') target = positionName(sequence, action.target.positionId);
+      else if (action.target.kind === 'circle-position') target = action.target.position + (action.target.distance > 1 ? String(action.target.distance) : '') + (action.target.direction === 'left' ? 'L' : 'R');
+      else {
+        target = 'X';
+        subscript = sequence.performers.find((person) => person.id === action.target.performerId)?.identifier ?? '?';
+      }
+      break;
+    case 'LEAVE':
+      path = 'M7 9H41 M41 9V39 M7 39H41';
+      if (action.target.kind === 'position') target = positionName(sequence, action.target.positionId);
+      else if (action.target.kind === 'circle-position') target = action.target.position + (action.target.distance > 1 ? String(action.target.distance) : '') + (action.target.direction === 'left' ? 'L' : 'R');
+      else {
+        target = action.target.hand === 'left' ? 'L' : 'R';
+        subscript = sequence.performers.find((person) => person.id === action.target.performerId)?.identifier ?? '?';
+      }
+      break;
+    case 'BOUNCE':
+      path = 'M7 9H41 M7 39H41';
+      target = action.target.kind === 'position'
+        ? positionName(sequence, action.target.positionId)
+        : action.target.position + (action.target.distance > 1 ? String(action.target.distance) : '') + (action.target.direction === 'left' ? 'L' : 'R');
+      break;
+    case 'TAP':
+      if (action.target.kind === 'position') target = positionName(sequence, action.target.positionId);
+      else target = action.target.position + (action.target.distance > 1 ? String(action.target.distance) : '') + (action.target.direction === 'left' ? 'L' : 'R');
+      break;
+    case 'ZIP':
+      path = action.role === 'source'
+        ? hand === 'left' ? 'M7 9H41 M41 9V39' : 'M7 39H41 M41 9V39'
+        : hand === 'left' ? 'M7 9H41 M7 9V39' : 'M7 39H41 M7 9V39';
+      break;
+  }
+
+  return (
+    <svg className="notation-symbol" viewBox="0 0 48 48" aria-hidden="true">
+      <rect x="1.5" y="1.5" width="45" height="45" rx="5" fill="#ffffff" stroke="#cbd5e1" strokeWidth="1.2" />
+      <path d={path} fill="none" stroke="#263238" strokeWidth="2.6" strokeLinecap="square" strokeLinejoin="miter" />
+      {target && <text x="24" y="24" textAnchor="middle" dominantBaseline="middle" fontFamily="Arial,sans-serif" fontSize={target.length > 2 ? 10 : 15} fill="#263238">{target}</text>}
+      {subscript && <text x="35" y="36" textAnchor="middle" dominantBaseline="middle" fontFamily="Arial,sans-serif" fontSize="13" fontWeight="bold" fill="#263238">{subscript}</text>}
+    </svg>
+  );
+}
+
 export default function App() {
   const [sequence, setSequence] = useState<Sequence>(makeSequence);
   const [selected, setSelected] = useState<{ performerId: string; hand: Hand; beatId: string } | null>(null);
@@ -484,22 +550,24 @@ export default function App() {
     if (Number.isFinite(value) && value > 0) commit({ ...sequence, bpm: value });
   };
 
-  const changeInitialLocation = (ballId: string, value: string) => {
-    const parts = value.split(':');
-    let location: ObjectLocation | undefined;
-    if (parts[0] === 'position' && parts[1]) {
-      location = { kind: 'position', positionId: asPositionId(parts[1]) };
-    } else if (parts[0] === 'held' && parts[1] && (parts[2] === 'left' || parts[2] === 'right')) {
-      location = { kind: 'hand-held', performerId: asPerformerId(parts[1]), hand: parts[2] };
-    } else if (parts[0] === 'back' && parts[1]) {
-      const position = sequence.positions.find((item) => item.id === parts[1]);
-      if (position?.kind === 'hand-back') {
-        location = { kind: 'hand-back', positionId: position.id, performerId: position.performerId, hand: position.hand };
-      }
+  const toggleInitialLocation = (location: ObjectLocation) => {
+    const occupied = sequence.initialState.placements.find((placement) => sameLocation(placement.location, location));
+    if (occupied) {
+      commit({
+        ...sequence,
+        initialState: { placements: sequence.initialState.placements.filter((placement) => placement.ballId !== occupied.ballId) },
+      });
+      return;
     }
-    if (!location) return;
-    const placements = sequence.initialState.placements.filter((placement) => placement.ballId !== ballId);
-    commit({ ...sequence, initialState: { placements: [...placements, { ballId: asBallId(ballId), location }] } });
+    const placed = new Set(sequence.initialState.placements.map((placement) => placement.ballId));
+    const nextBall = sequence.balls.find((ball) => !placed.has(ball.id));
+    if (!nextBall) return;
+    commit({
+      ...sequence,
+      initialState: {
+        placements: [...sequence.initialState.placements, { ballId: nextBall.id, location }],
+      },
+    });
   };
 
   const addClap = () => {
@@ -621,36 +689,79 @@ export default function App() {
           <div className="setting-control"><span>Beats</span><div className="stepper"><button type="button" onClick={removeBeat} disabled={sequence.beats.length <= 1 || sequence.notation.some((entry) => entry.time.beatId === sequence.beats[sequence.beats.length - 1]?.id)}>−</button><output>{sequence.beats.length}</output><button type="button" onClick={addBeat}>+</button></div></div>
           <div className="performer-settings"><span>Performers</span>{sequence.performers.map((performer) => <span className="performer-chip" key={performer.id}>{performer.name}{sequence.performers.length > 1 && <button type="button" className="remove-chip" onClick={() => removePerformer(performer.id)} aria-label={'Remove ' + performer.name}>×</button>}</span>)}<button type="button" onClick={addPerformer}>Add performer</button></div>
           <div className="position-settings"><span>Positions</span>{sequence.positions.filter((position) => position.kind === 'table').map((position) => <div className="position-edit" key={position.id}><input aria-label={'Rename position ' + position.name} defaultValue={position.name} onBlur={(event) => renamePosition(position.id, event.target.value)} /><button type="button" onClick={() => removePosition(position.id)} aria-label={'Remove position ' + position.name}>×</button></div>)}<button type="button" onClick={addPosition}>Add position</button></div>
-          <details className="initial-state-settings">
-            <summary>Initial object distribution</summary>
-            <div className="initial-state-grid">
-              {sequence.balls.map((ball, index) => {
-                const placement = sequence.initialState.placements.find((item) => item.ballId === ball.id);
-                const location = placement?.location;
-                const value = !location ? '' : location.kind === 'position'
-                  ? 'position:' + location.positionId
-                  : location.kind === 'hand-held'
-                    ? 'held:' + location.performerId + ':' + location.hand
-                    : 'back:' + location.positionId;
-                return <label key={ball.id}>Object {index + 1}
-                  <select value={value} onChange={(event) => changeInitialLocation(ball.id, event.target.value)}>
-                    <option value="">Unplaced</option>
-                    {sequence.positions.filter((position) => position.kind === 'table').map((position) => <option key={position.id} value={'position:' + position.id}>{position.name}</option>)}
-                    {sequence.performers.flatMap((person) => hands.map((hand) => <option key={person.id + hand} value={'held:' + person.id + ':' + hand}>{person.name} {hand}</option>))}
-                    {sequence.positions.filter((position) => position.kind === 'hand-back').map((position) => <option key={position.id} value={'back:' + position.id}>{sequence.performers.find((person) => person.id === position.performerId)?.name} {position.name} back</option>)}
-                  </select>
-                </label>;
-              })}
-            </div>
-          </details>
         </section>
       )}
+
+      <section className="initial-positions" aria-label="Initial positions">
+        <div className="initial-positions-heading">
+          <strong>Initial positions</strong>
+          <span>{sequence.initialState.placements.length} / {sequence.balls.length}</span>
+        </div>
+        {sequence.performers.map((performer) => {
+          const tablePositions = sequence.positions.filter((position) =>
+            position.kind === 'table' &&
+            (position.owner.kind === 'performer'
+              ? position.owner.performerId === performer.id
+              : performer.id === sequence.performers[0]?.id),
+          );
+          const backPositions = sequence.positions.filter((position) =>
+            position.kind === 'hand-back' && position.performerId === performer.id,
+          );
+          const heldLocation = (hand: Hand): ObjectLocation => ({ kind: 'hand-held', performerId: performer.id, hand });
+          return (
+            <div className="initial-performer" key={performer.id}>
+              <div className="initial-performer-name">{performer.name}</div>
+              <div className="initial-position-row">
+                {tablePositions.map((position) => {
+                  const location: ObjectLocation = { kind: 'position', positionId: position.id };
+                  const ball = sequence.initialState.placements.find((placement) => sameLocation(placement.location, location));
+                  return (
+                    <button type="button" key={position.id} className={'initial-position' + (ball ? ' has-ball' : '')}
+                      onClick={() => toggleInitialLocation(location)}
+                      disabled={!ball && sequence.initialState.placements.length >= sequence.balls.length}
+                      aria-label={position.name + (ball ? ', occupied' : ', empty')}>
+                      <span className="position-name">{position.name}</span><span className="ball-indicator" />
+                    </button>
+                  );
+                })}
+                {hands.map((hand) => {
+                  const location = heldLocation(hand);
+                  const ball = sequence.initialState.placements.find((placement) => sameLocation(placement.location, location));
+                  const back = backPositions.find((position) => position.hand === hand);
+                  const backLocation: ObjectLocation | undefined = back
+                    ? { kind: 'hand-back', positionId: back.id, performerId: performer.id, hand }
+                    : undefined;
+                  const backBall = backLocation
+                    ? sequence.initialState.placements.find((placement) => sameLocation(placement.location, backLocation))
+                    : undefined;
+                  return (
+                    <div className="initial-hand-group" key={hand}>
+                      <button type="button" className={'initial-position hand-held' + (ball ? ' has-ball' : '')}
+                        onClick={() => toggleInitialLocation(location)}
+                        disabled={!ball && sequence.initialState.placements.length >= sequence.balls.length}
+                        aria-label={(hand === 'left' ? 'Left' : 'Right') + ' hand' + (ball ? ', occupied' : ', empty')}>
+                        <span className="position-name">{hand === 'left' ? 'Left' : 'Right'} hand</span><span className="ball-indicator" />
+                      </button>
+                      {backLocation && <button type="button" className={'initial-position hand-back' + (backBall ? ' has-ball' : '')}
+                        onClick={() => toggleInitialLocation(backLocation)}
+                        disabled={!backBall && sequence.initialState.placements.length >= sequence.balls.length}
+                        aria-label={back!.name + ' hand back' + (backBall ? ', occupied' : ', empty')}>
+                        <span className="position-name">{back!.name}</span><span className="ball-indicator" />
+                      </button>}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })}
+      </section>
 
       <section className="editor-toolbar" aria-label="Notation actions">
         <div className="action-tools">
           {actionNames.map((name) => (
-            <button type="button" key={name} className={activeAction === name ? 'tool active' : 'tool'} onClick={() => { setActiveAction(name); if (selected) addAction(name); }} disabled={!selected}>
-              {name}
+            <button type="button" key={name} aria-label={name} title={name} className={activeAction === name ? 'tool active' : 'tool'} onClick={() => { setActiveAction(name); if (selected) addAction(name); }} disabled={!selected}>
+              <ActionSymbol action={makeAction(name, sequence)} sequence={sequence} hand={selected?.hand ?? 'left'} />
             </button>
           ))}
           {sequence.sequenceType === 'individual-passing' && <button type="button" className="tool" onClick={addIndividualPass} disabled={!selected}>PASS</button>}
@@ -717,7 +828,7 @@ export default function App() {
                         aria-label={performer.name + ' ' + hand + ' beat ' + (index + 1) + (entry ? ' ' + actionLabel(entry.action, sequence) : ' empty')}
                         title={errors.join(' ')}
                       >
-                        {entry ? <><strong>{entry.action.type === 'ZIP' ? '⇄' : entry.action.type === 'SPECIAL' ? '★' : entry.action.type === 'EMPTY' ? '·' : entry.action.type.slice(0, 1)}</strong><small>{actionLabel(entry.action, sequence).replace(entry.action.type, '').trim()}</small></> : null}
+                        {entry ? <ActionSymbol action={entry.action} sequence={sequence} hand={hand} /> : null}
                       </button>
                     );
                   })}
