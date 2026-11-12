@@ -45,12 +45,6 @@ export function getCameraPanOffset(
   return add(scale(cameraRight, -deltaX * factor), scale(cameraUp, deltaY * factor));
 }
 
-function positionOffset(name: string): number {
-  if (name === 'A') return -0.95;
-  if (name === 'C') return 0.95;
-  return 0;
-}
-
 export function getPerformerSpacingRadius(count: number, minimumDistance = 2.2): number {
   const safeCount = Math.max(1, Math.floor(count));
   if (safeCount <= 1) return 3.7;
