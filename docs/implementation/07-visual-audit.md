@@ -67,7 +67,7 @@ The audit distinguishes observed presentation defects from domain and simulation
 
 ## Verification evidence
 
-The CI run associated with commit `1b28d2450db4ea0bc73afd05c2d994e901d654bc` passed formatting, lint, TypeScript, unit tests, production build and browser checks. Its screenshots were reviewed.
+The CI run associated with commit `1b28d2450db4ea0bc73afd05c2d994e901d654bc` passed formatting, lint, TypeScript, unit tests, production build and browser checks. Its screenshots were reviewed. A later run built the PWA assets successfully, but its first offline reload assertion did not find the application root. The offline test now checks the actual precache entries and is being rerun.
 
 That screenshot review identified one additional desktop issue: the toolbar retained an old full height minimum, causing the editor grid to be pushed out of view. The minimum height has been removed. A fresh screenshot review is required to verify that correction.
 
