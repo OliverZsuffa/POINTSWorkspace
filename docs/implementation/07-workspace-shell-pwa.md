@@ -505,9 +505,9 @@ The following must be treated as release blocking:
 
 ## Implementation progress
 
-Status: In progress on `implementation/07-renderer-editor-corrections`.
+Status: In progress on `implementation/07-renderer-editor-corrections-verify`.
 
-The first implementation pass covers the approved circle layout, single authored circle pattern, square edge based notation cells, HOLD behaviour, target entry, performer specific hand back targets, Ctrl click selection and deletion controls. Automated verification is being rerun after the first lint correction. Manual visual review remains pending. No verification item is considered complete until its corresponding check has passed.
+The current implementation includes the circle geometry and one pattern model, square edge based notation cells, HOLD behaviour, target entry, performer specific hand back targets, Ctrl click selection, deletion controls, responsive workspace panels, panel resizing and swapping, collapsed initial state controls, larger responsive cells, and the PWA app shell. The first rendered screenshot review identified a desktop editor toolbar sizing issue, which has been corrected. The latest changes still require a fresh full CI run and screenshot review. PWA offline verification is also pending. No verification item is considered complete until its corresponding check has passed.
 
 ## Approval
 
