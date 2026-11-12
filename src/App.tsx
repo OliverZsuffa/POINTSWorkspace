@@ -430,6 +430,25 @@ export default function App() {
       removeSelected();
       return;
     }
+    const selectedEntry = entryAt(selected.performerId, selected.hand, selected.beatId, selected.offset ?? rational(0));
+    const targetKey = event.key.toUpperCase();
+    if (!modifier && selectedEntry && ['A', 'B', 'C', 'L', 'R'].includes(targetKey)) {
+      const action = selectedEntry.action;
+      if ('target' in action && action.target.kind === 'circle-position' && ['A', 'B', 'C'].includes(targetKey)) {
+        event.preventDefault();
+        changeCircleTarget(selectedEntry, 'position', targetKey);
+        return;
+      }
+      if (['LIFT', 'LEAVE', 'TAP', 'BOUNCE'].includes(action.type) && 'target' in action && action.target.kind === 'position') {
+        const position = sequence.positions.find((item) =>
+          item.name.toUpperCase() === targetKey &&
+          (item.kind === 'table'
+            ? item.owner.kind === 'shared' || item.owner.performerId === selected.performerId
+            : (action.type === 'LIFT' || action.type === 'LEAVE') && item.performerId === selected.performerId),
+        );
+        if (position) { event.preventDefault(); changeTarget(selectedEntry, position.id); return; }
+      }
+    }
     const actionShortcuts: Record<string, ActionName> = {
       '1': 'LIFT', '2': 'HOLD', '3': 'LEAVE', '4': 'BOUNCE',
       '5': 'TAP', '6': 'EMPTY', '7': 'ZIP', '8': 'SPECIAL',
