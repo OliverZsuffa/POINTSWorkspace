@@ -136,6 +136,98 @@ export const representativeSoloSequence: Sequence = {
   seatAssignments: [],
 };
 
+export const representativeIndividualPassingSequence: Sequence = {
+  id: asSequenceId('sequence-individual-passing-example'),
+  sequenceType: 'individual-passing',
+  timeSignature: DEFAULT_TIME_SIGNATURE,
+  bpm: 120,
+  beats: [{ id: asBeatId('pass-beat-1'), subdivisions: [] }],
+  performers: [
+    { id: asPerformerId('pass-performer-a'), name: 'Juggler 1', identifier: 'a' },
+    { id: asPerformerId('pass-performer-b'), name: 'Juggler 2', identifier: 'b' },
+  ],
+  positions: [
+    {
+      id: asPositionId('shared-A'),
+      kind: 'table',
+      name: 'A',
+      owner: { kind: 'shared' },
+    },
+    {
+      id: asPositionId('shared-B'),
+      kind: 'table',
+      name: 'B',
+      owner: { kind: 'shared' },
+    },
+    {
+      id: asPositionId('shared-C'),
+      kind: 'table',
+      name: 'C',
+      owner: { kind: 'shared' },
+    },
+  ],
+  balls: [{ id: asBallId('pass-ball-1') }],
+  initialState: {
+    placements: [
+      {
+        ballId: asBallId('pass-ball-1'),
+        location: {
+          kind: 'hand-held',
+          performerId: asPerformerId('pass-performer-a'),
+          hand: 'right',
+        },
+      },
+    ],
+  },
+  notation: [
+    {
+      id: asActionEntryId('pass-sender-leave'),
+      performerId: asPerformerId('pass-performer-a'),
+      hand: 'right',
+      time: { beatId: asBeatId('pass-beat-1'), offset: rational(0) },
+      action: {
+        type: 'LEAVE',
+        target: {
+          kind: 'pass-recipient-hand',
+          performerId: asPerformerId('pass-performer-b'),
+          hand: 'left',
+        },
+        linkId: asLinkId('pass-link-1'),
+      },
+    },
+    {
+      id: asActionEntryId('pass-receiver-lift'),
+      performerId: asPerformerId('pass-performer-b'),
+      hand: 'left',
+      time: { beatId: asBeatId('pass-beat-1'), offset: rational(0) },
+      action: {
+        type: 'LIFT',
+        target: {
+          kind: 'pass-source',
+          performerId: asPerformerId('pass-performer-a'),
+        },
+        linkId: asLinkId('pass-link-1'),
+      },
+    },
+  ],
+  individualPassingLayout: 'shared-positions',
+  tableLayout: {
+    type: 'rectangle',
+    longSideSeatCount: 1,
+    shortSideSeatCount: 1,
+  },
+  seatAssignments: [
+    {
+      performerId: asPerformerId('pass-performer-a'),
+      seat: { kind: 'rectangle-side', side: 'long-a', seatIndex: 0 },
+    },
+    {
+      performerId: asPerformerId('pass-performer-b'),
+      seat: { kind: 'rectangle-side', side: 'long-b', seatIndex: 0 },
+    },
+  ],
+};
+
 export const invalidInitialStateSequence: Sequence = {
   ...representativeSoloSequence,
   id: asSequenceId('sequence-invalid-example'),
@@ -188,11 +280,37 @@ export const representativeNotationExamples: readonly NotationEntry[] = [
     },
   },
   {
-    id: asActionEntryId('example-special'),
+    id: asActionEntryId('example-zip-receiver'),
+    performerId,
+    hand: 'left',
+    time: { beatId: asBeatId('beat-3'), offset: rational(0) },
+    action: {
+      type: 'ZIP',
+      role: 'receiver',
+      linkId: asLinkId('zip-example'),
+    },
+  },
+  {
+    id: asActionEntryId('example-special-left'),
     performerId,
     hand: 'left',
     time: { beatId: asBeatId('beat-4'), offset: rational(0) },
-    action: { type: 'SPECIAL', text: 'Clap' },
+    action: {
+      type: 'SPECIAL',
+      text: 'Clap',
+      linkId: asLinkId('special-clap'),
+    },
+  },
+  {
+    id: asActionEntryId('example-special-right'),
+    performerId,
+    hand: 'right',
+    time: { beatId: asBeatId('beat-4'), offset: rational(0) },
+    action: {
+      type: 'SPECIAL',
+      text: 'Clap',
+      linkId: asLinkId('special-clap'),
+    },
   },
 ];
 
