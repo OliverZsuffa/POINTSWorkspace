@@ -186,7 +186,7 @@ export default function App() {
     if (!selected) return;
     const existing = entryAt(selected.performerId, selected.hand, selected.beatId);
     if (!existing) return;
-    let removeIds = new Set([existing.id]);
+    const removeIds = new Set([existing.id]);
     if ('linkId' in existing.action && existing.action.linkId) {
       const linked = sequence.notation.filter((entry) =>
         'linkId' in entry.action && entry.action.linkId === existing.action.linkId &&
