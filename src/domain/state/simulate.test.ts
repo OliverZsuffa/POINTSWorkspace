@@ -13,6 +13,7 @@ const performerId = representativeSoloSequence.performers[0]!.id;
 const beatId = representativeSoloSequence.beats[0]!.id;
 const positionA = asPositionId('position-A');
 const positionB = asPositionId('position-B');
+const positionC = asPositionId('position-C');
 const rightBack = asPositionId('position-right-back');
 
 function entry(
@@ -134,6 +135,30 @@ describe('object state simulation', () => {
       kind: 'position',
       positionId: positionA,
     });
+  });
+
+  it('produces the same state regardless of notation entry order', () => {
+    const sequence: Sequence = {
+      ...representativeSoloSequence,
+      balls: [...representativeSoloSequence.balls, { id: asBallId('ball-2') }],
+      initialState: {
+        placements: [
+          { ballId: asBallId('ball-1'), location: { kind: 'position', positionId: positionA } },
+          { ballId: asBallId('ball-2'), location: { kind: 'position', positionId: positionC } },
+        ],
+      },
+      notation: [
+        entry('lift-right-a', 'right', { type: 'LIFT', target: { kind: 'position', positionId: positionA } }),
+        entry('lift-left-c', 'left', { type: 'LIFT', target: { kind: 'position', positionId: positionC } }),
+      ],
+    };
+    const forward = simulateSequence(sequence);
+    const reversed = simulateSequence({ ...sequence, notation: [...sequence.notation].reverse() });
+
+    expect(forward.validation.isValid).toBe(true);
+    expect(reversed).toEqual(forward);
+    expect(forward.snapshots[1]?.handStates[performerId]?.right.heldBallId).toBe('ball-1');
+    expect(forward.snapshots[1]?.handStates[performerId]?.left.heldBallId).toBe('ball-2');
   });
 
   it('moves a ball between hands through a paired ZIP', () => {
