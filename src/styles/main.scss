@@ -632,3 +632,8 @@ html, body, #root { min-height: 100%; background: #90d0d5; }
 
 
 .app-root { background: #f3f5f8; }
+
+
+@media (max-width: 1100px) {
+  .top-actions button[aria-label="Swap panels"] { display: none; }
+}
