@@ -1,0 +1,44 @@
+:root {
+  font-family: 'Inter', sans-serif;
+  color: #161616;
+  background: #f7fbfb;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+
+  --points-primary: #90d0d5;
+  --points-secondary: #6bc3c5;
+  --points-deep: #5aa9aa;
+  --surface: #ffffff;
+  --text-primary: #161616;
+  --border-subtle: #dce8e8;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  width: 100%;
+  min-width: 320px;
+  min-height: 100%;
+  margin: 0;
+}
+
+body {
+  min-height: 100vh;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+.app-root {
+  min-height: 100vh;
+}
