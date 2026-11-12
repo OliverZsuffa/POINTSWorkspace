@@ -42,8 +42,8 @@ function sequence(
     balls: [],
     initialState: { placements: [] },
     notation: [],
-    tableLayout: { type: 'solo' },
-    seatAssignments: [],
+    tableLayout,
+    seatAssignments,
   };
 }
 
