@@ -3,7 +3,7 @@ import * as THREE from 'three';
 import type { NotationEntry, ObjectLocation, Sequence, SimulationResult } from '../../domain/model';
 import { getMainBeatDurationSeconds } from '../../domain/time/time-signature';
 import {
-  getHandPosition,
+  getCameraPanOffset,\n  getHandPosition,\n  getHandReachPosition,
   getObjectPosition,
   getPerformerAnchor,
   getPerformerFacing,
