@@ -483,7 +483,7 @@ export default function App() {
       ...sequence.positions.filter((position) => position.kind === 'hand-back').map((position) => ({ kind: 'hand-back' as const, positionId: position.id, performerId: position.performerId, hand: position.hand })),
     ];
     const key = (location: ObjectLocation) => location.kind === 'position' ? 'p:' + location.positionId : location.kind === 'hand-held' ? 'h:' + location.performerId + ':' + location.hand : 'b:' + location.positionId;
-    const added = Array.from({ length: count - sequence.balls.length }, () => ({ id: asBallId(id('ball')) }));
+    const added = Array.from({ length: count - sequence.balls.length }, () => ({ id: asBallId(id('new-ball')) }));
     const placements = [...sequence.initialState.placements];
     for (const ball of added) {
       const location = candidates.find((candidate) => !occupied.has(key(candidate)));
@@ -496,7 +496,7 @@ export default function App() {
 
   const addBeat = () => commit({
     ...sequence,
-    beats: [...sequence.beats, { id: asBeatId(id('beat')), subdivisions: [] }],
+    beats: [...sequence.beats, { id: asBeatId(id('new-beat')), subdivisions: [] }],
   });
   const removeBeat = () => {
     const last = sequence.beats[sequence.beats.length - 1];
@@ -516,7 +516,7 @@ export default function App() {
     const positions: PositionDefinition[] = [...sequence.positions, ...ownedPositions, ...hands.map((hand) => ({
       kind: 'hand-back' as const, id: asPositionId(id('back')), name: (hand === 'left' ? 'L' : 'R') as 'L' | 'R', performerId, hand,
     }))];
-    const newBalls = [{ id: asBallId(id('ball')) }, { id: asBallId(id('ball')) }];
+    const newBalls = [{ id: asBallId(id('new-ball')) }, { id: asBallId(id('new-ball')) }];
     const seatAssignments = [...sequence.seatAssignments, {
       performerId, seat: { kind: 'rectangle-side' as const, side: (performerNumber % 2 ? 'long-a' : 'long-b') as 'long-a' | 'long-b', seatIndex: Math.floor((performerNumber - 1) / 2) },
     }];
