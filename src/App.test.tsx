@@ -166,7 +166,7 @@ describe('sequence editor', () => {
     expect(screen.getByRole('button', { name: /Juggler 1 left beat 1 LEAVE/ })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Juggler 2 right beat 1 LIFT/ })).toBeInTheDocument();
     expect(screen.getByLabelText('Recipient')).toBeInTheDocument();
-    expect(screen.getByLabelText('Hand')).toBeInTheDocument();
+    expect(screen.getAllByLabelText('Hand')).toHaveLength(2);
   });
 
   it('uses the acting performer as the default circle passing target', async () => {
