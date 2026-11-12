@@ -355,7 +355,7 @@ describe('sequence editor', () => {
     await user.clear(name);
     await user.type(name, 'Oliver');
     fireEvent.blur(name);
-    expect(screen.getByText('Oliver')).toBeInTheDocument();
+    expect(screen.getAllByText('Oliver')).toHaveLength(2);
     const identifier = screen.getByRole('textbox', { name: 'Performer identifier a' });
     await user.clear(identifier);
     await user.type(identifier, 'z');
