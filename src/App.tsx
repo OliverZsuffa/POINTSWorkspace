@@ -291,7 +291,7 @@ export default function App() {
   const [future, setFuture] = useState<Sequence[]>([]);
   const [showSettings, setShowSettings] = useState(false);
   const [showState, setShowState] = useState(false);
-  const [dragStart, setDragStart] = useState<{ performerId: string; hand: Hand; beatId: string } | null>(null);
+  const [dragStart, setDragStart] = useState<EditorCell | null>(null);
   const [passRecipientId, setPassRecipientId] = useState('');
   const [passRecipientHand, setPassRecipientHand] = useState<Hand>('left');
 
