@@ -20,7 +20,6 @@ function offlineAppShellPlugin() {
         `${BASE_URL}index.html`,
         `${BASE_URL}manifest.webmanifest`,
         `${BASE_URL}icons/icon.svg`,
-        `${BASE_URL}service-worker.js`,
       ]);
       for (const entry of Object.values(manifest)) {
         assets.add(BASE_URL + entry.file);
