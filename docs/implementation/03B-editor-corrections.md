@@ -2,7 +2,7 @@
 
 ## Status
 
-Approved by Oliver on 12 November 2026. Implementation in progress.
+Approved by Oliver on 12 November 2026. Implementation complete. All CI checks pass.
 
 ## Goal
 
@@ -94,35 +94,35 @@ Use `docs/POINTS_NOTATION.md` as the source of truth.
 
 ## Verification
 
-- [ ] Default solo sequence contains two balls, initially at A and C.
-- [ ] Adding a performer creates two additional balls at that performer's A and C.
-- [ ] Ball count can be increased and decreased while preserving stable IDs and valid placements.
-- [ ] A reduction that would discard a ball in use is rejected safely.
-- [ ] Notation cells remain square at desktop and mobile widths.
-- [ ] Adjacent LIFT, HOLD or BOUNCE, and LEAVE segments connect without gaps.
-- [ ] HOLD is visibly labelled inside its notation cell.
-- [ ] Object state changes when selecting different beats and matches simulator snapshots.
-- [ ] ZIP toolbar icon shows the complete paired transfer.
-- [ ] LIFT and LEAVE can target L and R hand backs.
-- [ ] TAP and BOUNCE remain restricted to table positions.
-- [ ] Individual passing can select another performer and receiving hand, and creates reciprocal LEAVE and X-targeted LIFT entries.
-- [ ] Circle passing can target the acting performer's own A, B and C positions without a subscript.
-- [ ] Circle passing can target other performers using left or right direction and distance, displayed as subscripts.
-- [ ] Individual passing identifiers are displayed as subscripts.
-- [ ] Blue palette is applied consistently and maintains contrast.
-- [ ] Prettier, ESLint, strict TypeScript, Vitest and production build pass.
+- [x] Default solo sequence contains two balls, initially at A and C.
+- [x] Adding a performer creates two additional balls at that performer's A and C.
+- [x] Ball count can be increased and decreased while preserving stable IDs and valid placements.
+- [x] A reduction that would discard a ball in use is rejected safely.
+- [x] Notation cells remain square at desktop and mobile widths.
+- [x] Adjacent LIFT, HOLD or BOUNCE, and LEAVE segments connect without gaps.
+- [x] HOLD is visibly labelled inside its notation cell.
+- [x] Object state changes when selecting different beats and matches simulator snapshots.
+- [x] ZIP toolbar icon shows the complete paired transfer.
+- [x] LIFT and LEAVE can target L and R hand backs.
+- [x] TAP and BOUNCE remain restricted to table positions.
+- [x] Individual passing can select another performer and receiving hand, and creates reciprocal LEAVE and X-targeted LIFT entries.
+- [x] Circle passing can target the acting performer's own A, B and C positions without a subscript.
+- [x] Circle passing can target other performers using left or right direction and distance, displayed as subscripts.
+- [x] Individual passing identifiers are displayed as subscripts.
+- [x] Blue palette is applied consistently and maintains contrast.
+- [x] Prettier, ESLint, strict TypeScript, Vitest and production build pass.
 
 ## Files expected to change
 
 - `src/App.tsx`
 - `src/styles/main.scss`
 - `src/App.test.tsx`
-- `src/domain/model.ts` and simulator target resolution, solely to represent own-performer circle targets
+- `src/domain/model.ts` and `src/domain/state/simulate.ts`, solely to represent own-performer circle targets
 - `docs/architecture/DOMAIN_MODEL.md` to document the target semantics
-- Focused domain and simulator tests for own-performer circle targets
+- `src/domain/state/simulate.test.ts` for own-performer circle targets
 
 The shared domain model and simulator should remain unchanged unless implementation reveals a genuine contract limitation. A confirmed limitation is that `CirclePassingTarget` currently requires a direction and positive distance, so it cannot represent the acting performer's own A, B or C position. Package 03B therefore also updates `src/domain/model.ts`, the simulator target resolver and their focused tests. The own performer target is represented explicitly by omitting direction and distance. No other domain semantics are changed.
 
 ## Approval
 
-Awaiting explicit approval before implementation.
+Approved by Oliver on 12 November 2026. Implementation completed and verified by GitHub Actions.
