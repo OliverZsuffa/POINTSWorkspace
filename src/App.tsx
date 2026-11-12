@@ -624,7 +624,7 @@ export default function App() {
 
   const selectInterval = (beatId: string, offset: Rational, duration: Rational) => {
     const cells = sequence.performers.flatMap((performer) => hands.map((hand) => ({ performerId: performer.id, hand, beatId, offset, duration })));
-    if (cells[0]) { setSelected(cells[0]); setSelectedCells(cells); }
+    if (cells[0]) { setSelected(cells[0]); setSelectedCells(cells); setPassRecipientId(''); setPassRecipientHand('left'); }
   };
 
   const selectBeat = (beatId: string) => {
@@ -633,7 +633,7 @@ export default function App() {
         performerId: performer.id, hand, beatId, offset: slot.offset, duration: slot.duration,
       })),
     ));
-    if (cells[0]) { setSelected(cells[0]); setSelectedCells(cells); }
+    if (cells[0]) { setSelected(cells[0]); setSelectedCells(cells); setPassRecipientId(''); setPassRecipientHand('left'); }
   };
 
   const subdivideInterval = (beatId: string, offset: Rational, duration: Rational) => {
@@ -1038,6 +1038,8 @@ export default function App() {
       },
     ];
     commit({ ...sequence, notation: [...sequence.notation, ...entries] });
+    setPassRecipientId('');
+    setPassRecipientHand('left');
   };
 
   const changeCircleTarget = (entry: NotationEntry, field: 'position' | 'direction' | 'distance', value: string) => {
