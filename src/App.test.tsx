@@ -128,10 +128,14 @@ describe('sequence editor', () => {
 
     expect(screen.getByRole('region', { name: 'Sequence settings' })).toBeInTheDocument();
     expect(screen.getByRole('region', { name: 'Initial positions' })).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: /Initial positions/ }));
+    expect(screen.getByRole('button', { name: 'A, occupied' })).toBeInTheDocument();
   });
 
   it('starts with two balls at A and C', () => {
+    const user = userEvent.setup();
     render(<App />);
+    await user.click(screen.getByRole('button', { name: /Initial positions/ }));
     expect(screen.getByRole('button', { name: 'A, occupied' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'C, occupied' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'B, empty' })).toBeInTheDocument();
@@ -290,6 +294,7 @@ describe('sequence editor', () => {
     const ballControl = () => Array.from(container.querySelectorAll('.setting-control')).find((element) => element.textContent?.includes('Balls'))!;
     await user.click(ballControl().querySelectorAll('button')[1]!);
     expect(screen.getByText('3 / 3')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: /Initial positions/ }));
     expect(screen.getByRole('button', { name: 'B, occupied' })).toBeInTheDocument();
     await user.click(ballControl().querySelectorAll('button')[0]!);
     expect(screen.getByText('2 / 2')).toBeInTheDocument();
