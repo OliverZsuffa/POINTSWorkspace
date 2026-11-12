@@ -202,3 +202,8 @@ button:disabled { cursor: default; opacity: .35; }
 .beat-select small { color: #9aa6a8; font-size: 9px; font-weight: 400; }
 .insert-beat { position: absolute; z-index: 2; top: 2px; right: 1px; width: 13px; height: 13px; padding: 0; border: 0; border-radius: 3px; background: var(--points-primary); color: #fff; font-size: 11px; line-height: 13px; opacity: .2; }
 .beat-head:hover .insert-beat, .insert-beat:focus-visible { opacity: 1; }
+
+.subdivide-interval { position: absolute; right: 1px; bottom: 1px; width: 13px; height: 13px; padding: 0; border: 0; border-radius: 3px; background: #e8effb; color: #315f9f; font-size: 10px; line-height: 13px; opacity: .22; }
+.beat-head:hover .subdivide-interval, .subdivide-interval:focus-visible { opacity: 1; }
+.beat-head.beat-start { border-left: 2px solid #b7c7dc; }
+.timeline-note { padding: 5px 12px; color: #65758d; font-size: 10px; }
