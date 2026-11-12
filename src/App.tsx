@@ -395,7 +395,7 @@ export default function App() {
     if (event.target instanceof HTMLElement && ['INPUT', 'SELECT', 'TEXTAREA'].includes(event.target.tagName)) return;
     if (event.key === 'Escape') { clearSelection(); return; }
     if (!selected) return;
-    if (event.key === 'Backspace' || event.key === 'Delete') {
+    if (event.key === 'Backspace') {
       event.preventDefault();
       removeSelected();
       return;
