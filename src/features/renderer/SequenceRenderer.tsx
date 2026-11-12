@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
-import type { ObjectLocation, Sequence, SimulationResult } from '../../domain/model';
+import type { NotationEntry, ObjectLocation, Sequence, SimulationResult } from '../../domain/model';
 import { getMainBeatDurationSeconds } from '../../domain/time/time-signature';
 import {
   getHandPosition,
@@ -60,6 +60,46 @@ function snapshotLocation(
 
 function makeMaterial(color: string, roughness = 0.72): THREE.MeshStandardMaterial {
   return new THREE.MeshStandardMaterial({ color, roughness, metalness: 0.02 });
+}
+
+function getActionTargetPosition(
+  sequence: Sequence,
+  entry: NotationEntry,
+  layout: SceneLayout,
+): Point3 | undefined {
+  const action = entry.action;
+  if (action.type === 'LIFT' || action.type === 'LEAVE' || action.type === 'TAP' || action.type === 'BOUNCE') {
+    if (action.target.kind === 'position') {
+      const position = sequence.positions.find((item) => item.id === action.target.positionId);
+      return position ? getTablePositionPosition(sequence, position, layout) : undefined;
+    }
+    if (action.target.kind === 'circle-position') {
+      const performerIndex = sequence.performers.findIndex((item) => item.id === entry.performerId);
+      const offset = action.target.direction
+        ? (action.target.direction === 'left' ? -1 : 1) * (action.target.distance ?? 1)
+        : 0;
+      const targetIndex = (performerIndex + offset + sequence.performers.length) % sequence.performers.length;
+      const targetPerformer = sequence.performers[targetIndex];
+      const position = sequence.positions.find((item) =>
+        item.kind === 'table' &&
+        item.name === action.target.position &&
+        (item.owner.kind === 'shared' || item.owner.performerId === targetPerformer?.id),
+      );
+      return position ? getTablePositionPosition(sequence, position, layout) : undefined;
+    }
+  }
+  if (action.type === 'LEAVE' && action.target.kind === 'pass-recipient-hand') {
+    return getHandPosition(sequence, action.target.performerId, action.target.hand, layout);
+  }
+  if (action.type === 'LIFT' && action.target.kind === 'pass-source' && action.linkId) {
+    const source = sequence.notation.find((item) =>
+      item.action.type === 'LEAVE' &&
+      'linkId' in item.action &&
+      item.action.linkId === action.linkId,
+    );
+    if (source) return getHandPosition(sequence, source.performerId, source.hand, layout);
+  }
+  return undefined;
 }
 
 export default function SequenceRenderer({ sequence, simulation, onSelectHand }: SequenceRendererProps) {
@@ -195,7 +235,7 @@ export default function SequenceRenderer({ sequence, simulation, onSelectHand }:
 
     const footprint = getTableFootprint(sequence);
     const tableGeometry = footprint.round
-      ? new THREE.CylinderGeometry(footprint.width / 2, footprint.width / 2, 0.2, 48)
+      ? new THREE.CylinderGeometry(footprint.width / 2, footprint.width / 2, 0.2, footprint.sideCount ?? 48)
       : new THREE.BoxGeometry(footprint.width, 0.2, footprint.depth);
     const table = new THREE.Mesh(tableGeometry, makeMaterial('#b9c8db'));
     table.position.y = -0.02;
@@ -358,9 +398,8 @@ export default function SequenceRenderer({ sequence, simulation, onSelectHand }:
           let targetPoint: Point3 | undefined;
           for (const entry of entries) {
             const action = entry.action;
-            if ((action.type === 'LIFT' || action.type === 'LEAVE' || action.type === 'TAP' || action.type === 'BOUNCE') && action.target.kind === 'position') {
-              const targetPosition = current.sequence.positions.find((position) => position.id === action.target.positionId);
-              if (targetPosition) targetPoint = getTablePositionPosition(current.sequence, targetPosition, current.layout);
+            if (action.type === 'LIFT' || action.type === 'LEAVE' || action.type === 'TAP' || action.type === 'BOUNCE') {
+              targetPoint = getActionTargetPosition(current.sequence, entry, current.layout);
             } else if (action.type === 'ZIP') {
               const otherHand = visual.hand === 'left' ? 'right' : 'left';
               const other = getHandPosition(current.sequence, visual.performerId, otherHand, current.layout);

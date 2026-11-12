@@ -35,6 +35,28 @@ export function getPerformerAnchor(
     return { x: (index - (count - 1) / 2) * 2.8, y: 0, z: 4 };
   }
 
+  const assignment = sequence.seatAssignments.find((item) => item.performerId === performer.id);
+  if (assignment?.seat.kind === 'polygon-edge' && sequence.tableLayout.type === 'polygon') {
+    const sideCount = Math.max(3, sequence.tableLayout.sideCount);
+    const angle = (Math.PI / 2) + ((assignment.seat.edgeIndex + 0.5) * Math.PI * 2) / sideCount;
+    const radius = Math.max(2.4, sideCount * 0.36) + 2.15;
+    return { x: Math.cos(angle) * radius, y: 0, z: Math.sin(angle) * radius };
+  }
+
+  if (assignment?.seat.kind === 'rectangle-side' && sequence.tableLayout.type === 'rectangle') {
+    const width = Math.max(3.2, sequence.tableLayout.longSideSeatCount * 1.15);
+    const depth = Math.max(2.4, sequence.tableLayout.shortSideSeatCount * 1.15);
+    const seat = assignment.seat;
+    if (seat.side === 'long-a' || seat.side === 'long-b') {
+      const countOnSide = Math.max(1, sequence.tableLayout.longSideSeatCount);
+      const x = countOnSide === 1 ? 0 : -width / 2 + (seat.seatIndex * width) / (countOnSide - 1);
+      return { x, y: 0, z: (seat.side === 'long-a' ? -1 : 1) * (depth / 2 + 2.2) };
+    }
+    const countOnSide = Math.max(1, sequence.tableLayout.shortSideSeatCount);
+    const z = countOnSide === 1 ? 0 : -depth / 2 + (seat.seatIndex * depth) / (countOnSide - 1);
+    return { x: (seat.side === 'short-a' ? -1 : 1) * (width / 2 + 2.2), y: 0, z };
+  }
+
   const angle = (Math.PI / 2) + (index * Math.PI * 2) / count;
   return { x: Math.cos(angle) * 3.7, y: 0, z: Math.sin(angle) * 3.7 };
 }
@@ -100,7 +122,7 @@ export function getObjectPosition(
   return location.kind === 'hand-back' ? { ...hand, y: hand.y + 0.18 } : hand;
 }
 
-export function getTableFootprint(sequence: Sequence): { width: number; depth: number; round: boolean } {
+export function getTableFootprint(sequence: Sequence): { width: number; depth: number; round: boolean; sideCount?: number } {
   if (sequence.tableLayout.type === 'rectangle') {
     const width = Math.max(3.2, sequence.tableLayout.longSideSeatCount * 1.15);
     const depth = Math.max(2.4, sequence.tableLayout.shortSideSeatCount * 1.15);
@@ -109,7 +131,7 @@ export function getTableFootprint(sequence: Sequence): { width: number; depth: n
   if (sequence.tableLayout.type === 'polygon') {
     const sideCount = Math.max(3, sequence.tableLayout.sideCount);
     const diameter = Math.max(3.2, sideCount * 0.72);
-    return { width: diameter, depth: diameter, round: true };
+    return { width: diameter, depth: diameter, round: true, sideCount };
   }
   return { width: 3.6, depth: 2.5, round: false };
 }

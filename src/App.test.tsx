@@ -1,6 +1,10 @@
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+vi.mock('./features/renderer/SequenceRenderer', () => ({
+  default: () => <section aria-label="Sequence renderer"><button type="button">Play</button></section>,
+}));
+
 import App from './App';
 
 describe('sequence editor', () => {
@@ -213,6 +217,18 @@ describe('sequence editor', () => {
     await user.selectOptions(screen.getByLabelText('Direction'), 'right');
     const cell = screen.getByRole('button', { name: /Juggler 1 left beat 1 LIFT/ });
     expect(cell.querySelector('tspan')?.textContent).toBe('R');
+  });
+
+  it('shows the performer identifier as a subscript for duplicate position names', async () => {
+    const user = userEvent.setup();
+    render(<App />);
+    await user.click(screen.getByRole('button', { name: 'Settings' }));
+    await user.click(screen.getByRole('button', { name: 'Add performer' }));
+    await user.selectOptions(screen.getByLabelText('Type'), 'individual-passing');
+    await user.click(screen.getByRole('button', { name: 'Juggler 2 left beat 1 empty' }));
+    await user.click(screen.getByRole('button', { name: 'LIFT' }));
+    const cell = screen.getByRole('button', { name: 'Juggler 2 left beat 1 LIFT A(b)' });
+    expect(cell.querySelector('tspan')?.textContent).toBe('b');
   });
 
   it('does not print HOLD or ZIP inside the ball rectangle symbols', async () => {
