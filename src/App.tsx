@@ -944,7 +944,9 @@ export default function App() {
       positions,
       balls: sequence.balls.filter((ball) => !removedBalls.has(ball.id)),
       initialState: { placements: sequence.initialState.placements.filter((placement) => !removedBalls.has(placement.ballId)) },
-      notation: sequence.notation.filter((entry) => entry.performerId !== performerId),
+      notation: sequence.sequenceType === 'circle-passing' && sequence.performers[0]?.id === performerId
+        ? sequence.notation.filter((entry) => entry.performerId === performerId).map((entry) => ({ ...entry, performerId: sequence.performers.find((item) => item.id !== performerId)!.id }))
+        : sequence.notation.filter((entry) => entry.performerId !== performerId),
       seatAssignments: sequence.seatAssignments.filter((assignment) => assignment.performerId !== performerId),
       tableLayout: sequence.sequenceType === 'solo'
         ? { type: 'solo' }
@@ -1014,31 +1016,65 @@ export default function App() {
       positions = [...sequence.positions.filter((position) => position.kind === 'hand-back'), ...normalized];
       individualPassingLayout = 'per-performer-positions';
     }
+
     const representativeId = sequence.performers[0]?.id;
-    const notation = sequence.notation
-      .filter((entry) => type !== 'circle-passing' || entry.performerId === representativeId)
-      .map((entry) => {
-        const action = entry.action;
-        if (!('target' in action)) return entry;
-        if (type === 'circle-passing' && action.target.kind === 'position') {
-          const targetPosition = positions.find((position) => position.id === action.target.positionId);
-          if (targetPosition?.kind === 'table' && ['A', 'B', 'C'].includes(targetPosition.name)) {
-            return { ...entry, action: { ...action, target: { kind: 'circle-position' as const, position: targetPosition.name as 'A' | 'B' | 'C' } } as NotationAction };
+    const sourcePerformerId = sequence.performers.find((person) =>
+      sequence.notation.some((entry) => entry.performerId === person.id),
+    )?.id ?? representativeId;
+    let notation = sequence.notation;
+    if (type === 'circle-passing') {
+      notation = sequence.notation
+        .filter((entry) => entry.performerId === sourcePerformerId)
+        .map((entry) => ({ ...entry, performerId: representativeId! }));
+    } else if (sequence.sequenceType === 'circle-passing' && representativeId) {
+      const pattern = sequence.notation.filter((entry) => entry.performerId === representativeId);
+      const instances = sequence.performers.slice(1).flatMap((performer) => {
+        const linkIds = new Map<string, ReturnType<typeof asLinkId>>();
+        return pattern.map((entry) => {
+          let action = entry.action;
+          if ('linkId' in action && action.linkId) {
+            const mapped = linkIds.get(action.linkId) ?? asLinkId('mode-' + action.linkId + '-' + performer.id);
+            linkIds.set(action.linkId, mapped);
+            action = { ...action, linkId: mapped } as NotationAction;
           }
-        }
-        if (type !== 'circle-passing' && action.target.kind === 'circle-position') {
-          const targetPosition = positions.find((position) => position.kind === 'table' && position.name === action.target.position &&
-            (position.owner.kind === 'shared' || (position.owner.kind === 'performer' && position.owner.performerId === entry.performerId)));
-          if (targetPosition) return { ...entry, action: { ...action, target: { kind: 'position' as const, positionId: targetPosition.id } } as NotationAction };
-        }
-        return entry;
+          if ('target' in action && action.target.kind === 'circle-position') {
+            const targetPosition = positions.find((position) => position.kind === 'table' &&
+              position.name === action.target.position &&
+              position.owner.kind === 'performer' && position.owner.performerId === performer.id);
+            if (targetPosition) action = { ...action, target: { kind: 'position', positionId: targetPosition.id } } as NotationAction;
+          }
+          return { ...entry, id: asActionEntryId('mode-' + entry.id + '-' + performer.id), performerId: performer.id, action };
+        });
       });
+      notation = [...pattern, ...instances];
+    }
+
+    notation = notation.map((entry) => {
+      const action = entry.action;
+      if (!('target' in action)) return entry;
+      if (type === 'circle-passing' && action.target.kind === 'position') {
+        const targetPosition = positions.find((position) => position.id === action.target.positionId);
+        if (targetPosition?.kind === 'table' && ['A', 'B', 'C'].includes(targetPosition.name)) {
+          return { ...entry, action: { ...action, target: { kind: 'circle-position' as const, position: targetPosition.name as 'A' | 'B' | 'C' } } as NotationAction };
+        }
+      }
+      if (type !== 'circle-passing' && action.target.kind === 'circle-position') {
+        const targetPosition = positions.find((position) => position.kind === 'table' && position.name === action.target.position &&
+          (position.owner.kind === 'shared' || (position.owner.kind === 'performer' && position.owner.performerId === entry.performerId)));
+        if (targetPosition) return { ...entry, action: { ...action, target: { kind: 'position' as const, positionId: targetPosition.id } } as NotationAction };
+      }
+      return entry;
+    });
+
     commit({
       ...sequence, sequenceType: type, positions, notation, individualPassingLayout,
       tableLayout: type === 'solo' ? { type: 'solo' }
-        : type === 'circle-passing' ? { type: 'polygon', sideCount: Math.max(3, sequence.performers.length) }
+        : type === 'circle-passing' ? { type: 'polygon', sideCount: sequence.performers.length }
           : { type: 'rectangle', longSideSeatCount: Math.max(1, sequence.performers.length), shortSideSeatCount: 0 },
     });
+    if (type === 'circle-passing' && selected && selected.performerId !== representativeId && representativeId) {
+      selectCell({ ...selected, performerId: representativeId });
+    }
   };
 
   const changeIndividualLayout = (layout: 'shared-positions' | 'per-performer-positions') => {
