@@ -448,10 +448,11 @@ export default function App() {
     const existing = entryAt(performerId, hand, beatId);
     const linkId = asLinkId(id('link'));
     let action = makeAction(type, sequence, linkId, performerId);
+    const existingSpecialLinkId = existing?.action.type === 'SPECIAL' ? existing.action.linkId : undefined;
     if (type === 'SPECIAL') {
       const text = window.prompt('SPECIAL', existing?.action.type === 'SPECIAL' ? existing.action.text : 'SPECIAL');
       if (text === null) return;
-      action = { type: 'SPECIAL', text };
+      action = { type: 'SPECIAL', text, ...(existingSpecialLinkId ? { linkId: existingSpecialLinkId } : {}) };
     }
     let notation = sequence.notation.filter((entry) => entry.id !== existing?.id);
     if (existing && 'linkId' in existing.action && existing.action.linkId) {
@@ -460,13 +461,18 @@ export default function App() {
         notation = notation.filter((entry) =>
           !('linkId' in entry.action && entry.action.linkId === existingLinkId),
         );
-      } else if (existing.action.type === 'SPECIAL') {
+      } else if (existing.action.type === 'SPECIAL' && type !== 'SPECIAL') {
         notation = notation.map((entry) =>
           entry.action.type === 'SPECIAL' && entry.action.linkId === existingLinkId
             ? { ...entry, action: { type: 'SPECIAL', text: entry.action.text } }
             : entry,
         );
       }
+    }
+    if (type === 'SPECIAL' && existingSpecialLinkId && action.type === 'SPECIAL') {
+      notation = notation.map((entry) => entry.action.type === 'SPECIAL' && entry.action.linkId === existingSpecialLinkId
+        ? { ...entry, action: { ...entry.action, text: action.text } }
+        : entry);
     }
     const newEntry: NotationEntry = {
       id: existing?.id ?? asActionEntryId(id('entry')),
@@ -1179,7 +1185,7 @@ export default function App() {
             <button type="button" className="tool" onClick={addIndividualPass} disabled={!selected || sequence.performers.length < 2}>PASS</button>
           </>}
           <button type="button" className="tool" onClick={addClap} disabled={!selected}>CLAP</button>
-          <button type="button" className="tool delete-tool" onClick={removeSelected} disabled={!selected || !entryAt(selected.performerId, selected.hand, selected.beatId)}>Delete</button>
+          <button type="button" className="tool delete-tool" onClick={removeSelected} disabled={!selected || !(selectedCells.length ? selectedCells : [selected]).some((cell) => Boolean(entryAt(cell.performerId, cell.hand, cell.beatId)))}>Delete</button>
         </div>
         <span className="selection-label">{selected ? sequence.performers.find((item) => item.id === selected.performerId)?.name + ' · ' + selected.hand + ' · beat ' + (sequence.beats.findIndex((beat) => beat.id === selected.beatId) + 1) : 'Select a cell'}</span>
         {targetableEntry && targetableEntry.action.target.kind === 'position' && (
@@ -1258,6 +1264,7 @@ export default function App() {
                           selectCell({ performerId: performer.id, hand, beatId: beat.id }, event.shiftKey);
                         }}
                         onDoubleClick={() => entry && entry.action.type === 'SPECIAL' && addAction('SPECIAL')}
+                        onContextMenu={(event) => { if (entry?.action.type === 'SPECIAL') { event.preventDefault(); selectCell({ performerId: performer.id, hand, beatId: beat.id }); addAction('SPECIAL'); } }}
                         aria-label={performer.name + ' ' + hand + ' beat ' + (index + 1) + (entry ? ' ' + actionLabel(entry.action, sequence) : ' empty')}
                         title={errors.join(' ')}
                       >
