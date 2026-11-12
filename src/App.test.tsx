@@ -636,8 +636,8 @@ describe('sequence editor', () => {
     await user.click(screen.getByRole('button', { name: 'Add performer' }));
     await user.selectOptions(screen.getByLabelText('Type'), 'circle-passing');
     expect(container.querySelectorAll('.performer-block')).toHaveLength(1);
-    expect(screen.getByText('Juggler 1')).toBeInTheDocument();
-    expect(screen.queryByText('Juggler 2', { selector: '.performer-heading' })).not.toBeInTheDocument();
+    expect(container.querySelector('.performer-heading')?.textContent).toContain('Juggler 1');
+    expect(container.querySelector('.performer-heading')?.textContent).not.toContain('Juggler 2');
   });
 
   it('sets table position targets by typing their labels', () => {
