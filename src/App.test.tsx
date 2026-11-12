@@ -132,7 +132,7 @@ describe('sequence editor', () => {
     expect(screen.getByRole('button', { name: 'A, occupied' })).toBeInTheDocument();
   });
 
-  it('starts with two balls at A and C', () => {
+  it('starts with two balls at A and C', async () => {
     const user = userEvent.setup();
     render(<App />);
     await user.click(screen.getByRole('button', { name: /Initial positions/ }));
