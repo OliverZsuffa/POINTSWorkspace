@@ -1,6 +1,6 @@
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import App from './App';
 
 describe('sequence editor', () => {
@@ -100,7 +100,10 @@ describe('sequence editor', () => {
     await user.click(screen.getByRole('button', { name: 'Juggler 1 left beat 1 empty' }));
     await user.click(screen.getByRole('button', { name: 'LIFT' }));
 
-    expect(screen.getByRole('button', { name: 'Juggler 1 left beat 1 LIFT A' }).querySelector('svg.ball-segment')).toBeInTheDocument();
+    const symbol = screen.getByRole('button', { name: 'Juggler 1 left beat 1 LIFT A' }).querySelector('svg.ball-segment');
+    expect(symbol).toBeInTheDocument();
+    expect(symbol).toHaveAttribute('viewBox', '0 0 100 100');
+    expect(symbol?.querySelector('path')).toHaveAttribute('d', 'M0 19H100 M0 19V81 M0 81H100');
   });
 
   it('exposes sequence settings and initial object distribution', async () => {
@@ -111,5 +114,119 @@ describe('sequence editor', () => {
 
     expect(screen.getByRole('region', { name: 'Sequence settings' })).toBeInTheDocument();
     expect(screen.getByRole('region', { name: 'Initial positions' })).toBeInTheDocument();
+  });
+
+  it('starts with two balls at A and C', () => {
+    render(<App />);
+    expect(screen.getByRole('button', { name: 'A, occupied' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'C, occupied' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'B, empty' })).toBeInTheDocument();
+    expect(screen.getByText('2 / 2')).toBeInTheDocument();
+  });
+
+  it('shows object state after the selected beat', async () => {
+    const user = userEvent.setup();
+    const { container } = render(<App />);
+    await user.click(screen.getByRole('button', { name: 'Juggler 1 left beat 1 empty' }));
+    await user.click(screen.getByRole('button', { name: 'LIFT' }));
+    await user.click(screen.getByRole('button', { name: /Object state/ }));
+    expect(screen.getByText('After beat 1')).toBeInTheDocument();
+    expect(screen.getByText('Juggler 1 left')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Juggler 1 left beat 2 empty' }));
+    await user.click(screen.getByRole('button', { name: 'LEAVE' }));
+    expect(screen.getByText('After beat 2')).toBeInTheDocument();
+    expect(screen.queryByText('Juggler 1 left')).not.toBeInTheDocument();
+    expect(container.querySelector('.state-content')?.textContent).toContain('A');
+  });
+
+  it('adds two balls with a new performer', async () => {
+    const user = userEvent.setup();
+    render(<App />);
+    await user.click(screen.getByRole('button', { name: 'Settings' }));
+    await user.click(screen.getByRole('button', { name: 'Add performer' }));
+    expect(screen.getByText('4 / 4')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Juggler 2 left beat 1 empty' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Juggler 2 right beat 1 empty' })).toBeInTheDocument();
+  });
+
+  it('allows LIFT and LEAVE to target the acting performer hand backs', async () => {
+    const user = userEvent.setup();
+    render(<App />);
+    await user.click(screen.getByRole('button', { name: 'Juggler 1 left beat 1 empty' }));
+    await user.click(screen.getByRole('button', { name: 'LIFT' }));
+    await user.selectOptions(screen.getByLabelText('Target'), 'back-right');
+    expect(screen.getByRole('button', { name: 'Juggler 1 left beat 1 LIFT R' })).toBeInTheDocument();
+  });
+
+  it('creates an individual pass using explicit performer and hand controls', async () => {
+    const user = userEvent.setup();
+    render(<App />);
+    await user.click(screen.getByRole('button', { name: 'Settings' }));
+    await user.click(screen.getByRole('button', { name: 'Add performer' }));
+    await user.selectOptions(screen.getByLabelText('Type'), 'individual-passing');
+    await user.click(screen.getByRole('button', { name: 'Juggler 1 left beat 1 empty' }));
+    await user.selectOptions(screen.getByLabelText('Pass to'), screen.getByRole('option', { name: /Juggler 2/ }));
+    await user.selectOptions(screen.getByLabelText('Hand'), 'right');
+    await user.click(screen.getByRole('button', { name: 'PASS' }));
+    const leaveCell = screen.getByRole('button', { name: /Juggler 1 left beat 1 LEAVE/ });
+    const liftCell = screen.getByRole('button', { name: /Juggler 2 right beat 1 LIFT/ });
+    expect(leaveCell.querySelector('tspan')?.textContent).toBe('b');
+    expect(liftCell.querySelector('tspan')?.textContent).toBe('a');
+    expect(screen.getByLabelText('Recipient')).toBeInTheDocument();
+    expect(screen.getAllByLabelText('Hand')).toHaveLength(2);
+  });
+
+  it('uses the acting performer as the default circle passing target', async () => {
+    const user = userEvent.setup();
+    render(<App />);
+    await user.click(screen.getByRole('button', { name: 'Settings' }));
+    await user.selectOptions(screen.getByLabelText('Type'), 'circle-passing');
+    await user.click(screen.getByRole('button', { name: 'Juggler 1 left beat 1 empty' }));
+    await user.click(screen.getByRole('button', { name: 'LIFT' }));
+    expect(screen.getByLabelText('Performer')).toHaveValue('self');
+    expect(screen.queryByLabelText('Direction')).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('Distance')).not.toBeInTheDocument();
+  });
+
+  it('renders the direction as a subscript for another circle performer', async () => {
+    const user = userEvent.setup();
+    render(<App />);
+    await user.click(screen.getByRole('button', { name: 'Settings' }));
+    await user.click(screen.getByRole('button', { name: 'Add performer' }));
+    await user.selectOptions(screen.getByLabelText('Type'), 'circle-passing');
+    await user.click(screen.getByRole('button', { name: 'Juggler 1 left beat 1 empty' }));
+    await user.click(screen.getByRole('button', { name: 'LIFT' }));
+    await user.selectOptions(screen.getByLabelText('Performer'), 'other');
+    await user.selectOptions(screen.getByLabelText('Direction'), 'right');
+    const cell = screen.getByRole('button', { name: /Juggler 1 left beat 1 LIFT/ });
+    expect(cell.querySelector('tspan')?.textContent).toBe('R');
+  });
+
+  it('shows both halves of the ZIP toolbar symbol', () => {
+    render(<App />);
+    const zip = screen.getByRole('button', { name: 'ZIP' });
+    expect(zip.querySelectorAll('.zip-tool-preview .notation-symbol')).toHaveLength(2);
+  });
+
+  it('changes ball count and rejects reducing a ball that is in use', async () => {
+    const user = userEvent.setup();
+    const { container } = render(<App />);
+    await user.click(screen.getByRole('button', { name: 'Settings' }));
+    const ballControl = () => Array.from(container.querySelectorAll('.setting-control')).find((element) => element.textContent?.includes('Balls'))!;
+    await user.click(ballControl().querySelectorAll('button')[1]!);
+    expect(screen.getByText('3 / 3')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'B, occupied' })).toBeInTheDocument();
+    await user.click(ballControl().querySelectorAll('button')[0]!);
+    expect(screen.getByText('2 / 2')).toBeInTheDocument();
+
+    await user.click(ballControl().querySelectorAll('button')[1]!);
+    await user.click(screen.getByRole('button', { name: 'Juggler 1 left beat 1 empty' }));
+    await user.click(screen.getByRole('button', { name: 'LIFT' }));
+    await user.selectOptions(screen.getByLabelText('Target'), 'position-B');
+    const alert = vi.spyOn(window, 'alert').mockImplementation(() => undefined);
+    await user.click(ballControl().querySelectorAll('button')[0]!);
+    expect(screen.getByText('3 / 3')).toBeInTheDocument();
+    expect(alert).toHaveBeenCalled();
+    alert.mockRestore();
   });
 });

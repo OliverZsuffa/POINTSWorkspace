@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { asActionEntryId, asBallId, asLinkId, asPerformerId, asPositionId } from '../ids';
+import { asActionEntryId, asBallId, asBeatId, asLinkId, asPerformerId, asPositionId } from '../ids';
 import type { NotationEntry, Sequence } from '../model';
 import { rational } from '../time/rational';
 import {
@@ -320,4 +320,36 @@ describe('object state simulation', () => {
     expect(result.snapshots[1]?.handStates[performerId]?.left.heldBallId).toBe('ball-1');
     expect(result.snapshots[1]?.handStates[performerId]?.right.heldBallId).toBeNull();
   });
+
+  it('resolves an own-performer circle passing position without a subscript', () => {
+    const firstPerformer = asPerformerId('pass-performer-a');
+    const secondPerformer = asPerformerId('pass-performer-b');
+    const circlePositions = (['A', 'B', 'C'] as const).flatMap((name) => [
+      { id: asPositionId('circle-a-' + name), kind: 'table' as const, name, owner: { kind: 'performer' as const, performerId: firstPerformer } },
+      { id: asPositionId('circle-b-' + name), kind: 'table' as const, name, owner: { kind: 'performer' as const, performerId: secondPerformer } },
+    ]);
+    const sequence: Sequence = {
+      ...representativeIndividualPassingSequence,
+      sequenceType: 'circle-passing',
+      individualPassingLayout: 'per-performer-positions',
+      positions: circlePositions,
+      initialState: {
+        placements: [{
+          ballId: asBallId('pass-ball-1'),
+          location: { kind: 'position', positionId: asPositionId('circle-a-A') },
+        }],
+      },
+      notation: [{
+        id: asActionEntryId('circle-own-lift'),
+        performerId: firstPerformer,
+        hand: 'left',
+        time: { beatId: asBeatId('pass-beat-1'), offset: rational(0) },
+        action: { type: 'LIFT', target: { kind: 'circle-position', position: 'A' } },
+      }],
+    };
+    const result = simulateSequence(sequence);
+    expect(result.validation.isValid).toBe(true);
+    expect(result.snapshots[1]?.handStates[firstPerformer]?.left.heldBallId).toBe('pass-ball-1');
+  });
+
 });
