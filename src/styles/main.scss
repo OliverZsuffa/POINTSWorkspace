@@ -430,3 +430,202 @@ html, body, #root { min-height: 100%; background: #90d0d5; }
 .notation-cell.invalid { background-color: #ffe8e6; box-shadow: inset 0 0 0 1px #d75d54; }
 .notation-cell.selected.invalid { outline-color: #d75d54; }
 .notation-cell .special-symbol { font-size: 12px; line-height: 1.1; }
+
+
+/* Package 07 workspace and editor ergonomics. */
+:root { --notation-cell-size: 56px; }
+
+.workspace-tabs { display: none; }
+.workspace-panels {
+  display: grid;
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 480px;
+  overflow: hidden;
+  background: var(--surface);
+}
+.editor-workspace-panel,
+.renderer-workspace-panel {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  background: var(--surface);
+}
+.workspace-panel-header {
+  display: flex;
+  flex: 0 0 36px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 0 12px;
+  border-bottom: 1px solid var(--border-subtle);
+  color: var(--text-primary);
+  font-size: 12px;
+}
+.workspace-panel-header button {
+  border: 1px solid var(--border-subtle);
+  border-radius: 5px;
+  padding: 4px 8px;
+  background: white;
+  color: #607086;
+  font-size: 10px;
+}
+.workspace-divider {
+  position: relative;
+  z-index: 2;
+  width: 8px;
+  min-width: 8px;
+  cursor: col-resize;
+  touch-action: none;
+  background: #edf1f7;
+  border-left: 1px solid var(--border-subtle);
+  border-right: 1px solid var(--border-subtle);
+}
+.workspace-divider:hover,
+.workspace-divider:focus-visible { background: #dce7f8; outline: none; }
+.workspace-panels.swapped .renderer-workspace-panel { grid-column: 1; grid-row: 1; }
+.workspace-panels.swapped .workspace-divider { grid-column: 2; grid-row: 1; }
+.workspace-panels.swapped .editor-workspace-panel { grid-column: 3; grid-row: 1; }
+
+.editor-workspace {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+}
+.editor-toolbar {
+  display: flex;
+  flex: 0 0 auto;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 7px 10px;
+  border-right: 0;
+  border-bottom: 1px solid var(--border-subtle);
+}
+.action-tools { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; }
+.action-tools .tool { min-width: 36px; min-height: 34px; padding: 4px 7px; }
+.action-tools .zip-tool { grid-column: auto; }
+.selection-label { white-space: nowrap; }
+.target-tools { display: flex; flex-wrap: wrap; align-items: center; gap: 7px; }
+.target-control { display: flex; flex-direction: row; align-items: center; gap: 6px; }
+.target-control select,
+.target-control input { width: auto; min-width: 92px; min-height: 30px; }
+.editor-scroll {
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 0;
+  overflow: auto;
+  padding: 12px;
+}
+.notation-grid { width: max-content; min-width: max-content; max-width: none; }
+.grid-head .beat-head,
+.grid-head .row-label { min-height: var(--notation-cell-size); }
+.grid-head .beat-head { width: var(--notation-cell-size); min-width: var(--notation-cell-size); }
+.hand-row { min-height: var(--notation-cell-size); grid-auto-rows: var(--notation-cell-size); }
+.hand-row .row-label { min-height: var(--notation-cell-size); }
+.notation-cell {
+  width: var(--notation-cell-size);
+  min-width: var(--notation-cell-size);
+  height: var(--notation-cell-size);
+  min-height: var(--notation-cell-size);
+  aspect-ratio: 1 / 1;
+}
+.notation-cell .notation-symbol,
+.notation-cell .ball-segment {
+  width: var(--notation-cell-size);
+  height: var(--notation-cell-size);
+}
+.notation-cell .special-symbol {
+  line-height: var(--notation-cell-size);
+  font-size: 12px;
+}
+.beat-head .beat-select { min-height: var(--notation-cell-size); }
+.initial-positions { display: grid; gap: 0; padding: 0 16px; }
+.initial-positions-heading {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 12px;
+  min-height: 38px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--text-primary);
+  text-align: left;
+  cursor: pointer;
+}
+.initial-positions-heading strong { font-size: 11px; }
+.initial-positions-heading span { color: #7c8da6; font-size: 10px; }
+.initial-positions-heading .disclosure-indicator { margin-left: auto; font-size: 17px; }
+.initial-positions-content { display: grid; gap: 10px; padding: 4px 0 12px; }
+.position-summary { color: var(--text-primary); font-size: 12px; font-weight: 600; }
+
+.renderer-workspace-panel > .renderer-panel {
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 0;
+  height: 100%;
+  border: 0;
+  border-radius: 0;
+}
+
+@media (min-width: 701px) and (max-width: 1100px) {
+  :root { --notation-cell-size: 48px; }
+}
+@media (max-width: 1100px) {
+  .workspace-tabs {
+    display: flex;
+    flex: 0 0 42px;
+    align-items: stretch;
+    gap: 4px;
+    padding: 4px 10px 0;
+    border-bottom: 1px solid var(--border-subtle);
+    background: var(--surface);
+  }
+  .workspace-tabs button {
+    flex: 1;
+    border: 0;
+    border-bottom: 2px solid transparent;
+    background: transparent;
+    color: #718096;
+    font-size: 12px;
+    font-weight: 600;
+  }
+  .workspace-tabs button.active { border-bottom-color: var(--points-deep); color: var(--text-primary); }
+  .workspace-panels { display: block; min-height: 0; }
+  .workspace-panels.active-editor .renderer-workspace-panel { display: none; }
+  .workspace-panels.active-renderer .editor-workspace-panel { display: none; }
+  .workspace-divider { display: none; }
+  .editor-workspace-panel,
+  .renderer-workspace-panel { height: 100%; min-height: 0; }
+  .bottom-panels { grid-template-columns: minmax(0, 1fr) 220px; padding: 8px 12px 12px; }
+}
+@media (max-width: 700px) {
+  :root { --notation-cell-size: 44px; }
+  .workspace-tabs { flex-basis: 40px; }
+  .workspace-panel-header { flex-basis: 32px; }
+  .editor-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 6px;
+    padding: 7px 9px;
+  }
+  .action-tools { gap: 4px; }
+  .action-tools .tool { min-height: 34px; padding: 4px 6px; }
+  .selection-label { font-size: 10px; }
+  .target-tools { gap: 6px; }
+  .target-control { flex-direction: row; align-items: center; }
+  .target-control select,
+  .target-control input { min-width: 80px; }
+  .editor-scroll { padding: 8px 8px 14px; }
+  .initial-positions { padding: 0 10px; }
+  .initial-positions-content { gap: 8px; }
+  .bottom-panels { grid-template-columns: 1fr; padding: 6px 10px 10px; }
+}
