@@ -340,7 +340,9 @@ export default function App() {
             const matchingPosition = targetPosition?.kind === 'table'
               ? sequence.positions.find((position) => position.kind === 'table' && position.name === targetPosition.name &&
                 position.owner.kind === 'performer' && position.owner.performerId === performer.id)
-              : undefined;
+              : targetPosition?.kind === 'hand-back'
+                ? sequence.positions.find((position) => position.kind === 'hand-back' && position.hand === targetPosition.hand && position.performerId === performer.id)
+                : undefined;
             if (matchingPosition) action = { ...action, target: { kind: 'position', positionId: matchingPosition.id } } as NotationAction;
           }
         }
