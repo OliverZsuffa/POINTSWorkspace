@@ -1181,17 +1181,15 @@ export default function App() {
                         key={beat.id}
                         className={'notation-cell' + (selectedCell ? ' selected' : '') + (errors.length ? ' invalid' : '') + (entry ? ' occupied' : '')}
                         onMouseDown={(event) => {
-                          if (!event.shiftKey) return;
-                          event.preventDefault();
                           const cell = { performerId: performer.id, hand, beatId: beat.id };
-                          selectCell(cell);
-                          setDragStart(cell);
-                        }}
-                        onMouseDown={(event) => {
-                          if (!event.ctrlKey) return;
-                          event.preventDefault();
-                          const cell = { performerId: performer.id, hand, beatId: beat.id };
-                          setEraseStart(cell);
+                          if (event.ctrlKey) {
+                            event.preventDefault();
+                            setEraseStart(cell);
+                          } else if (event.shiftKey) {
+                            event.preventDefault();
+                            selectCell(cell);
+                            setDragStart(cell);
+                          }
                         }}
                         onMouseUp={() => {
                           const cell = { performerId: performer.id, hand, beatId: beat.id };
