@@ -2,7 +2,15 @@ import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 vi.mock('./features/renderer/SequenceRenderer', () => ({
-  default: () => <section aria-label="Sequence renderer"><button type="button">Play</button></section>,
+  default: ({ sequence }: { sequence: { performers: unknown[]; notation: unknown[] } }) => (
+    <section
+      aria-label="Sequence renderer"
+      data-performer-count={sequence.performers.length}
+      data-notation-count={sequence.notation.length}
+    >
+      <button type="button">Play</button>
+    </section>
+  ),
 }));
 
 import App from './App';
