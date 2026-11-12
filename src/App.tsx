@@ -1234,6 +1234,7 @@ export default function App() {
             })}
             <button type="button" className="add-beat" onClick={addBeat} aria-label="Add beat">+</button>
           </div>
+          {sequence.beats.some((beat) => beat.subdivisions.length > 0) && <p className="timeline-note">Subdivisions are shown in the notation grid. The simulator currently evaluates all actions in a main beat simultaneously.</p>}
           {sequence.performers.map((performer) => (
             <div className="performer-block" key={performer.id}>
               <div className="performer-heading">{performer.name}<span>{performer.identifier ?? ''}</span></div>
