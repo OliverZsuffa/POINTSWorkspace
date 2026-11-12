@@ -320,4 +320,19 @@ describe('object state simulation', () => {
     expect(result.snapshots[1]?.handStates[performerId]?.left.heldBallId).toBe('ball-1');
     expect(result.snapshots[1]?.handStates[performerId]?.right.heldBallId).toBeNull();
   });
+
+  it('resolves an own-performer circle passing position without a subscript', () => {
+    const sequence: Sequence = {
+      ...representativeSoloSequence,
+      sequenceType: 'circle-passing',
+      notation: [entry('circle-own-lift', 'right', {
+        type: 'LIFT',
+        target: { kind: 'circle-position', position: 'A' },
+      })],
+    };
+    const result = simulateSequence(sequence);
+    expect(result.validation.isValid).toBe(true);
+    expect(result.snapshots[1]?.handStates[performerId]?.right.heldBallId).toBe('ball-1');
+  });
+
 });
