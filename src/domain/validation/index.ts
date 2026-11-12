@@ -1,1 +1,1 @@
-export { validateSequence } from '../state/simulate';
+export { sequenceValidator, validateSequence } from '../state/simulate';
