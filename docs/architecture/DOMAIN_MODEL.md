@@ -32,7 +32,7 @@ Each main beat has a stable ID. Subdivisions are intervals within a main beat, e
 
 A notation entry identifies its performer, hand, action and timeline position. Timeline positions use exact rational offsets from the beginning of a main beat. This avoids using screen column numbers as time and supports repeated half subdivisions without floating point drift.
 
-The editor may rearrange the visual presentation of the timeline, but it must preserve these musical positions. Actions at the same timeline position are simultaneous and take effect at the beginning of that interval.
+The editor may rearrange the visual presentation of the timeline, but it must preserve these musical positions. For state simulation, all actions assigned to one main beat are evaluated together against the state entering that beat. Subdivision offsets remain part of the notation timeline, but they do not establish an action order within the same main beat.
 
 ## Performers and positions
 
@@ -65,11 +65,11 @@ Notation entries use a discriminated action union:
 - ZIP
 - SPECIAL
 
-LIFT and LEAVE can target a normal position, a circle passing relative position or the relevant individual passing hand reference. TAP and BOUNCE target a position. ZIP entries carry a shared link ID and a source or receiver role. Linked SPECIAL entries may share a link ID and must use the same text. A standalone SPECIAL has no link ID.
+LIFT and LEAVE can target a table position, a hand back position, a circle passing relative position or the relevant individual passing hand reference. LIFT from a hand back moves the balanced object into the acting hand. LEAVE to a hand back moves the held object onto that hand back if it is free. TAP and BOUNCE target a defined position. ZIP entries carry a shared link ID and a source or receiver role. Linked SPECIAL entries may share a link ID and must use the same text. A standalone SPECIAL has no link ID.
 
-The domain model records notation. The validation and simulation package determines whether the actions are legal in the current state.
+The domain model records notation. The validation and simulation package determines whether the actions are legal in the current state. It provides a state snapshot immediately before and immediately after each main beat.
 
-All actions assigned to the same timeline position are simultaneous. A hand has one finger held object and one separate back balanced object. TAP requires the fingers to be free. BOUNCE is the position tap performed while holding an object with the fingers. The held object remains in the hand. A balanced object on the back does not prevent TAP or BOUNCE. SPECIAL also requires free fingers, while allowing a balanced object on the back.
+All actions assigned to the same main beat are simultaneous. A hand has one finger held object and one separate back balanced object. TAP and EMPTY require the fingers to be free. BOUNCE is the position tap performed while holding an object with the fingers. The held object remains in the hand. A balanced object on the back does not prevent TAP or BOUNCE. SPECIAL also requires free fingers, while allowing a balanced object on the back.
 
 A ZIP source and receiver share a link ID and occur at the same timeline position. An individual pass is represented by a sender LEAVE targeting the receiving performer's hand and a receiver LIFT targeting the source performer. The validation layer checks that the two sides correspond. A hand cannot receive and send an object during the same beat.
 

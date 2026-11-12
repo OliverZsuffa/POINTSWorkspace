@@ -1,94 +1,60 @@
 # Implementation Plan 02: Object State and Validation Engine
 
+## Status
+
+Approved by Oliver on 12 November 2026. Implementation complete, pending final CI verification.
+
 ## Goal
 
 Implement canonical sequence simulation and validation. This package determines whether a sequence is physically and notationally valid and supplies state data to the editor and renderer.
 
 ## Scope
 
-### Included
+Included:
 
-- Initial object distribution.
-- Deterministic state evaluation at each beat.
-- Simultaneous action processing at the beginning of each beat.
-- Position occupancy and object identity tracking.
-- Finger held and back balanced hand state.
-- HOLD, LIFT, LEAVE, BOUNCE, TAP, EMPTY, ZIP, individual passing and SPECIAL rules.
-- Validation of action eligibility, object capacity and transfer consistency.
-- Structured validation issues referencing affected performers, hands, positions and times.
-- State snapshots for the editor overview and renderer.
-- Unit tests for valid and invalid action combinations.
+1. Initial object distribution, including table positions, finger held objects and hand back balanced objects.
+2. Deterministic state evaluation at each main beat.
+3. Simultaneous action processing against the state entering the beat.
+4. Position occupancy and stable ball identity tracking.
+5. Finger held and back balanced hand state.
+6. HOLD, LIFT, LEAVE, BOUNCE, TAP, EMPTY, ZIP, individual passing, circle passing and SPECIAL rules.
+7. Validation of action eligibility, object capacity, linked actions and transfer consistency.
+8. Structured validation issues referencing affected entries, positions and times.
+9. State snapshots immediately before and after each main beat.
+10. Implementations of the shared SequenceSimulator and SequenceValidator contracts.
+11. Unit tests for valid and invalid action combinations.
 
-### Excluded
+Excluded: React interface, visual animation, editing gestures, generator search and sequence code import or export.
 
-- React interface.
-- Visual animation.
-- Editing gestures.
-- Generator search.
-- Sequence code import and export.
+## Simulation rules
 
-## Proposed approach
+All actions assigned to a main beat are evaluated together against the state entering that beat. No action can rely on another action in the same beat having happened first. The engine validates the complete batch before applying transfers. If a beat contains an error, none of its transfers are applied.
 
-Build a pure domain engine that takes a sequence and initial state and produces beat state snapshots plus validation issues. It must not depend on the UI or renderer.
+A position contains zero or one ball. Each hand can hold one object with its fingers and balance one separate object on its back. A back balanced object does not occupy the fingers and does not make the hand occupied for action eligibility.
 
-All actions assigned to a beat take effect simultaneously at its beginning. Validate the combined set against the state entering the beat. Iteration order must never determine validity.
+TAP requires free fingers. BOUNCE requires an object held with the fingers and leaves that object in the hand. Both are allowed while an object is balanced on the back. LIFT, LEAVE and SPECIAL are also permitted with a back balanced object, subject to their other requirements. SPECIAL requires free fingers.
 
-A position contains exactly zero or one ball. A hand can hold one object with its fingers and balance one separate object on its back. A back balanced object does not occupy the fingers and does not make the hand occupied for action eligibility.
+ZIP source and receiver are paired in the same beat. Individual passing sender LEAVE and receiver LIFT are paired in the same beat. A hand cannot receive and send an object in one beat. Transfers preserve ball identity and cannot create or destroy objects.
 
-TAP requires no object held with the fingers. BOUNCE is the corresponding position tapping action while holding one object with the fingers. That object remains in the hand. Both actions are allowed while an object is balanced on the back. LIFT, LEAVE and SPECIAL are also permitted with a back balanced object, subject to their other requirements. SPECIAL requires no finger held object.
+Circle passing resolves performer distance using the order of performers in the sequence because the current domain model has no separate circle order.
 
-ZIP sending and receiving occur simultaneously in the same beat. Individual passing sender LEAVE and receiver LIFT also occur simultaneously. A hand cannot receive and send an object in the same beat. Incompatible simultaneous operations on the same position are invalid. Transfers must preserve object identity and cannot create or destroy objects.
+## Files
 
-The engine reports invalid notation rather than silently repairing it. Where possible, issues identify all participating cells in a failed relationship.
-
-## Files and components
-
-| File or area | Planned change |
+| File | Responsibility |
 |---|---|
-| src/domain/state/ | State representation and transition evaluation |
-| src/domain/validation/ | Validation rules and issue generation |
-| src/domain/actions/ | Action semantics and helpers |
-| Tests for state | State transition tests |
-| Tests for validation | Validation rule tests |
-
-## Steps
-
-1. Consume and verify the domain contracts from package 01.
-2. Define the state snapshot entering and leaving each beat.
-3. Implement simultaneous action validation and transition resolution.
-4. Implement position occupancy and hand capacity checks.
-5. Implement each action family and transfer relationship.
-6. Implement structured validation issues with cell and time references.
-7. Implement state snapshots for every beat.
-8. Add tests for individual actions, simultaneous actions and invalid combinations.
-9. Record any remaining ambiguous rule rather than inferring behaviour.
+| src/domain/state/simulate.ts | Initial state, simultaneous transitions, snapshots and validation |
+| src/domain/state/index.ts | State simulation exports |
+| src/domain/validation/index.ts | Validation exports |
+| src/domain/model.ts | Explicit before and after snapshot phase |
+| src/domain/state/simulate.test.ts | State and validation unit tests |
+| docs/architecture/DOMAIN_MODEL.md | Simulation timing and snapshot documentation |
 
 ## Verification
 
-- [ ] Formatting
-- [ ] Linting
-- [ ] TypeScript strict type check
-- [ ] Automated tests
-- [ ] Production build
-- [ ] Action iteration order cannot change results
-- [ ] One finger held object plus one back balanced object is supported
-- [ ] Simultaneous ZIP and individual passing are tested
-- [ ] Receiving and sending in the same hand and beat is rejected
-- [ ] Every position has capacity for zero or one ball
+The CI workflow must pass formatting, linting, strict TypeScript checks, automated tests and production build.
 
-## Dependencies
+The tests cover solo flow, individual passing, ZIP, circle passing and invalid circle distances, TAP versus BOUNCE, EMPTY eligibility, hand back LIFT and LEAVE, balanced objects during other actions, invalid initial distributions, atomic rejection of conflicting simultaneous actions and independence from notation array order.
 
-Package 01 must provide the shared sequence and action contracts.
+## Remaining limitations
 
-## Risks and open questions
-
-- State snapshot timing must be consistent across editor and renderer.
-- Compound meter and subdivision interaction remains open.
-- TAP and BOUNCE target occupancy requirements should be checked against the complete notation rules.
-- Error versus warning severity still needs a final policy.
-
-## Approval
-
-Status: Awaiting approval
-
-Implementation must not begin until this plan is explicitly approved.
+All actions in one main beat are simultaneous even when their notation offsets differ. This follows the current beat level action model. Warning severity is not introduced. Every validation issue is an error. Circle passing uses performer array order because no separate seating order is currently part of the sequence contract.

@@ -228,6 +228,7 @@ export interface HandObjectState {
 
 export interface ObjectStateSnapshot {
   readonly at: TimelinePosition;
+  readonly phase: 'before' | 'after';
   readonly ballLocations: Readonly<Record<BallId, ObjectLocation>>;
   readonly handStates: Readonly<
     Record<PerformerId, Readonly<Record<Hand, HandObjectState>>>
