@@ -187,7 +187,12 @@ function evaluateBeat(sequence: Sequence, entries: readonly NotationEntry[], sta
     if (zip.length === 2 && zip.length === group.length) {
       const source = zip.find((entry) => entry.action.type === 'ZIP' && entry.action.role === 'source');
       const receiver = zip.find((entry) => entry.action.type === 'ZIP' && entry.action.role === 'receiver');
-      if (!source || !receiver || source.performerId !== receiver.performerId || source.hand === receiver.hand) {
+      if (
+        source?.action.type !== 'ZIP' ||
+        receiver?.action.type !== 'ZIP' ||
+        source.performerId !== receiver.performerId ||
+        source.hand === receiver.hand
+      ) {
         issues.push(problem('invalid-zip-pair', 'ZIP link "' + linkId + '" must connect opposite hands of one performer.', group));
       } else {
         const ballId = held(state, source.performerId, source.hand);
@@ -198,16 +203,16 @@ function evaluateBeat(sequence: Sequence, entries: readonly NotationEntry[], sta
     } else if (pass.length === 2 && pass.length === group.length) {
       const sender = pass.find((entry) => entry.action.type === 'LEAVE' && entry.action.target.kind === 'pass-recipient-hand');
       const receiver = pass.find((entry) => entry.action.type === 'LIFT' && entry.action.target.kind === 'pass-source');
-      const validPair =
-        sender?.action.type === 'LEAVE' &&
-        sender.action.target.kind === 'pass-recipient-hand' &&
-        receiver?.action.type === 'LIFT' &&
-        receiver.action.target.kind === 'pass-source' &&
-        sender.performerId !== receiver.performerId &&
-        sender.action.target.performerId === receiver.performerId &&
-        sender.action.target.hand === receiver.hand &&
-        receiver.action.target.performerId === sender.performerId;
-      if (!sender || !receiver || !validPair) {
+      if (
+        sender?.action.type !== 'LEAVE' ||
+        sender.action.target.kind !== 'pass-recipient-hand' ||
+        receiver?.action.type !== 'LIFT' ||
+        receiver.action.target.kind !== 'pass-source' ||
+        sender.performerId === receiver.performerId ||
+        sender.action.target.performerId !== receiver.performerId ||
+        sender.action.target.hand !== receiver.hand ||
+        receiver.action.target.performerId !== sender.performerId
+      ) {
         issues.push(problem('invalid-individual-pass-pair', 'Passing link "' + linkId + '" must connect one sender LEAVE and one reciprocal receiver LIFT.', group));
       } else {
         const ballId = held(state, sender.performerId, sender.hand);
