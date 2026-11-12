@@ -23,7 +23,28 @@ function normalize(point: Point3): Point3 {
   return { x: point.x / length, y: 0, z: point.z / length };
 }
 
-export function getHandReachProgress(progress: number): number {\n  const clamped = Math.max(0, Math.min(1, progress));\n  return Math.sin(clamped * Math.PI);\n}\n\nexport function getHandReachPosition(base: Point3, target: Point3, progress: number): Point3 {\n  const amount = getHandReachProgress(progress);\n  return add(base, scale({ x: target.x - base.x, y: target.y - base.y, z: target.z - base.z }, amount));\n}\n\nexport function getCameraPanOffset(\n  cameraRight: Point3,\n  cameraUp: Point3,\n  deltaX: number,\n  deltaY: number,\n  radius: number,\n): Point3 {\n  const factor = Math.max(0, radius) * 0.0018;\n  return add(scale(cameraRight, -deltaX * factor), scale(cameraUp, deltaY * factor));\n}\n\nfunction positionOffset(name: string): number {
+export function getHandReachProgress(progress: number): number {
+  const clamped = Math.max(0, Math.min(1, progress));
+  return Math.sin(clamped * Math.PI);
+}
+
+export function getHandReachPosition(base: Point3, target: Point3, progress: number): Point3 {
+  const amount = getHandReachProgress(progress);
+  return add(base, scale({ x: target.x - base.x, y: target.y - base.y, z: target.z - base.z }, amount));
+}
+
+export function getCameraPanOffset(
+  cameraRight: Point3,
+  cameraUp: Point3,
+  deltaX: number,
+  deltaY: number,
+  radius: number,
+): Point3 {
+  const factor = Math.max(0, radius) * 0.0018;
+  return add(scale(cameraRight, -deltaX * factor), scale(cameraUp, deltaY * factor));
+}
+
+function positionOffset(name: string): number {
   if (name === 'A') return -0.95;
   if (name === 'C') return 0.95;
   return 0;
