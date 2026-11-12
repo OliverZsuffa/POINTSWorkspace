@@ -2,7 +2,7 @@
 
 ## Status
 
-Approved on 12 November 2026. Implementation in progress.
+Approved on 12 November 2026. Implementation complete on branch work/03-sequence-editor-completion. Automated verification passes. Manual visual review remains.
 
 ## Goal
 
@@ -144,24 +144,24 @@ The exact file split may be adjusted during implementation if responsibilities r
 
 ## Verification
 
-- [ ] Prettier formatting check
-- [ ] ESLint
-- [ ] Strict TypeScript check
-- [ ] Vitest unit and component tests
-- [ ] Production build
-- [ ] Every notation action renders and can be edited
-- [ ] Target editing for all passing modes
-- [ ] ZIP pairing and paired deletion
-- [ ] Linked SPECIAL editing, movement and deletion
-- [ ] Rectangle drawing and movement are atomic undo steps
-- [ ] Existing notation is never silently overwritten
-- [ ] Multi selection, copy, paste and conflict rejection
-- [ ] Beat insertion, deletion, movement and subdivision behaviour
-- [ ] Performer and position changes preserve specified references
-- [ ] Initial state editing agrees with simulator results
-- [ ] Invalid notation is marked and errors navigate to the correct cell
-- [ ] Keyboard interactions and touch equivalents
-- [ ] Desktop, tablet and phone layout review
+- [x] Prettier formatting check
+- [x] ESLint
+- [x] Strict TypeScript check
+- [x] Vitest unit and component tests
+- [x] Production build
+- [x] Every notation action renders and can be edited
+- [x] Target editing for all passing modes
+- [x] ZIP pairing and paired deletion
+- [x] Linked SPECIAL editing, movement and deletion
+- [x] Rectangle drawing and movement are atomic undo steps
+- [x] Existing notation is never silently overwritten
+- [x] Multi selection, copy, paste and conflict rejection
+- [x] Beat insertion, deletion, movement and subdivision behaviour
+- [x] Performer and position changes preserve specified references
+- [x] Initial state editing agrees with simulator results
+- [x] Invalid notation is marked and errors navigate to the correct cell
+- [x] Keyboard interactions and touch equivalents
+- [ ] Desktop, tablet and phone layout review. Automated responsive and touch interaction tests pass, but a manual visual review is still required.
 
 ## Dependencies and boundaries
 
@@ -176,10 +176,17 @@ Package 04 has not been implemented. The editor must work independently of the r
 1. Compound meter grouping is not fully represented by the current binary subdivision model. Do not silently approximate its musical grouping.
 2. Exact shortcut mappings beyond the already agreed arrow, Shift plus arrow, Escape, Backspace, Ctrl plus drag and Shift plus drag interactions remain to be finalised.
 3. Double click behaviour and a separate gesture for opening selected notation properties remain undecided. Do not assign them a new meaning without review.
-4. Mobile touch equivalents for modifier key drag interactions need deliberate implementation. Preserve full editing capability rather than dropping those operations.
-5. The current simulator evaluates actions at main beat level. Subdivision entries must not imply a different simulation order or timing until the domain model supports it.
-6. The precise visual presentation of the state overview can be refined during implementation, but it must remain hidden by default and derived from simulator snapshots.
+4. Mobile touch equivalents are implemented through explicit Select, Draw, Move and Erase modes. Automated interaction tests pass.
+5. The current simulator evaluates actions at main beat level. Subdivision entries are stored and editable, but the simulator does not distinguish their offsets. The editor displays an explicit warning rather than implying separate simulation timing.
+6. The state overview is implemented, hidden by default and derived from simulator snapshots.
 
 ## Approval
 
-Status: Approved. Implementation in progress.
+Approved by Oliver on 12 November 2026. Implementation completed on branch work/03-sequence-editor-completion. Pull request #6 is open for review. Package 03B is already merged into main.
+
+
+## Implementation notes
+
+The editor uses src/App.tsx for application composition and interaction state, src/features/editor/timeline.ts for timeline subdivision logic, and src/features/editor/rectangles.ts for simulator based ball rectangle grouping. The implementation also updates src/styles/main.scss, src/App.test.tsx and focused simulator tests.
+
+The editor supports binary subdivision intervals. Conventional triplet subdivision in compound meter such as 6/8 is not represented by the current domain model. The UI explicitly communicates this limitation. Extending subdivision timing and simulator evaluation is outside this package because Package 02 owns simulation semantics.

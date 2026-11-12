@@ -21,22 +21,22 @@ Use this project as the reference for the interface's overall feel and presentat
 
 The intention is to adopt its visual language, not copy its juggling notation logic or product structure.
 
-### Brand colour reference: POINTS website
+### Brand colour reference and editor palette
 
 Repository: https://github.com/pointscs/pointscs.github.io  
 Website: https://pointscs.github.io/
 
-Use the POINTS website's turquoise colour identity:
+Use the Workspace editor's agreed blue palette. This supersedes the original turquoise website palette for the application interface.
 
 | Role | Colour |
 |---|---|
-| Main brand colour | `#90D0D5` |
-| Secondary brand colour | `#6BC3C5` |
-| Additional turquoise | `#5AA9AA` |
+| Main brand colour | `#3569BD` |
+| Secondary brand colour | `#7FA5E8` |
+| Light blue surface | `#D9E6FB` |
 | Light text / neutral | `azure` / white |
 | Dark text | `#161616` to `#222222` |
 
-These values are taken from the website's stylesheet. The final interface should use the POINTS palette consistently for backgrounds, accents, interactive states, and supporting surfaces.
+These are the agreed Workspace editor colours. Use them consistently for backgrounds, accents, interactive states and supporting surfaces.
 
 ## Combined direction
 
