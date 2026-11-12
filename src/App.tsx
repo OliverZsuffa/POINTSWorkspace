@@ -266,27 +266,27 @@ function NotationMark({ action, sequence, hand }: { action: NotationAction; sequ
   let circledTarget = false;
   switch (action.type) {
     case 'LIFT':
-      path = 'M1.5 1.5H98.5 M1.5 1.5V98.5 M1.5 98.5H98.5';
+      path = 'M0 0H100 M0 0V100 M0 100H100';
       if (action.target.kind === 'position') label = positionReference(sequence, action.target.positionId);
       else if (action.target.kind === 'circle-position') { label = action.target.position; subscript = circleSubscript(action.target); }
       else if ('performerId' in action.target) { const targetPerformerId = action.target.performerId; label = 'X'; subscript = sequence.performers.find((person) => person.id === targetPerformerId)?.identifier ?? '?'; }
       break;
-    case 'HOLD': path = 'M1.5 1.5H98.5 M1.5 98.5H98.5'; break;
+    case 'HOLD': path = 'M0 0H100 M0 100H100'; break;
     case 'LEAVE':
-      path = 'M1.5 1.5H98.5 M98.5 1.5V98.5 M1.5 98.5H98.5';
+      path = 'M0 0H100 M100 0V100 M0 100H100';
       if (action.target.kind === 'position') label = positionReference(sequence, action.target.positionId);
       else if (action.target.kind === 'circle-position') { label = action.target.position; subscript = circleSubscript(action.target); }
       else if ('hand' in action.target) { const targetHand = action.target.hand; const targetPerformerId = action.target.performerId; label = targetHand === 'left' ? 'L' : 'R'; circledTarget = true; subscript = sequence.performers.find((person) => person.id === targetPerformerId)?.identifier ?? '?'; }
       break;
     case 'BOUNCE':
-      path = 'M1.5 1.5H98.5 M1.5 98.5H98.5';
+      path = 'M0 0H100 M0 100H100';
       if (action.target.kind === 'position') label = positionReference(sequence, action.target.positionId);
       else { label = action.target.position; subscript = circleSubscript(action.target); }
       break;
     case 'ZIP':
       path = action.role === 'source'
-        ? hand === 'left' ? 'M1.5 1.5H98.5 M98.5 1.5V98.5' : 'M1.5 98.5H98.5 M98.5 1.5V98.5'
-        : hand === 'left' ? 'M1.5 1.5H98.5 M1.5 1.5V98.5' : 'M1.5 98.5H98.5 M1.5 1.5V98.5';
+        ? hand === 'left' ? 'M0 0H100 M100 0V100' : 'M0 100H100 M100 0V100'
+        : hand === 'left' ? 'M0 0H100 M0 0V100' : 'M0 100H100 M0 0V100';
       break;
   }
   return (
