@@ -69,6 +69,7 @@ test('circle passing renderer layout with ten participants', async ({ page }) =>
   const addPerson = page.getByRole('button', { name: 'Add one person' });
   for (let count = 0; count < 7; count += 1) await addPerson.click();
   await expect(page.getByLabel('People count')).toHaveText('10');
+  await page.getByRole('button', { name: 'Settings' }).click();
 
   const renderer = page.getByRole('region', { name: 'Sequence renderer' });
   await expect(renderer).toBeVisible();
