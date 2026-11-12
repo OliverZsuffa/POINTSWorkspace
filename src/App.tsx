@@ -989,7 +989,16 @@ export default function App() {
           ? { type: 'polygon', sideCount: Math.max(3, sequence.performers.length - 1) }
           : { type: 'rectangle', longSideSeatCount: Math.max(1, Math.ceil((sequence.performers.length - 1) / 2)), shortSideSeatCount: 0 },
     });
-    if (selected?.performerId === performerId) clearSelection();
+    const remainingPerformers = sequence.performers.filter((person) => person.id !== performerId);
+    if (selected?.performerId === performerId) {
+      if (sequence.sequenceType === 'circle-passing' && remainingPerformers[0]) {
+        selectCell({ ...selected, performerId: remainingPerformers[0].id });
+      } else {
+        clearSelection();
+      }
+    } else {
+      setSelectedCells((cells) => cells.filter((cell) => cell.performerId !== performerId));
+    }
   };
 
   const addPosition = () => {
@@ -1129,8 +1138,9 @@ export default function App() {
         : type === 'circle-passing' ? { type: 'polygon', sideCount: sequence.performers.length }
           : { type: 'rectangle', longSideSeatCount: Math.max(1, Math.ceil(sequence.performers.length / 2)), shortSideSeatCount: 0 },
     });
-    if (type === 'circle-passing' && selected && selected.performerId !== representativeId && representativeId) {
-      selectCell({ ...selected, performerId: representativeId });
+    if (type === 'circle-passing') {
+      if (selected && representativeId) selectCell({ ...selected, performerId: representativeId });
+      else setSelectedCells([]);
     }
   };
 
