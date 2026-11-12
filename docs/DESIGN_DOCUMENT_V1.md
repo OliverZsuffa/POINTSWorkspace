@@ -32,7 +32,7 @@ There is one predefined default layout. Additional predefined layout presets are
 
 The Sequence Generator is located below the two main panels in a panel that the user can pull up when needed.
 
-Remembering the user's chosen layout between sessions is undecided. Multiple browser tabs operate independently. Changes in one tab do not automatically update another tab.
+Remembering the user's chosen layout between sessions is undecided. Multiple browser tabs operate independently. Changes in one tab do not automatically update another tab. Whether each tab restores its own last working sequence, whether tabs initially load the same saved sequence, and how each tab persists subsequent changes remain undecided.
 
 ### Mobile and tablet
 
@@ -80,7 +80,7 @@ Adding a juggler creates a new juggler section with empty left and right hand ro
 
 Adding a position makes it immediately available as a target wherever that position is valid. Removing a position that is still referenced by notation is allowed, but affected notation is retained and marked invalid. Renaming a position updates all existing references to that position automatically. The initial state editor should reuse the same components and interaction patterns as other relevant position editing controls wherever possible.
 
-Changing the sequence type does not automatically rewrite or delete incompatible notation. Existing notation that is incompatible with the newly selected type is retained and marked invalid. Changing the time signature preserves the existing beat and notation positions. Only the bar boundaries and their labels change according to the new time signature.
+Changing the sequence type does not automatically rewrite or delete incompatible notation. Existing notation that is incompatible with the newly selected type is retained and marked invalid. Changing the time signature preserves the existing timeline positions and notation. Bar boundaries, beat grouping, beat durations, and their labels are recalculated according to the new time signature. The time signature follows conventional musical semantics.
 
 Changing a setting must update the sequence editor and renderer to reflect the new sequence structure.
 
@@ -127,9 +127,9 @@ The user can insert a new beat between existing columns. A small plus control ap
 
 Subdivisions are not restricted to a single predefined level. The user can add further subdivisions wherever needed. Each subdivision splits its selected interval in half.
 
-The numerator of the time signature determines the number of beats in each bar. The denominator does not otherwise change the editor's beat structure. The default time signature is 4/4. The table must make each bar boundary visually distinct, using a thicker border or equivalent separator. For example, in 3/4 time, the boundary after every third beat must be identifiable.
+The time signature follows conventional musical semantics. In simple meters, the numerator indicates the number of beats in a bar and the denominator identifies the note value of each beat. In compound meters such as 6/8, the eighth notes are grouped in threes, producing two main beats per bar. The denominator therefore affects the musical duration represented by a beat, not merely its displayed label. The default time signature is 4/4. The table must make bar boundaries and the grouping of beats visually identifiable. The exact representation of compound meter grouping and its interaction with the editor's subdivision model remains to be specified.
 
-A subdivision always splits an existing interval in half. Labels follow conventional musical counting: beat numbers for quarter note beats, `&` for eighth note subdivisions, and `e` and `a` for sixteenth note subdivisions. Labels beyond sixteenth notes remain to be defined.
+Subdivisions currently follow a binary model in which each subdivision splits an existing interval in half. Labels follow conventional musical counting: beat numbers for quarter note beats, `&` for eighth note subdivisions, and `e` and `a` for sixteenth note subdivisions. Labels beyond sixteenth notes remain to be defined. This binary model does not by itself represent the three eighth note subdivisions within a compound 6/8 beat. The editor's subdivision model must be clarified to support the selected conventional compound meter behaviour without misrepresenting musical timing.
 
 Users can remove beats and subdivisions, move individual time positions, and select multiple positions to move them together. Multiple selection can include nonadjacent positions. When a beat or subdivision is moved, all notation within that time position moves with it across every juggler hand row. A beat and its subdivisions are treated as one group when the beat is moved.
 
@@ -181,7 +181,7 @@ Validation must cover the rules defined by POINTS notation. Examples include:
 - A transfer whose source and receiving actions do not match.
 - Inconsistent object states across time or between hands.
 
-The exact validation rules and severity levels remain to be specified. Selecting a general error should navigate to the affected cell or time position where possible. SPECIAL actions must be rejected when the relevant hand is not empty.
+The exact validation rules and severity levels remain to be specified. The renderer is disabled whenever the sequence contains any validation error. Selecting a general error should navigate to the affected cell or time position where possible. SPECIAL actions must be rejected when the relevant hand is not empty.
 
 The editor does not prevent every invalid action from being entered. If an action is invalid in the current object state, the user may still enter it and the normal validation system marks the error. When an edit makes a linked action inconsistent, both affected cells are marked invalid rather than silently rewriting one side. ZIP symbols are a paired operation: deleting either side deletes the corresponding other side as well. Deleting one cell of a linked SPECIAL action does not automatically delete the other cell. The remaining cell is retained and treated as a standalone SPECIAL action.
 
@@ -195,7 +195,7 @@ The code is generated automatically and can be copied explicitly at any time. Pa
 
 There is one current working sequence rather than a collection of named sequences. Multiple saved sequences, editable sequence names, and a duplicate sequence management feature are not required. The most recent working sequence is restored when the application is reopened, including when it is incomplete or invalid. Undo history does not need to survive closing the browser. If browser local storage is cleared, the locally stored working sequence is lost; no additional recovery mechanism is required.
 
-A code that cannot be parsed or is otherwise invalid as an import must be rejected. The current sequence remains untouched. The application must not partially import an unreadable or unsupported code. A successfully parsed sequence is then checked by the normal notation validator. Import restores all sequence properties encoded in the code, including BPM and the initial object distribution. Import replaces the entire current sequence structure, including its beat count, jugglers, positions, and other settings. The import control is accessible from the main editor. Pasting a code initiates loading immediately; confirmation is required only when existing work would be overwritten. Sequence codes do not need an explicit format version.
+A code that cannot be parsed or is otherwise invalid as an import must be rejected. The current sequence remains untouched. The application must not partially import an unreadable or unsupported code. A successfully parsed sequence is then checked by the normal notation validator. Import restores all sequence properties encoded in the code, including BPM and the initial object distribution. Import replaces the entire current sequence structure, including its beat count, jugglers, positions, and other settings. The import control is accessible from the main editor. Pasting a code initiates loading immediately; confirmation is required only when existing work would be overwritten. Sequence codes do not currently require an explicit format version. Future compatibility implications remain to be reviewed before the format is finalised.
 
 ### 1.8 Image export
 
@@ -260,7 +260,7 @@ The renderer must support:
 - Repeating the sequence continuously.
 - Setting playback tempo in beats per minute (BPM), stored as part of the sequence.
 
-In step mode, moving from one beat state to the next is animated over 0.5 seconds, after which playback stops at the new beat. In continuous playback, the animation runs smoothly without pauses at beat boundaries. The duration of each beat is determined by the BPM, and subdivisions take proportionally less time. For example, a half beat takes half the duration of a full beat. Every action within the same beat or subdivision uses the same available time interval. Actions do not receive different durations based on their type or physical distance. The default tempo is 120 BPM. Changing BPM during playback takes effect immediately.
+In step mode, moving from one beat state to the next is animated over 0.5 seconds, after which playback stops at the new beat. In continuous playback, the animation runs smoothly without pauses at beat boundaries. BPM is measured in quarter notes per minute. The duration of each musical beat is determined by both the BPM and the time signature denominator. For example, a quarter note lasts twice as long as an eighth note. Subdivisions take proportionally less time than the interval they divide. Compound meters use conventional grouping, so 6/8 is grouped as two beats, each containing three eighth notes. Every action within the same beat or subdivision uses the same available time interval. Actions do not receive different durations based on their type or physical distance. The default tempo is 120 BPM. Changing BPM during playback takes effect immediately.
 
 When continuous repetition is enabled, a sequence whose final object state matches its initial object state can loop seamlessly. If the states do not match, the renderer jumps back to the initial state between runs. The user can choose between one run through and continuous repetition.
 - Camera rotation.
@@ -269,13 +269,11 @@ When continuous repetition is enabled, a sequence whose final object state match
 - Changing object colours.
 - Changing juggler positioning.
 
-Controls should also have keyboard shortcuts where appropriate. The exact shortcut assignments remain open. Editing the sequence stops playback.
-
-Selecting a table position in the renderer should visibly mark that position. The position labels are otherwise hidden to keep the scene uncluttered.
+Controls should also have keyboard shortcuts where appropriate. The exact shortcut assignments remain open. Any sequence edit immediately stops playback. The renderer then moves to the same timeline position in the updated sequence if that position still exists. The exact fallback behaviour when the previous position no longer exists remains to be specified.
 
 The current playback position should be indicated in the Sequence Editor, so the user can see which point in the notation is currently being animated. A corresponding current beat or subdivision indicator inside the renderer is not required at this stage.
 
-Both hands and objects are animated simultaneously when their actions occur at the same time. If the sequence contains any validation errors, rendering and playback stop and remain disabled. The renderer does not attempt to animate an invalid sequence and does not display a separate error message. Only hands are selectable in the renderer. Selecting a hand highlights its corresponding notation cell in the editor at the relevant beat or subdivision. Since each hand has at most one action at a given time position, the selection identifies that action rather than highlighting every action performed by that hand throughout the sequence. Clicking the currently selected hand again deselects it. Balls are not selectable.
+Both hands and objects are animated simultaneously when their actions occur at the same time. If the sequence contains any validation errors, rendering and playback stop and remain disabled. The renderer does not attempt to animate an invalid sequence and does not display a separate error message. Only hands are selectable in the renderer. Selecting a hand highlights its corresponding notation cell in the editor at the relevant beat or subdivision. Since each hand has at most one action at a given time position, the selection identifies that action rather than highlighting every action performed by that hand throughout the sequence. Clicking the currently selected hand again deselects it. Balls and table positions are not independently selectable.
 
 Changes made in the Sequence Editor update the renderer immediately, including during playback. Selecting a notation cell should highlight the corresponding hand or object in the renderer. Selecting an object or hand in the renderer should highlight the corresponding notation cell in the editor. During playback, the editor indicates both the current beat and the exact subdivision.
 
@@ -298,7 +296,7 @@ When generating variations, the original sequence itself must be excluded from t
 
 The user can also select a part of an existing sequence and use it as a required or forbidden subsequence.
 
-Generated results must always be complete and valid sequences. The generator must not return incomplete or invalid candidates.
+Generated results must always be complete and valid sequences. The generator must not return incomplete or invalid candidates. The generator does not create subdivisions and does not use subdivisions, even if the source sequence contains them. Generated sequences use main beats only.
 
 ### 3.2 Generation parameters and constraints
 
