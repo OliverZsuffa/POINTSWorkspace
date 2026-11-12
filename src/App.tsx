@@ -439,6 +439,14 @@ export default function App() {
         changeCircleTarget(selectedEntry, 'position', targetKey);
         return;
       }
+      if (action.type === 'LEAVE' && 'hand' in action.target && 'performerId' in action.target) {
+        const recipient = sequence.performers.find((person) => person.identifier?.toUpperCase() === targetKey && person.id !== selected.performerId);
+        if (recipient) { event.preventDefault(); changePassTarget(selectedEntry, recipient.id, action.target.hand); return; }
+      }
+      if (action.type === 'LIFT' && 'performerId' in action.target) {
+        const source = sequence.performers.find((person) => person.identifier?.toUpperCase() === targetKey && person.id !== selected.performerId);
+        if (source) { event.preventDefault(); changePassTarget(selectedEntry, source.id); return; }
+      }
       if (['LIFT', 'LEAVE', 'TAP', 'BOUNCE'].includes(action.type) && 'target' in action && action.target.kind === 'position') {
         const position = sequence.positions.find((item) =>
           item.name.toUpperCase() === targetKey &&
