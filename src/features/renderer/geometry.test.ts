@@ -8,7 +8,7 @@ import {
   getHandReachPosition,
   getHandReachProgress,
   getObjectPosition,
-  getPerformerAnchor,
+  getPassMeetingPoint,\n  getPerformerAnchor,
   getPerformerSpacingRadius,
   getTableFootprint,
   getTablePositionPosition,
@@ -107,6 +107,16 @@ describe('renderer geometry', () => {
     const position = getHandPosition(value, 'a', 'left', 'circle');
     const object = getObjectPosition(value, { kind: 'hand-held', performerId: asPerformerId('a'), hand: 'left' }, 'circle');
     expect(object).toEqual(position);
+  });
+
+  it('gives both passing hands the same intermediate meeting point', () => {
+    const value = sequence(2);
+    const source = getHandPosition(value, 'a', 'left', 'circle');
+    const recipient = getHandPosition(value, 'b', 'right', 'circle');
+    const meeting = getPassMeetingPoint(value, 'a', 'left', 'b', 'right', 'circle');
+    expect(meeting.x).toBeCloseTo((source.x + recipient.x) / 2);
+    expect(meeting.y).toBeCloseTo((source.y + recipient.y) / 2);
+    expect(meeting.z).toBeCloseTo((source.z + recipient.z) / 2);
   });
 
   it('expands the automatic circle to maintain minimum performer separation', () => {
