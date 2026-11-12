@@ -198,7 +198,7 @@ function NotationMark({ action, sequence, hand }: { action: NotationAction; sequ
       path = 'M0 2H100 M0 2V52 M0 52H100';
       if (action.target.kind === 'position') label = positionName(sequence, action.target.positionId);
       else if (action.target.kind === 'circle-position') label = action.target.position + (action.target.distance > 1 ? String(action.target.distance) : '') + (action.target.direction === 'left' ? 'L' : 'R');
-      else {
+      else if (action.target.kind === 'pass-source') {
         label = 'X';
         subscript = sequence.performers.find((person) => person.id === action.target.performerId)?.identifier ?? '?';
       }
@@ -211,7 +211,7 @@ function NotationMark({ action, sequence, hand }: { action: NotationAction; sequ
       path = 'M0 2H100 M100 2V52 M0 52H100';
       if (action.target.kind === 'position') label = positionName(sequence, action.target.positionId);
       else if (action.target.kind === 'circle-position') label = action.target.position + (action.target.distance > 1 ? String(action.target.distance) : '') + (action.target.direction === 'left' ? 'L' : 'R');
-      else {
+      else if (action.target.kind === 'pass-recipient-hand') {
         label = action.target.hand === 'left' ? 'L' : 'R';
         circledTarget = true;
         subscript = sequence.performers.find((person) => person.id === action.target.performerId)?.identifier ?? '?';
@@ -229,10 +229,6 @@ function NotationMark({ action, sequence, hand }: { action: NotationAction; sequ
         : hand === 'left' ? 'M0 2H100 M0 2V52' : 'M0 52H100 M0 2V52';
       label = 'ZIP';
       break;
-    case 'TAP':
-    case 'EMPTY':
-    case 'SPECIAL':
-      return null;
   }
 
   return (
