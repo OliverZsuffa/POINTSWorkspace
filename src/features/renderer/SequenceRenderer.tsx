@@ -8,7 +8,7 @@ import {
   getHandReachPosition,
   getObjectPosition,
   getPerformerAnchor,
-  getPerformerFacing,
+  getPassMeetingPoint,\n  getPerformerFacing,
   getTableFootprint,
   getTablePositionPosition,
   type Point3,
@@ -95,7 +95,14 @@ function getActionTargetPosition(
     }
   }
   if (action.type === 'LEAVE' && action.target.kind === 'pass-recipient-hand') {
-    return getHandPosition(sequence, action.target.performerId, action.target.hand, layout);
+    return getPassMeetingPoint(
+      sequence,
+      entry.performerId,
+      entry.hand,
+      action.target.performerId,
+      action.target.hand,
+      layout,
+    );
   }
   if (action.type === 'LIFT' && action.target.kind === 'pass-source' && action.linkId) {
     const source = sequence.notation.find((item) =>
@@ -103,7 +110,16 @@ function getActionTargetPosition(
       'linkId' in item.action &&
       item.action.linkId === action.linkId,
     );
-    if (source) return getHandPosition(sequence, source.performerId, source.hand, layout);
+    if (source) {
+      return getPassMeetingPoint(
+        sequence,
+        source.performerId,
+        source.hand,
+        entry.performerId,
+        entry.hand,
+        layout,
+      );
+    }
   }
   return undefined;
 }
