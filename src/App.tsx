@@ -769,6 +769,21 @@ export default function App() {
     });
   };
 
+  const updatePerformer = (performerId: string, field: 'name' | 'identifier', value: string) => {
+    const clean = value.trim();
+    if (field === 'name' && !clean) { window.alert('A performer needs a name.'); return; }
+    if (field === 'identifier') {
+      if (!/^[a-z]$/.test(clean)) { window.alert('Use one lowercase letter as the performer identifier.'); return; }
+      if (sequence.performers.some((person) => person.id !== performerId && person.identifier === clean)) {
+        window.alert('This performer identifier is already in use.');
+        return;
+      }
+    }
+    commit({ ...sequence, performers: sequence.performers.map((person) => person.id === performerId
+      ? field === 'name' ? { ...person, name: clean } : { ...person, identifier: clean }
+      : person) });
+  };
+
   const removePerformer = (performerId: string) => {
     const performer = sequence.performers.find((item) => item.id === performerId);
     if (!performer || sequence.performers.length <= 1) return;
@@ -1117,7 +1132,7 @@ export default function App() {
           </label>
           <div className="setting-control"><span>Balls</span><div className="stepper"><button type="button" onClick={() => changeBallCount(sequence.balls.length - 1)} disabled={sequence.balls.length <= 1}>−</button><output>{sequence.balls.length}</output><button type="button" onClick={() => changeBallCount(sequence.balls.length + 1)}>+</button></div></div>
           <div className="setting-control"><span>Beats</span><div className="stepper"><button type="button" onClick={removeBeat} disabled={sequence.beats.length <= 1 || sequence.notation.some((entry) => entry.time.beatId === sequence.beats[sequence.beats.length - 1]?.id)}>−</button><output>{sequence.beats.length}</output><button type="button" onClick={addBeat}>+</button></div></div>
-          <div className="performer-settings"><span>Performers</span>{sequence.performers.map((performer) => <span className="performer-chip" key={performer.id}>{performer.name}{sequence.performers.length > 1 && <button type="button" className="remove-chip" onClick={() => removePerformer(performer.id)} aria-label={'Remove ' + performer.name}>×</button>}</span>)}<button type="button" onClick={addPerformer}>Add performer</button></div>
+          <div className="performer-settings"><span>Performers</span>{sequence.performers.map((performer) => <div className="performer-chip" key={performer.id + performer.name + performer.identifier}><input className="performer-name" aria-label={'Performer name ' + performer.name} defaultValue={performer.name} onBlur={(event) => updatePerformer(performer.id, 'name', event.target.value)} /><input className="performer-identifier" aria-label={'Performer identifier ' + (performer.identifier ?? '')} defaultValue={performer.identifier ?? ''} maxLength={1} onBlur={(event) => updatePerformer(performer.id, 'identifier', event.target.value)} />{sequence.performers.length > 1 && <button type="button" className="remove-chip" onClick={() => removePerformer(performer.id)} aria-label={'Remove ' + performer.name}>×</button>}</div>)}<button type="button" onClick={addPerformer}>Add performer</button></div>
           <div className="position-settings"><span>Positions</span>{sequence.positions.filter((position) => position.kind === 'table').map((position) => <div className="position-edit" key={position.id}><input aria-label={'Rename position ' + position.name} defaultValue={position.name} onBlur={(event) => renamePosition(position.id, event.target.value)} /><button type="button" onClick={() => removePosition(position.id)} aria-label={'Remove position ' + position.name}>×</button></div>)}<button type="button" onClick={addPosition}>Add position</button></div>
         </section>
       )}
