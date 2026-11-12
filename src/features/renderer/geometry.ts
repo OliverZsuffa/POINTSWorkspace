@@ -57,6 +57,28 @@ export function getPerformerSpacingRadius(count: number, minimumDistance = 2.2):
   return Math.max(3.7, minimumDistance / (2 * Math.sin(Math.PI / safeCount)));
 }
 
+function getPolygonSideCount(sequence: Sequence): number {
+  return sequence.sequenceType === 'circle-passing'
+    ? Math.max(3, sequence.performers.length)
+    : sequence.tableLayout.type === 'polygon'
+      ? Math.max(3, sequence.tableLayout.sideCount)
+      : 0;
+}
+
+function getOwnedPositionOffset(sequence: Sequence, position: PositionDefinition): number {
+  if (position.kind !== 'table') return 0;
+  const siblings = sequence.positions
+    .filter((item): item is Extract<PositionDefinition, { kind: 'table' }> =>
+      item.kind === 'table' &&
+      item.owner.kind === position.owner.kind &&
+      (item.owner.kind === 'shared' ||
+        (position.owner.kind === 'performer' && item.owner.performerId === position.owner.performerId)),
+    )
+    .sort((a, b) => a.name.localeCompare(b.name));
+  const index = siblings.findIndex((item) => item.id === position.id);
+  return (index - (siblings.length - 1) / 2) * 0.72;
+}
+
 export function getPerformerAnchor(
   sequence: Sequence,
   performer: Performer,
@@ -66,15 +88,17 @@ export function getPerformerAnchor(
   const count = Math.max(1, sequence.performers.length);
 
   if (layout === 'line') {
-    return { x: (index - (count - 1) / 2) * 2.8, y: 0, z: 4 };
+    return { x: (index - (count - 1) / 2) * 2.8, y: 0, z: 2.85 };
   }
 
   const assignment = sequence.seatAssignments.find((item) => item.performerId === performer.id);
-  if (assignment?.seat.kind === 'polygon-edge' && sequence.tableLayout.type === 'polygon') {
-    const sideCount = Math.max(3, sequence.tableLayout.sideCount);
-    const angle = (Math.PI / 2) + ((assignment.seat.edgeIndex + 0.5) * Math.PI * 2) / sideCount;
-    const tableRadius = Math.max(1.6, sideCount * 0.36);
-    const radius = tableRadius + 2.2;
+  const polygonSideCount = getPolygonSideCount(sequence);
+  if (polygonSideCount > 0) {
+    const edgeIndex = assignment?.seat.kind === 'polygon-edge' ? assignment.seat.edgeIndex : index;
+    const footprint = getTableFootprint(sequence);
+    const apothem = (footprint.width / 2) * Math.cos(Math.PI / polygonSideCount);
+    const radius = apothem + 1.05;
+    const angle = (Math.PI / 2) + ((edgeIndex + 0.5) * Math.PI * 2) / polygonSideCount;
     return { x: Math.cos(angle) * radius, y: 0, z: Math.sin(angle) * radius };
   }
 
@@ -85,11 +109,11 @@ export function getPerformerAnchor(
     if (seat.side === 'long-a' || seat.side === 'long-b') {
       const countOnSide = Math.max(1, sequence.tableLayout.longSideSeatCount);
       const x = countOnSide === 1 ? 0 : -width / 2 + (seat.seatIndex * width) / (countOnSide - 1);
-      return { x, y: 0, z: (seat.side === 'long-a' ? -1 : 1) * (depth / 2 + 2.2) };
+      return { x, y: 0, z: (seat.side === 'long-a' ? -1 : 1) * (depth / 2 + 1.05) };
     }
     const countOnSide = Math.max(1, sequence.tableLayout.shortSideSeatCount);
     const z = countOnSide === 1 ? 0 : -depth / 2 + (seat.seatIndex * depth) / (countOnSide - 1);
-    return { x: (seat.side === 'short-a' ? -1 : 1) * (width / 2 + 2.2), y: 0, z };
+    return { x: (seat.side === 'short-a' ? -1 : 1) * (width / 2 + 1.05), y: 0, z };
   }
 
   const angle = (Math.PI / 2) + (index * Math.PI * 2) / count;
@@ -138,15 +162,22 @@ export function getHandPosition(
 }
 
 export function getTableFootprint(sequence: Sequence): { width: number; depth: number; round: boolean; sideCount?: number } {
+  const polygonSideCount = getPolygonSideCount(sequence);
+  if (polygonSideCount > 0) {
+    const maxOwnedPositions = Math.max(1, ...sequence.performers.map((performer) =>
+      sequence.positions.filter((position) =>
+        position.kind === 'table' && position.owner.kind === 'performer' && position.owner.performerId === performer.id,
+      ).length,
+    ));
+    const requiredEdgeLength = Math.max(2.4, (maxOwnedPositions - 1) * 0.72 + 0.8);
+    const radius = Math.max(1.6, requiredEdgeLength / (2 * Math.sin(Math.PI / polygonSideCount)));
+    const diameter = radius * 2;
+    return { width: diameter, depth: diameter, round: true, sideCount: polygonSideCount };
+  }
   if (sequence.tableLayout.type === 'rectangle') {
     const width = Math.max(3.2, sequence.tableLayout.longSideSeatCount * 1.15);
     const depth = Math.max(2.4, sequence.tableLayout.shortSideSeatCount * 1.15);
     return { width, depth, round: false };
-  }
-  if (sequence.tableLayout.type === 'polygon') {
-    const sideCount = Math.max(3, sequence.tableLayout.sideCount);
-    const diameter = Math.max(3.2, sideCount * 0.72);
-    return { width: diameter, depth: diameter, round: true, sideCount };
   }
   return { width: 3.6, depth: 2.5, round: false };
 }
@@ -161,7 +192,7 @@ export function getTablePositionPosition(
   const owner = position.owner;
 
   if (owner.kind === 'shared') {
-    return { x: positionOffset(position.name), y: 0.19, z: 0 };
+    return { x: getOwnedPositionOffset(sequence, position), y: 0.19, z: 0 };
   }
 
   const performer = sequence.performers.find((item) => item.id === owner.performerId);
@@ -191,15 +222,19 @@ export function getTablePositionPosition(
     };
   }
 
-  if (assignment?.seat.kind === 'polygon-edge' && sequence.tableLayout.type === 'polygon') {
-    const sideCount = Math.max(3, sequence.tableLayout.sideCount);
+  const polygonSideCount = getPolygonSideCount(sequence);
+  if (polygonSideCount > 0) {
+    const performerIndex = sequence.performers.findIndex((item) => item.id === performer.id);
+    const edgeIndex = assignment?.seat.kind === 'polygon-edge' ? assignment.seat.edgeIndex : performerIndex;
+    const sideCount = polygonSideCount;
     const radius = footprint.width / 2;
-    const angle = (Math.PI / 2) + ((assignment.seat.edgeIndex + 0.5) * Math.PI * 2) / sideCount;
+    const angle = (Math.PI / 2) + ((edgeIndex + 0.5) * Math.PI * 2) / sideCount;
     const normal = { x: Math.cos(angle), y: 0, z: Math.sin(angle) };
     const tangent = { x: -normal.z, y: 0, z: normal.x };
     const apothem = radius * Math.cos(Math.PI / sideCount);
     const maxOffset = Math.max(0, radius * Math.sin(Math.PI / sideCount) - 0.2);
-    const tangentOffset = Math.max(-maxOffset, Math.min(maxOffset, positionOffset(position.name)));
+    const requestedOffset = getOwnedPositionOffset(sequence, position);
+    const tangentOffset = Math.max(-maxOffset, Math.min(maxOffset, requestedOffset));
     return add(
       scale(normal, apothem - inwardOffset),
       add(scale(tangent, tangentOffset), { x: 0, y: 0.19, z: 0 }),
@@ -224,7 +259,8 @@ export function getTablePositionPosition(
 
   const edgePoint = scale(direction, Math.max(0, edgeDistance - inwardOffset));
   const tangent = { x: -direction.z, y: 0, z: direction.x };
-  const tangentOffset = Math.max(-maximumTangentOffset, Math.min(maximumTangentOffset, positionOffset(position.name)));
+  const requestedOffset = getOwnedPositionOffset(sequence, position);
+  const tangentOffset = Math.max(-maximumTangentOffset, Math.min(maximumTangentOffset, requestedOffset));
   return add(edgePoint, add(scale(tangent, tangentOffset), { x: 0, y: 0.19, z: 0 }));
 }
 
