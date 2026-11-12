@@ -1272,7 +1272,7 @@ export default function App() {
         </div>
         <span className="selection-label">{selected ? sequence.performers.find((item) => item.id === selected.performerId)?.name + ' · ' + selected.hand + ' · beat ' + (sequence.beats.findIndex((beat) => beat.id === selected.beatId) + 1) : 'Select a cell'}</span>
         <div className="target-tools">
-          {targetableEntry && targetableEntry.action.target.kind === 'position' && (
+          {!showActionMenu && targetableEntry && targetableEntry.action.target.kind === 'position' && (
             <label className="target-control">Target
               <select value={targetableEntry.action.target.positionId} onChange={(event) => changeTarget(targetableEntry, event.target.value)}>
                 {sequence.positions.filter((position) => position.kind === 'table' || ((targetableEntry.action.type === 'LIFT' || targetableEntry.action.type === 'LEAVE') && position.kind === 'hand-back' && position.performerId === targetableEntry.performerId)).map((position) => (
@@ -1281,7 +1281,7 @@ export default function App() {
               </select>
             </label>
           )}
-          {targetableEntry && targetableEntry.action.target.kind === 'circle-position' && (
+          {!showActionMenu && targetableEntry && targetableEntry.action.target.kind === 'circle-position' && (
             <div className="target-control">
               <label>Position <select value={targetableEntry.action.target.position} onChange={(event) => changeCircleTarget(targetableEntry, 'position', event.target.value)}><option>A</option><option>B</option><option>C</option></select></label>
               <label>Performer <select value={targetableEntry.action.target.direction ? 'other' : 'self'} onChange={(event) => setCircleTargetMode(targetableEntry, event.target.value as 'self' | 'other')}><option value="self">Self</option><option value="other" disabled={sequence.performers.length < 2}>Other</option></select></label>
@@ -1291,13 +1291,13 @@ export default function App() {
               </>}
             </div>
           )}
-          {targetableEntry && selectedPassRecipient && (
+          {!showActionMenu && targetableEntry && selectedPassRecipient && (
             <div className="target-control">
               <label>Recipient <select value={selectedPassRecipient.performerId} onChange={(event) => changePassTarget(targetableEntry, event.target.value, selectedPassRecipient.hand)}>{sequence.performers.filter((person) => person.id !== selected?.performerId).map((person) => <option key={person.id} value={person.id}>{person.name} ({person.identifier ?? '?'})</option>)}</select></label>
               <label>Hand <select value={selectedPassRecipient.hand} onChange={(event) => changePassTarget(targetableEntry, selectedPassRecipient.performerId, event.target.value as Hand)}><option value="left">Left</option><option value="right">Right</option></select></label>
             </div>
           )}
-          {targetableEntry && selectedPassSource && (
+          {!showActionMenu && targetableEntry && selectedPassSource && (
             <label className="target-control">Source <select value={selectedPassSource.performerId} onChange={(event) => changePassTarget(targetableEntry, event.target.value)}>{sequence.performers.filter((person) => person.id !== selected?.performerId).map((person) => <option key={person.id} value={person.id}>{person.name} ({person.identifier ?? '?'})</option>)}</select></label>
           )}
         </div>
