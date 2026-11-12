@@ -636,8 +636,20 @@ describe('sequence editor', () => {
     await user.click(screen.getByRole('button', { name: 'Add performer' }));
     await user.selectOptions(screen.getByLabelText('Type'), 'circle-passing');
     expect(container.querySelectorAll('.performer-block')).toHaveLength(1);
-    expect(container.querySelector('.performer-heading')?.textContent).toContain('Juggler 1');
-    expect(container.querySelector('.performer-heading')?.textContent).not.toContain('Juggler 2');
+    expect(container.querySelector('.performer-heading')?.textContent).toBe('Pattern');
+  });
+
+  it('shows a participant count control for circle passing', async () => {
+    const user = userEvent.setup();
+    render(<App />);
+    await user.click(screen.getByRole('button', { name: 'Settings' }));
+    await user.click(screen.getByRole('button', { name: 'Add performer' }));
+    await user.click(screen.getByRole('button', { name: 'Add performer' }));
+    await user.selectOptions(screen.getByLabelText('Type'), 'circle-passing');
+    expect(screen.getByText('People')).toBeInTheDocument();
+    expect(screen.getByLabelText('People count')).toHaveTextContent('3');
+    await user.click(screen.getByRole('button', { name: 'Add one person' }));
+    expect(screen.getByLabelText('People count')).toHaveTextContent('4');
   });
 
   it('sets table position targets by typing their labels', () => {
