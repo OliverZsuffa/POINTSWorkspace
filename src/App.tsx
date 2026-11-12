@@ -417,7 +417,7 @@ export default function App() {
     if (event.key === 'ArrowDown') nextRow += 1;
     const row = rows[Math.max(0, Math.min(rows.length - 1, nextRow))];
     const beat = sequence.beats[Math.max(0, Math.min(sequence.beats.length - 1, nextBeat))];
-    if (row && beat) selectCell({ performerId: row.performerId, hand: row.hand, beatId: beat.id }, event.shiftKey);
+    if (row && beat) selectCell({ performerId: row.performerId, hand: row.hand, beatId: beat.id, offset: selected.offset, duration: selected.duration }, event.shiftKey);
   };
 
   const addAction = (type: ActionName) => {
