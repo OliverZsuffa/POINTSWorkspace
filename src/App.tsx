@@ -508,13 +508,23 @@ export default function App() {
       window.alert('Move a rectangle within the same hand row.');
       return;
     }
-    const source = entryAt(first.performerId, first.hand, first.beatId, first.offset ?? rational(0));
-    if (!source) return;
     const sourceIndex = sequence.beats.findIndex((beat) => beat.id === first.beatId);
     const targetIndex = sequence.beats.findIndex((beat) => beat.id === last.beatId);
     const offset = targetIndex - sourceIndex;
     if (offset === 0) return;
-    const rectangle = getBallRectangleEntries(sequence, simulation, source);
+    const selectedSourceCells = selectedCells.some((cell) =>
+      cell.performerId === first.performerId && cell.hand === first.hand && cell.beatId === first.beatId &&
+      compareRational(cell.offset ?? rational(0), first.offset ?? rational(0)) === 0,
+    ) ? selectedCells : [first];
+    const sourceEntries = selectedSourceCells
+      .map((cell) => entryAt(cell.performerId, cell.hand, cell.beatId, cell.offset ?? rational(0)))
+      .filter((entry): entry is NotationEntry => Boolean(entry));
+    if (!sourceEntries.length) return;
+    const moving = new Map<string, NotationEntry>();
+    for (const entry of sourceEntries) {
+      for (const rectangleEntry of getBallRectangleEntries(sequence, simulation, entry)) moving.set(rectangleEntry.id, rectangleEntry);
+    }
+    const rectangle = [...moving.values()];
     if (!rectangle.length) return;
     const movingIds = new Set(rectangle.map((entry) => entry.id));
     const destinations = rectangle.map((entry) => {
@@ -522,14 +532,13 @@ export default function App() {
       return { entry, beat: sequence.beats[currentIndex + offset] };
     });
     if (destinations.some((item) => !item.beat)) {
-      window.alert('The complete rectangle would extend beyond the sequence.');
+      window.alert('The complete rectangle selection would extend beyond the sequence.');
       return;
     }
     const conflict = destinations.some(({ entry, beat }) => sequence.notation.some((other) =>
       !movingIds.has(other.id) && other.performerId === entry.performerId && other.hand === entry.hand &&
       other.time.beatId === beat!.id &&
-      other.time.offset.numerator === entry.time.offset.numerator &&
-      other.time.offset.denominator === entry.time.offset.denominator,
+      compareRational(other.time.offset, entry.time.offset) === 0,
     ));
     if (conflict) {
       window.alert('Move cancelled because the destination contains notation.');
