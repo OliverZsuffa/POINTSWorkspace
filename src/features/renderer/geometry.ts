@@ -105,6 +105,23 @@ export function getPerformerFacing(
   return normalize(scale(getPerformerAnchor(sequence, performer, layout), -1));
 }
 
+export function getPassMeetingPoint(
+  sequence: Sequence,
+  sourcePerformerId: string,
+  sourceHand: 'left' | 'right',
+  recipientPerformerId: string,
+  recipientHand: 'left' | 'right',
+  layout: SceneLayout,
+): Point3 {
+  const source = getHandPosition(sequence, sourcePerformerId, sourceHand, layout);
+  const recipient = getHandPosition(sequence, recipientPerformerId, recipientHand, layout);
+  return {
+    x: (source.x + recipient.x) / 2,
+    y: (source.y + recipient.y) / 2,
+    z: (source.z + recipient.z) / 2,
+  };
+}
+
 export function getHandPosition(
   sequence: Sequence,
   performerId: string,
