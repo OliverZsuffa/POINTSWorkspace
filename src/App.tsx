@@ -22,7 +22,7 @@ import { rational } from './domain/time/rational';
 import { DEFAULT_TIME_SIGNATURE } from './domain/time/time-signature';
 import { simulateSequence } from './domain/state';
 
-let nextId = 0;
+let nextId = 1;
 const id = (prefix: string) => prefix + '-' + (++nextId).toString(36);
 const hands: readonly Hand[] = ['left', 'right'];
 const actionNames = ['LIFT', 'HOLD', 'LEAVE', 'BOUNCE', 'TAP', 'EMPTY', 'ZIP', 'SPECIAL'] as const;
