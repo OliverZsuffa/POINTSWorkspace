@@ -469,7 +469,7 @@ export default function App() {
       const unsafe = removed.some((ball) => {
         const initial = sequence.initialState.placements.find((placement) => placement.ballId === ball.id);
         const current = latest?.ballLocations[ball.id];
-        return !initial || !current || !sameLocation(initial.location, current) || initial.location.kind !== 'position';
+        return !initial || !current || initial.location.kind !== 'position' || simulation.snapshots.some((snapshot) => !snapshot.ballLocations[ball.id] || !sameLocation(initial.location, snapshot.ballLocations[ball.id]!));
       });
       if (unsafe) { window.alert('The selected balls are in use. Move them back to their initial table positions before reducing the count.'); return; }
       const removedIds = new Set(removed.map((ball) => ball.id));
@@ -508,7 +508,8 @@ export default function App() {
     const performerId = asPerformerId(id('performer'));
     const performerNumber = sequence.performers.length + 1;
     const performer = { id: performerId, name: 'Juggler ' + performerNumber, identifier: String.fromCharCode(96 + performerNumber) };
-    const ownedPositions = ['A', 'B', 'C'].map((name) => ({
+    const sharedLayout = sequence.sequenceType === 'individual-passing' && sequence.individualPassingLayout === 'shared-positions';
+    const ownedPositions = (sharedLayout ? [] : ['A', 'B', 'C']).map((name) => ({
       kind: 'table' as const, id: asPositionId(id('position')), name,
       owner: { kind: 'performer' as const, performerId },
     }));
@@ -523,8 +524,8 @@ export default function App() {
       ...sequence, performers: [...sequence.performers, performer], positions, seatAssignments,
       balls: [...sequence.balls, ...newBalls],
       initialState: { placements: [...sequence.initialState.placements,
-        { ballId: newBalls[0]!.id, location: { kind: 'position', positionId: ownedPositions[0]!.id } },
-        { ballId: newBalls[1]!.id, location: { kind: 'position', positionId: ownedPositions[2]!.id } },
+        { ballId: newBalls[0]!.id, location: sharedLayout && sequence.positions.some((position) => position.kind === 'table' && position.owner.kind === 'shared' && position.name === 'A' && sequence.initialState.placements.some((placement) => placement.location.kind === 'position' && placement.location.positionId === position.id)) ? { kind: 'hand-held', performerId, hand: 'left' } : sharedLayout ? { kind: 'position', positionId: sequence.positions.find((position) => position.kind === 'table' && position.owner.kind === 'shared' && position.name === 'A')!.id } : { kind: 'position', positionId: ownedPositions[0]!.id } },
+        { ballId: newBalls[1]!.id, location: sharedLayout && sequence.positions.some((position) => position.kind === 'table' && position.owner.kind === 'shared' && position.name === 'C' && sequence.initialState.placements.some((placement) => placement.location.kind === 'position' && placement.location.positionId === position.id)) ? { kind: 'hand-held', performerId, hand: 'right' } : sharedLayout ? { kind: 'position', positionId: sequence.positions.find((position) => position.kind === 'table' && position.owner.kind === 'shared' && position.name === 'C')!.id } : { kind: 'position', positionId: ownedPositions[2]!.id },
       ] },
       tableLayout: sequence.sequenceType === 'solo' ? { type: 'rectangle', longSideSeatCount: Math.ceil((performerNumber + 1) / 2), shortSideSeatCount: 0 } : sequence.tableLayout,
     });
@@ -602,7 +603,7 @@ export default function App() {
   const changeType = (type: SequenceType) => {
     let positions = sequence.positions;
     let individualPassingLayout = sequence.individualPassingLayout;
-    if (type === 'individual-passing') {
+    if (type === 'individual-passing' && sequence.individualPassingLayout !== 'shared-positions') {
       const tables = sequence.positions.filter((position) => position.kind === 'table');
       const names = [...new Set(tables.map((position) => position.name))];
       const normalized = sequence.performers.flatMap((performer, performerIndex) => names.map((name) => {
@@ -619,6 +620,61 @@ export default function App() {
       ...sequence, sequenceType: type, positions, individualPassingLayout,
       tableLayout: type === 'solo' ? { type: 'solo' } : { type: 'rectangle', longSideSeatCount: Math.max(1, sequence.performers.length), shortSideSeatCount: 0 },
     });
+  };
+
+  const changeIndividualLayout = (layout: 'shared-positions' | 'per-performer-positions') => {
+    if (sequence.sequenceType !== 'individual-passing' || layout === sequence.individualPassingLayout) return;
+    const tables = sequence.positions.filter((position) => position.kind === 'table');
+    const names = [...new Set(tables.map((position) => position.name))];
+    if (layout === 'shared-positions') {
+      const shared = names.map((name) => {
+        const existing = tables.find((position) => position.name === name && position.owner.kind === 'shared');
+        const first = tables.find((position) => position.name === name);
+        return existing ?? (first ? { ...first, owner: { kind: 'shared' as const } } : undefined);
+      }).filter((position): position is PositionDefinition & { kind: 'table' } => Boolean(position));
+      const byName = new Map(shared.map((position) => [position.name, position.id]));
+      const oldToNew = new Map(tables.map((position) => [position.id, byName.get(position.name)!]));
+      const placements = sequence.initialState.placements.map((placement) => placement.location.kind === 'position' && oldToNew.has(placement.location.positionId)
+        ? { ...placement, location: { kind: 'position' as const, positionId: oldToNew.get(placement.location.positionId)! } }
+        : placement);
+      const occupied = new Set<string>();
+      for (const placement of placements) {
+        const key = placement.location.kind === 'position' ? 'p:' + placement.location.positionId : placement.location.kind === 'hand-held' ? 'h:' + placement.location.performerId + ':' + placement.location.hand : 'b:' + placement.location.positionId;
+        if (occupied.has(key)) { window.alert('Shared positions cannot contain multiple balls. Move the extra balls to hands or hand backs before switching layouts.'); return; }
+        occupied.add(key);
+      }
+      const notation = sequence.notation.map((entry) => {
+        const action = entry.action;
+        if ((action.type === 'LIFT' || action.type === 'LEAVE' || action.type === 'TAP' || action.type === 'BOUNCE') && action.target.kind === 'position' && oldToNew.has(action.target.positionId)) {
+          return { ...entry, action: { ...action, target: { ...action.target, positionId: oldToNew.get(action.target.positionId)! } } };
+        }
+        return entry;
+      });
+      commit({ ...sequence, positions: [...sequence.positions.filter((position) => position.kind === 'hand-back'), ...shared], initialState: { placements }, notation, individualPassingLayout: layout });
+      return;
+    }
+    const perPerformer = sequence.performers.flatMap((performer, performerIndex) => names.map((name) => {
+      const existing = tables.find((position) => position.name === name && position.owner.kind === 'performer' && position.owner.performerId === performer.id)
+        ?? (performerIndex === 0 ? tables.find((position) => position.name === name) : undefined);
+      return existing
+        ? { ...existing, owner: { kind: 'performer' as const, performerId: performer.id } }
+        : { kind: 'table' as const, id: asPositionId(id('position')), name, owner: { kind: 'performer' as const, performerId: performer.id } };
+    }));
+    const firstPositions = new Map(perPerformer.filter((position) => position.owner.kind === 'performer' && position.owner.performerId === sequence.performers[0]?.id).map((position) => [position.name, position.id]));
+    const sharedToFirst = new Map(tables.filter((position) => position.owner.kind === 'shared').map((position) => [position.id, firstPositions.get(position.name)!]));
+    const placements = sequence.initialState.placements.map((placement) => placement.location.kind === 'position' && sharedToFirst.has(placement.location.positionId)
+      ? { ...placement, location: { kind: 'position' as const, positionId: sharedToFirst.get(placement.location.positionId)! } }
+      : placement);
+    const notation = sequence.notation.map((entry) => {
+      const action = entry.action;
+      if ((action.type === 'LIFT' || action.type === 'LEAVE' || action.type === 'TAP' || action.type === 'BOUNCE') && action.target.kind === 'position' && sharedToFirst.has(action.target.positionId)) {
+        const oldPosition = tables.find((position) => position.id === action.target.positionId);
+        const targetId = perPerformer.find((position) => position.name === oldPosition?.name && position.owner.kind === 'performer' && position.owner.performerId === entry.performerId)?.id ?? sharedToFirst.get(action.target.positionId)!;
+        return { ...entry, action: { ...action, target: { ...action.target, positionId: targetId } } };
+      }
+      return entry;
+    });
+    commit({ ...sequence, positions: [...sequence.positions.filter((position) => position.kind === 'hand-back'), ...perPerformer], initialState: { placements }, notation, individualPassingLayout: layout });
   };
 
   const changeTarget = (entry: NotationEntry, targetId: string) => {
@@ -776,6 +832,12 @@ export default function App() {
               <option value="individual-passing">Individual passing</option>
             </select>
           </label>
+          {sequence.sequenceType === 'individual-passing' && <label>Position layout
+            <select value={sequence.individualPassingLayout ?? 'per-performer-positions'} onChange={(event) => changeIndividualLayout(event.target.value as 'shared-positions' | 'per-performer-positions')}>
+              <option value="per-performer-positions">Per performer</option>
+              <option value="shared-positions">Shared</option>
+            </select>
+          </label>}
           <label>BPM
             <input type="number" min="1" max="400" value={sequence.bpm} onChange={(event) => changeBpm(Number(event.target.value))} />
           </label>
