@@ -82,6 +82,27 @@ describe('sequence editor', () => {
     expect(screen.getByRole('textbox', { name: 'Rename position E' })).toBeInTheDocument();
   });
 
+  it('sets initial objects by clicking visible positions', async () => {
+    const user = userEvent.setup();
+    render(<App />);
+
+    await user.click(screen.getByRole('button', { name: 'A, occupied' }));
+    expect(screen.getByRole('button', { name: 'A, empty' })).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'A, empty' }));
+    expect(screen.getByRole('button', { name: 'A, occupied' })).toBeInTheDocument();
+  });
+
+  it('renders notation using the POINTS symbol geometry', async () => {
+    const user = userEvent.setup();
+    render(<App />);
+
+    await user.click(screen.getByRole('button', { name: 'Juggler 1 left beat 1 empty' }));
+    await user.click(screen.getByRole('button', { name: 'LIFT' }));
+
+    expect(screen.getByRole('button', { name: 'Juggler 1 left beat 1 LIFT A' }).querySelector('svg.notation-symbol')).toBeInTheDocument();
+  });
+
   it('exposes sequence settings and initial object distribution', async () => {
     const user = userEvent.setup();
     render(<App />);
@@ -89,6 +110,6 @@ describe('sequence editor', () => {
     await user.click(screen.getByRole('button', { name: 'Settings' }));
 
     expect(screen.getByRole('region', { name: 'Sequence settings' })).toBeInTheDocument();
-    expect(screen.getByText('Initial object distribution')).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Initial positions' })).toBeInTheDocument();
   });
 });
