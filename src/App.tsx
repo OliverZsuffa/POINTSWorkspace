@@ -661,6 +661,7 @@ export default function App() {
     const updated = splitSubdivision(beat, offset, duration, () => asSubdivisionId(id('subdivision')));
     if (updated === beat) return;
     commit({ ...sequence, beats: sequence.beats.map((item) => item.id === beatId ? updated : item) });
+    setShowActionMenu(false);
   };
 
   const undo = () => {
@@ -741,6 +742,7 @@ export default function App() {
     const beats = [...sequence.beats];
     [beats[index], beats[target]] = [beats[target]!, beats[index]!];
     commit({ ...sequence, beats });
+    setShowActionMenu(false);
   };
   const removeBeat = () => {
     const target = selected?.beatId ? sequence.beats.find((beat) => beat.id === selected.beatId) : sequence.beats[sequence.beats.length - 1];
@@ -1107,6 +1109,7 @@ export default function App() {
         : item,
     ) });
     selectCell(cell);
+    setShowActionMenu(false);
   };
 
   const selectedEntry = selected
