@@ -1107,8 +1107,45 @@ export default function App() {
     let performers = sequence.performers;
     let positions = sequence.positions;
     let notation = sequence.notation;
+    let initialState = sequence.initialState;
     const individualPassingLayout = sequence.individualPassingLayout;
     if (type === 'circle-passing') {
+      const originalPerformers = sequence.performers;
+      const visualCount = Math.max(3, originalPerformers.length);
+      setVisualParticipantCount(visualCount);
+      const baseTables = sequence.positions.filter((position) => position.kind === 'table' &&
+        position.owner.kind === 'performer' && position.owner.performerId === representative.id);
+      const baseBacks = sequence.positions.filter((position) => position.kind === 'hand-back' && position.performerId === representative.id);
+      const mapPerformerIndex = (performerId: string) => Math.max(0, originalPerformers.findIndex((person) => person.id === performerId));
+      const mapPerformerId = (index: number) => index === 0 ? representative.id : asPerformerId('visual-performer-' + (index + 1));
+      const mapPositionId = (positionId: string, index: number) => {
+        const source = sequence.positions.find((position) => position.id === positionId);
+        if (!source) return undefined;
+        const base = source.kind === 'table'
+          ? baseTables.find((position) => position.name === source.name)
+          : baseBacks.find((position) => position.hand === source.hand);
+        return base ? index === 0 ? base.id : asPositionId('visual-' + index + '-' + base.id) : undefined;
+      };
+      initialState = {
+        placements: sequence.initialState.placements.map((placement) => {
+          const location = placement.location;
+          if (location.kind === 'position') {
+            const source = sequence.positions.find((position) => position.id === location.positionId);
+            const ownerIndex = source?.kind === 'table' && source.owner.kind === 'performer'
+              ? mapPerformerIndex(source.owner.performerId)
+              : source?.kind === 'hand-back' ? mapPerformerIndex(source.performerId) : 0;
+            const mapped = mapPositionId(location.positionId, ownerIndex);
+            return mapped ? { ...placement, location: { kind: 'position' as const, positionId: mapped } } : placement;
+          }
+          if (location.kind === 'hand-held') {
+            const index = mapPerformerIndex(location.performerId);
+            return { ...placement, location: { ...location, performerId: asPerformerId(mapPerformerId(index)) } };
+          }
+          const index = mapPerformerIndex(location.performerId);
+          const mapped = mapPositionId(location.positionId, index);
+          return mapped ? { ...placement, location: { ...location, performerId: asPerformerId(mapPerformerId(index)), positionId: mapped } } : placement;
+        }),
+      };
       performers = [representative];
       positions = sequence.positions.filter((position) => position.kind === 'table'
         ? position.owner.kind === 'performer' && position.owner.performerId === representative.id
@@ -1127,7 +1164,6 @@ export default function App() {
         return target?.kind === 'table' && names.includes(target.name)
           ? { ...entry, action: { ...action, target: { kind: 'circle-position' as const, position: target.name as 'A' | 'B' | 'C' } } as NotationAction } : entry;
       });
-      setVisualParticipantCount(3);
     } else if (sequence.sequenceType === 'circle-passing') {
       notation = sequence.notation.map((entry) => {
         const action = entry.action;
@@ -1144,7 +1180,7 @@ export default function App() {
           return { performerId: person.id, seat: { kind: 'rectangle-side' as const, side: (index % 2 === 0 ? 'long-a' : 'long-b') as 'long-a' | 'long-b', seatIndex: Math.floor(index / 2) } };
         })]
       : sequence.seatAssignments.filter((item) => performers.some((person) => person.id === item.performerId));
-    commit({ ...sequence, sequenceType: type, performers, positions, notation, individualPassingLayout,
+    commit({ ...sequence, sequenceType: type, performers, positions, notation, initialState, individualPassingLayout,
       seatAssignments, tableLayout: type === 'solo' ? { type: 'solo' } : type === 'circle-passing'
         ? { type: 'polygon', sideCount: 3 }
         : { type: 'rectangle', longSideSeatCount: Math.max(1, Math.ceil(performers.length / 2)), shortSideSeatCount: 0 } });
