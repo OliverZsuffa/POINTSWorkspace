@@ -173,6 +173,9 @@ test('PWA manifest is installable and the app shell reloads offline', async ({ p
   expect(cacheCoverage.paths.some((path) => path.endsWith('.js'))).toBe(true);
   expect(cacheCoverage.missing).toEqual([]);
 
+  page.on('console', (message) => console.log('PWA browser console:', message.type(), message.text()));
+  page.on('pageerror', (error) => console.log('PWA browser page error:', error.message));
+  page.on('requestfailed', (request) => console.log('PWA failed request:', request.url(), request.failure()?.errorText));
   const serviceWorkerState = await page.evaluate(async () => {
     const registration = await navigator.serviceWorker.ready;
     const appShellUrl = new URL('index.html', registration.scope).href;
