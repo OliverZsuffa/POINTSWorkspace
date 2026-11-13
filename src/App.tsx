@@ -375,6 +375,28 @@ export default function App() {
         : { ...position, id: asPositionId('visual-' + index + '-' + position.id), performerId: performer.id }));
     const positionFor = (performerId: string, name: string) => positions.find((position) =>
       position.kind === 'table' && position.name === name && position.owner.kind === 'performer' && position.owner.performerId === performerId);
+    const basePositionById = new Map(basePositions.map((position) => [position.id, position]));
+    const projectedBalls = performers.flatMap((_, index) => index === 0 ? sequence.balls : sequence.balls.map((ball) => ({
+      ...ball,
+      id: asBallId('circle-' + index + '-' + ball.id),
+    })));
+    const projectedPlacements = performers.flatMap((performer, index) => sequence.initialState.placements.map((placement) => {
+      if (index === 0) return placement;
+      const ball = sequence.balls.find((item) => item.id === placement.ballId)!;
+      let location = placement.location;
+      if (location.kind === 'position') {
+        const source = basePositionById.get(location.positionId);
+        const mapped = source ? positionFor(performer.id, source.name) : undefined;
+        if (mapped) location = { kind: 'position', positionId: mapped.id };
+      } else if (location.kind === 'hand-held') {
+        location = { ...location, performerId: performer.id };
+      } else {
+        const handBack = location;
+        const mapped = positions.find((item) => item.kind === 'hand-back' && item.performerId === performer.id && item.hand === handBack.hand);
+        if (mapped?.kind === 'hand-back') location = { ...handBack, positionId: mapped.id, performerId: performer.id };
+      }
+      return { ...placement, ballId: asBallId('circle-' + index + '-' + ball.id), location };
+    }));
     const pattern = sequence.notation.filter((entry) => entry.performerId === representative.id);
     const sourceEntryById = new Map<string, NotationEntry['id']>();
     const notation = performers.flatMap((performer, index) => {
@@ -405,7 +427,7 @@ export default function App() {
         return { ...entry, id: cloneId, performerId: performer.id, action };
       });
     });
-    return { sequence: { ...sequence, performers, positions, notation, tableLayout: { type: 'polygon' as const, sideCount: performers.length } }, sourceEntryById };
+    return { sequence: { ...sequence, performers, positions, balls: projectedBalls, initialState: { placements: projectedPlacements }, notation, tableLayout: { type: 'polygon' as const, sideCount: performers.length } }, sourceEntryById };
   }, [sequence, visualParticipantCount]);
   const simulationSequence = simulationModel.sequence;
   const simulation = useMemo(() => simulateSequence(simulationSequence), [simulationSequence]);
