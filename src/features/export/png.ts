@@ -53,7 +53,7 @@ function makeSvg(sequence: Sequence, performers: readonly Sequence['performers']
       const rowY = y + handIndex * ROW;
       parts.push(`<text x="110" y="${rowY + 22}" font-size="12">${hand === 'left' ? 'L' : 'R'}</text>`);
       parts.push(`<path d="M${x0} ${rowY}h${sequence.beats.length * CELL} M${x0} ${rowY + ROW}h${sequence.beats.length * CELL}" stroke="#d4dbe5" stroke-width="1"/>`);
-      sequence.beats.forEach((beat, beatIndex) => {
+      sequence.beats.forEach((_, beatIndex) => {
         const entries = sequence.notation.filter((entry) => entry.performerId === performer.id && entry.hand === hand && entry.time.beatId === beat.id);
         entries.forEach((entry) => {
           const x = x0 + beatIndex * CELL;
@@ -72,10 +72,15 @@ function makeSvg(sequence: Sequence, performers: readonly Sequence['performers']
   });
   const state = sequence.initialState.placements.map((placement) => {
     const ball = sequence.balls.find((item) => item.id === placement.ballId);
-    const location = placement.location.kind === 'position'
-      ? sequence.positions.find((item) => item.id === placement.location.positionId)?.name ?? '?'
-      : placement.location.kind === 'hand-held' ? (placement.location.hand === 'left' ? 'L' : 'R') + ' held'
-      : (placement.location.hand === 'left' ? 'L' : 'R') + ' back';
+    const objectLocation = placement.location;
+    let location = '?';
+    if (objectLocation.kind === 'position') {
+      location = sequence.positions.find((item) => item.id === objectLocation.positionId)?.name ?? '?';
+    } else if (objectLocation.kind === 'hand-held') {
+      location = (objectLocation.hand === 'left' ? 'L' : 'R') + ' held';
+    } else {
+      location = (objectLocation.hand === 'left' ? 'L' : 'R') + ' back';
+    }
     return (ball?.id ?? '?') + ' at ' + location;
   }).join(' · ');
   parts.push(`<text x="24" y="${height - 48}" font-size="11">Initial objects: ${escapeXml(state || 'None')}</text>`);
