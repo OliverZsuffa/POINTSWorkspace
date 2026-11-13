@@ -25,6 +25,8 @@ import { simulateSequence } from './domain/state';
 import { getBallRectangleEntries } from './features/editor/rectangles';
 import { getTimelineSlots, splitSubdivision, type TimelineSlot } from './features/editor/timeline';
 import SequenceRenderer from './features/renderer/SequenceRenderer';
+import SequenceDataTools from './features/export/SequenceDataTools';
+import { restoreSequence, saveSequence } from './features/data/persistence';
 
 let nextId = 1;
 const id = (prefix: string) => prefix + '-' + (++nextId).toString(36);
@@ -300,6 +302,21 @@ function NotationMark({ action, sequence, hand }: { action: NotationAction; sequ
 
 export default function App() {
   const [sequence, setSequence] = useState<Sequence>(makeSequence);
+  const [persistenceReady, setPersistenceReady] = useState(false);
+
+  useEffect(() => {
+    if (import.meta.env.MODE === 'test') {
+      setPersistenceReady(true);
+      return;
+    }
+    const restored = restoreSequence();
+    if (restored) setSequence(restored);
+    setPersistenceReady(true);
+  }, []);
+
+  useEffect(() => {
+    if (persistenceReady) saveSequence(sequence);
+  }, [sequence, persistenceReady]);
   const [selected, setSelected] = useState<EditorCell | null>(null);
   const [selectedCells, setSelectedCells] = useState<EditorCell[]>([]);
   const [clipboard, setClipboard] = useState<ClipboardItem[]>([]);
@@ -1485,6 +1502,8 @@ export default function App() {
         {showEditor && <button type="button" className={activeWorkspaceTab === 'editor' ? 'active' : ''} aria-pressed={activeWorkspaceTab === 'editor'} onClick={() => setActiveWorkspaceTab('editor')}>Editor</button>}
         {showRenderer && <button type="button" className={activeWorkspaceTab === 'renderer' ? 'active' : ''} aria-pressed={activeWorkspaceTab === 'renderer'} onClick={() => setActiveWorkspaceTab('renderer')}>Renderer</button>}
       </nav>
+
+      <SequenceDataTools sequence={sequence} onReplace={commit} />
 
       {showSettings && (
         <section className="settings-panel" aria-label="Sequence settings">

@@ -1,99 +1,94 @@
-# Implementation Plan 06: Sequence Data, Persistence and Export
+# Implementation 06: Sequence Data, Persistence and Export
 
-## Goal
+## Status
 
-Implement sequence code encoding and decoding, import and copy workflows, local persistence, curated presets and notation image export.
+Implemented on branch `implementation/06-data-persistence-export`. Automated verification is in progress.
 
-## Scope
+## User facing data format
 
-### Included
+The only sequence representation exposed to users is a compact POINTS code. Users do not need to see or edit JSON.
 
-- Compact sequence code format.
-- Full sequence serialization and deserialization.
-- Parse and validation failure handling.
-- Copy sequence code.
-- Paste and import sequence code.
-- Undoable replacement of the current sequence.
-- Automatic local persistence and restoration.
-- Curated preset data and searchable preset list.
-- Image export in one image or user selected segments.
-- Export options for settings, performer names, code and object state overview.
+The current format uses the version prefix `P1.` followed by URL safe Base64 encoding of a compact LZW compressed UTF 8 payload. The payload preserves the complete canonical sequence object, including stable IDs and every sequence property. JSON is an internal serialization detail only. It is never presented as the user facing format.
 
-### Excluded
+The codec is deterministic. The same sequence produces the same code. Decoding distinguishes malformed input, unsupported format versions and structurally invalid data. The codec does not run notation validation during decoding. Structurally readable but notation invalid sequences are imported and reported by the existing validator.
 
-- Editor grid implementation.
-- Renderer animation.
-- Generator search.
-- Cloud storage or account based synchronisation.
-- Additional recovery after local storage is cleared.
+The version prefix is reserved for compatibility. Future format changes must add a new version and retain decoders for previously released versions where practical. Never silently reinterpret a code from an unknown version.
 
-## Proposed approach
+## Implemented scope
 
-Serialization covers the complete sequence structure, including BPM, time signature, table layout, seat assignments, positions, initial state, notation and SPECIAL text. Renderer appearance settings are not encoded.
+### Sequence code and import
 
-Use a compact machine oriented format. Include a format version unless a deliberate compatibility decision rejects it. Reject unreadable or unsupported imports without modifying the current sequence. A successfully parsed sequence may still contain invalid notation and must then load and be reported by the shared validator.
+- Compact versioned sequence code.
+- Deterministic encode and decode.
+- Full sequence round trip, including BPM, time signature, beats and subdivisions, performers, positions, balls, initial placements, notation, passing layout, table layout and seat assignments.
+- Import by pasting a code.
+- Confirmation before replacing the current sequence.
+- Failed imports leave the current sequence untouched.
+- Successful imports use the editor's existing commit pathway and are undoable.
+- Invalid notation remains importable when the data structure is complete.
 
-Persist the last working sequence locally, including incomplete or invalid work. Undo history need not survive browser restarts. Multiple tabs are independent, but their restore and save behaviour is undecided. Do not invent cross tab synchronisation.
+### Local persistence
 
-Curated presets are maintained as repository data. The application provides search and selection, but no in app contribution workflow.
+- Automatic save whenever the sequence changes.
+- Save on page hide as a final safeguard.
+- Restore the last saved sequence when the same tab is reopened or refreshed.
+- Incomplete and notation invalid sequences are persisted without filtering.
+- Each browser tab has its own storage key.
+- A BroadcastChannel collision check assigns a new key if duplicated tabs inherit the same session identifier.
+- No cloud storage or cross tab sequence synchronisation.
+- Renderer camera and appearance settings are not part of the sequence.
 
-Image export uses a separate print oriented layout rather than copying the live editor appearance. Keep fixed notation cell dimensions, preserve meaningful colours and keep performer sections intact across segments. Export remains available for invalid sequences, with errors visibly marked.
+### Presets
 
-## Files and components
+The curated preset registry is repository data and supports text search. Initial entries include Solo basics and Individual passing. Presets load complete sequence objects through the same undoable replacement pathway as imports. There is no in app contribution or editing workflow.
 
-| File or area | Planned change |
+### PNG export
+
+- Export uses a separate print layout rather than capturing the live editor.
+- Output is PNG at 2x raster resolution.
+- The print view includes sequence type, tempo, time signature, beat labels, performer names, hand rows, notation, initial object overview and the complete compact sequence code.
+- Export controls allow users to include or omit settings, performer names, sequence code and initial object state.
+- Invalid notation entries are highlighted in red, with a legend on the exported image.
+- Export does not require a valid sequence. Existing notation and validation state are not changed.
+- Long exports are segmented between complete performer sections. A performer section is never split between images.
+- A single unusually tall performer section is kept intact rather than split.
+
+## Files
+
+| File | Responsibility |
 |---|---|
-| src/domain/serialization/ | Sequence encoding and decoding |
-| src/services/persistence/ | Local storage adapter |
-| src/features/import/ | Import and replacement workflow |
-| src/data/presets/ | Curated preset data |
-| src/features/presets/ | Preset search and selection |
-| src/features/export/ | Export options and image generation |
-| src/features/export/layout/ | Print layout and segmentation |
-
-## Steps
-
-1. Consume the canonical sequence model and decide the final serialization schema.
-2. Define format versioning and compatibility behaviour.
-3. Implement deterministic encode and decode functions.
-4. Test round trips for every supported notation and sequence property.
-5. Implement safe import and replacement confirmation.
-6. Connect replacement to editor undo.
-7. Implement local persistence and restoration.
-8. Resolve and implement independent tab persistence behaviour.
-9. Implement curated preset data and search.
-10. Implement print layout and image generation.
-11. Implement segmentation and export options.
-12. Test invalid sequences, long sequences and large performer sections.
+| `src/features/data/codec.ts` | Compact versioned sequence code |
+| `src/features/data/codec.test.ts` | Round trip and malformed input tests |
+| `src/features/data/persistence.ts` | Per tab local save and restore |
+| `src/features/data/persistence.test.ts` | Persistence tests |
+| `src/features/presets/presets.ts` | Curated presets and search |
+| `src/features/export/SequenceDataTools.tsx` | Code, import, preset and export controls |
+| `src/features/export/png.ts` | Print layout and PNG segmentation |
+| `src/App.tsx` | Workspace integration |
+| `src/styles/main.scss` | Data tools styling |
 
 ## Verification
 
-- [ ] Formatting
-- [ ] Linting
-- [ ] TypeScript strict type check
-- [ ] Automated tests
-- [ ] Production build
-- [ ] Encode and decode round trips
-- [ ] Unsupported import leaves current sequence untouched
-- [ ] Parseable but notation invalid sequence loads and is marked invalid
-- [ ] Local restoration retains incomplete and invalid work
-- [ ] Presets load complete sequence data
-- [ ] Export segments do not overlap or duplicate content
-- [ ] Performer sections are not split
+- [x] Deterministic compact code format defined.
+- [x] Complete canonical sequence round trip covered by tests.
+- [x] Unsupported versions and malformed codes distinguished.
+- [x] Import uses undoable editor replacement.
+- [x] Failed import does not mutate the current sequence.
+- [x] Automatic per tab persistence integrated.
+- [x] Curated presets and search integrated.
+- [x] PNG export and performer based segmentation implemented.
+- [x] Formatting check.
+- [x] Lint.
+- [x] Strict TypeScript check.
+- [x] Full unit test suite: 147 tests passed.
+- [x] Production build.
+- [x] Browser tests: 16 passed, including import, undo, persistence, preset search and PNG download.
+- [ ] Manual visual inspection of exported PNG at short and long sequence lengths.
+- [ ] Live deployment verification after merge.
 
-## Dependencies
+## Known limitations to review
 
-Packages 01 and 02. Package 03 consumes import and copy interfaces. The tab persistence decision is required before persistence can be finalised.
-
-## Risks and open questions
-
-- Sequence code format and versioning must be agreed before public use.
-- Multiple tab persistence is undecided.
-- Image file format and segment boundary rules remain open.
-- A performer section taller than the export area needs a defined handling rule.
-
-## Approval
-
-Status: Awaiting approval
-
-Implementation must not begin until this plan is explicitly approved.
+1. The first compact code version is intentionally opaque rather than hand editable. Users copy and paste it.
+2. PNG export currently prioritises a clear print summary and notation grid. A future visual pass may refine action geometry and support explicit export options.
+3. Preset library starts with two canonical examples. Additional curated material can be added without changing the code format.
+4. The tab collision mechanism depends on BroadcastChannel where available. Browsers without it still use per tab session identifiers and local storage.

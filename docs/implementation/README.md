@@ -15,7 +15,7 @@ The implementation is divided into bounded work packages so separate agents can 
 | 03C | Editor completion and feature verification | Full audit of Packages 03 and 03B, complete missing interactions, notation grid and usability corrections | 03, 03B | Implemented and merged through PR #9; manual visual verification remains |
 | 04 | Sequence renderer | 3D scene, animation, playback and editor synchronisation | 01, 02 | Implemented in PR #7; correction pass 04B merged through PR #11; manual visual review remains |
 | 05 | Sequence generator | Constraint search and candidate generation | 01, 02 | Awaiting approval |
-| 06 | Data, persistence and export | Sequence codes, import, local persistence, presets and image export | 01, 02 | Awaiting approval |
+| 06 | Data, persistence and export | Compact sequence codes, import, per tab persistence, presets and PNG export | 01, 02 | Implemented in PR #19; CI passed, manual PNG visual review remains |
 | 07 | Workspace shell and PWA | Application layout, responsive shell, panel management and offline support | 01 | Implemented and merged through PR #15; CI and Chromium offline verification passed |
 | 07C | Circle passing and renderer playback corrections | Separate the authored pattern from visual participants, correct triangular geometry, preserve object state across loops and align beat navigation | 07 | Implemented and merged through PR #16; CI and browser checks passed |
 | 07D | Circle validation and polygon spacing fix | Project initial objects for every visual participant in editor validation and prevent position overlap on adjacent polygon edges | 07C | Implemented and merged through PR #17; CI, browser checks and 3 and 4 participant screenshot review passed |
@@ -49,15 +49,15 @@ Each agent should work in its own branch and limit changes to its assigned files
 ## Current cross package blockers
 
 1. Compound meter subdivision representation. Conventional 6/8 grouping must be represented, but the current editor subdivision model only splits intervals in half.
-2. Persistence across multiple browser tabs. Tabs are independent, but restoration and saving behaviour is undecided.
+2. Compound meter subdivision representation. Conventional 6/8 grouping is represented in the domain model, but the current editor subdivision model only splits intervals in half.
 3. Exact generator result limit, page size and continuation mechanics.
 4. Renderer playhead fallback when an edit removes the previous timeline position.
 5. Exact manual seat reassignment interaction.
-6. Image export details, including file format, segment boundaries and oversized performer sections.
+6. Manual visual inspection of PNG exports at short and long sequence lengths remains outstanding.
 7. Remaining cell editing gestures and manual responsive visual verification.
 
 Agents may implement unrelated parts while a blocker remains open, but must not make an irreversible architectural decision for it.
 
 ## Approval
 
-Packages 01, 02, 03 and 03B are implemented and merged. Package 03C first pass is merged through PR #9. Its final correction and verification pass merged through PR #10. Automated checks and six viewport screenshot reviews pass. Remaining Partial requirements are documented in the 03C verification matrix. Package 04 was implemented and merged through PR #7. Renderer correction pass 04B was merged through PR #11. Manual visual review of the actual 3D renderer remains outstanding. Package 07 was approved by Oliver on 12 November 2026 and merged through PR #15 on 13 November 2026. Package 07C was approved by Oliver on 13 November 2026 and merged through PR #16. Package 07D was approved and merged through PR #17 on 13 November 2026. Its checks passed formatting, lint, TypeScript, unit tests, production build and browser tests. The three and four participant screenshots were manually reviewed. Automated geometry tests cover 3 through 20 participants. Packages 05 and 06 remain awaiting approval. Package 08 has a detailed implementation plan and remains awaiting approval.
+Packages 01, 02, 03 and 03B are implemented and merged. Package 03C first pass is merged through PR #9. Its final correction and verification pass merged through PR #10. Automated checks and six viewport screenshot reviews pass. Remaining Partial requirements are documented in the 03C verification matrix. Package 04 was implemented and merged through PR #7. Renderer correction pass 04B was merged through PR #11. Manual visual review of the actual 3D renderer remains outstanding. Package 07 was approved by Oliver on 12 November 2026 and merged through PR #15 on 13 November 2026. Package 07C was approved by Oliver on 13 November 2026 and merged through PR #16. Package 07D was approved and merged through PR #17 on 13 November 2026. Its checks passed formatting, lint, TypeScript, unit tests, production build and browser tests. The three and four participant screenshots were manually reviewed. Automated geometry tests cover 3 through 20 participants. Package 05 remains awaiting approval. Package 06 is implemented in PR #19. Formatting, lint, strict TypeScript, 147 unit tests, production build and 16 browser tests passed. Manual visual inspection of exported PNG files remains outstanding. Package 08 has a detailed implementation plan and remains awaiting approval.
