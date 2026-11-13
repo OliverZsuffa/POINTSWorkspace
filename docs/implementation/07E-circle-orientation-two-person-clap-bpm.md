@@ -2,7 +2,7 @@
 
 ## Status
 
-Approved by Oliver on 13 November 2026. Implementation is in progress in PR #18. Automated verification is pending.
+Approved by Oliver on 13 November 2026. Implemented in PR #18. Formatting, lint, strict TypeScript, unit tests, production build and Chromium browser tests passed on 13 November 2026. Focused two, three and four participant screenshots were manually inspected.
 
 ## Goal
 
@@ -49,7 +49,7 @@ This package must preserve the one authored pattern performer model. Renderer vi
 2. Run formatting, lint, strict TypeScript, all unit tests, production build and browser tests.
 3. Capture focused screenshots for the two participant layout and circle notation cells, including the CLAP bar. Manually inspect the relevant small layouts.
 4. Update implementation documentation and the visual audit with exact test evidence and any remaining manual checks.
-5. Merge only after all automated checks pass and the changed behaviour is verified.
+5. Automated checks passed on the final PR revision. The two participant renderer and CLAP notation screenshot was manually inspected, as were the three and four participant renderer screenshots.
 
 ## Constraints
 
