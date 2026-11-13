@@ -184,7 +184,7 @@ export function getTableFootprint(sequence: Sequence): { width: number; depth: n
         position.kind === 'table' && position.owner.kind === 'performer' && position.owner.performerId === performer.id,
       ).length,
     ));
-    const requiredEdgeLength = Math.max(2.4, (maxOwnedPositions - 1) * 0.72 + 0.8);
+    const requiredEdgeLength = Math.max(4, (maxOwnedPositions - 1) * 0.72 + 1.8);
     const radius = Math.max(1.6, requiredEdgeLength / (2 * Math.sin(Math.PI / polygonSideCount)));
     const diameter = radius * 2;
     return { width: diameter, depth: diameter, round: true, sideCount: polygonSideCount };

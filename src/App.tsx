@@ -1372,7 +1372,7 @@ export default function App() {
       ...action.target,
       ...(field === 'position' ? { position: value as 'A' | 'B' | 'C' } : {}),
       ...(field === 'direction' ? { direction: value as 'left' | 'right' } : {}),
-      ...(field === 'distance' ? { distance: Math.min(Math.max(1, Number(value) || 1), Math.max(1, sequence.performers.length - 1)) } : {}),
+      ...(field === 'distance' ? { distance: Math.min(Math.max(1, Number(value) || 1), Math.max(1, visualParticipantCount - 1)) } : {}),
     };
     commit({ ...sequence, notation: sequence.notation.map((item) =>
       item.id === entry.id ? { ...item, action: { ...action, target } } : item,

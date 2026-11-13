@@ -221,8 +221,6 @@ describe('sequence editor', () => {
     const user = userEvent.setup();
     render(<App />);
     await user.click(screen.getByRole('button', { name: 'Settings' }));
-    await user.click(screen.getByRole('button', { name: 'Add performer' }));
-    await user.click(screen.getByRole('button', { name: 'Add performer' }));
     await user.selectOptions(screen.getByLabelText('Type'), 'circle-passing');
     await user.click(screen.getByRole('button', { name: 'Juggler 1 left beat 1 empty' }));
     await user.click(screen.getByRole('button', { name: 'LIFT' }));
@@ -376,7 +374,7 @@ describe('sequence editor', () => {
     render(<App />);
     await user.click(screen.getByRole('button', { name: 'Insert beat after 1' }));
     expect(screen.getByRole('button', { name: 'Select beat 2' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Juggler 1 left beat 9 empty' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Juggler 1 left beat 5 empty' })).toBeInTheDocument();
   });
 
   it('moves an entire ball rectangle when dragging one of its cells', () => {
@@ -664,13 +662,12 @@ describe('sequence editor', () => {
     const user = userEvent.setup();
     render(<App />);
     await user.click(screen.getByRole('button', { name: 'Settings' }));
-    await user.click(screen.getByRole('button', { name: 'Add performer' }));
-    await user.click(screen.getByRole('button', { name: 'Add performer' }));
     await user.selectOptions(screen.getByLabelText('Type'), 'circle-passing');
-    expect(screen.getByText('People')).toBeInTheDocument();
-    expect(screen.getByLabelText('People count')).toHaveTextContent('3');
-    await user.click(screen.getByRole('button', { name: 'Add one person' }));
-    expect(screen.getByLabelText('People count')).toHaveTextContent('4');
+    expect(screen.getByLabelText('Visual jugglers')).toHaveValue(3);
+    await user.clear(screen.getByLabelText('Visual jugglers'));
+    await user.type(screen.getByLabelText('Visual jugglers'), '4');
+    expect(screen.getByLabelText('Visual jugglers')).toHaveValue(4);
+    expect(document.querySelectorAll('.performer-block')).toHaveLength(1);
   });
 
   it('sets table position targets by typing their labels', () => {
@@ -799,8 +796,6 @@ describe('sequence editor', () => {
     render(<App />);
 
     await user.click(screen.getByRole('button', { name: 'Settings' }));
-    await user.click(screen.getByRole('button', { name: 'Add performer' }));
-    await user.click(screen.getByRole('button', { name: 'Add performer' }));
     await user.selectOptions(screen.getByLabelText('Type'), 'circle-passing');
     await user.click(screen.getByRole('button', { name: 'Juggler 1 left beat 1 empty' }));
     await user.click(screen.getByRole('button', { name: 'LIFT' }));
