@@ -55,7 +55,7 @@ function makeSequence(): Sequence {
     sequenceType: 'solo',
     timeSignature: DEFAULT_TIME_SIGNATURE,
     bpm: 120,
-    beats: Array.from({ length: 8 }, (_, index) => ({
+    beats: Array.from({ length: 4 }, (_, index) => ({
       id: asBeatId('beat-' + (index + 1)),
       subdivisions: [],
     })),
@@ -322,6 +322,7 @@ export default function App() {
   const [dragStart, setDragStart] = useState<EditorCell | null>(null);
   const [passRecipientId, setPassRecipientId] = useState('');
   const [passRecipientHand, setPassRecipientHand] = useState<Hand>('left');
+  const [visualParticipantCount, setVisualParticipantCount] = useState(3);
 
   useEffect(() => {
     if (!resizingPanels) return;
@@ -361,41 +362,51 @@ export default function App() {
       (position.owner.kind === 'performer' && position.owner.performerId === sequence.performers[0]?.id)),
   );
   const simulationModel = useMemo(() => {
-    if (sequence.sequenceType !== 'circle-passing' || sequence.performers.length <= 1) {
-      return { sequence, sourceEntryById: new Map<string, NotationEntry['id']>() };
-    }
+    if (sequence.sequenceType !== 'circle-passing') return { sequence, sourceEntryById: new Map<string, NotationEntry['id']>() };
     const representative = sequence.performers[0]!;
+    const performers = Array.from({ length: visualParticipantCount }, (_, index) => index === 0 ? representative
+      : { id: asPerformerId('visual-performer-' + (index + 1)), name: 'Juggler ' + (index + 1), identifier: String.fromCharCode(97 + index) });
+    const basePositions = sequence.positions.filter((position) => position.kind === 'table'
+      ? position.owner.kind === 'performer' && position.owner.performerId === representative.id
+      : position.performerId === representative.id);
+    const positions = performers.flatMap((performer, index) => index === 0 ? basePositions : basePositions.map((position) =>
+      position.kind === 'table'
+        ? { ...position, id: asPositionId('visual-' + index + '-' + position.id), owner: { kind: 'performer' as const, performerId: performer.id } }
+        : { ...position, id: asPositionId('visual-' + index + '-' + position.id), performerId: performer.id }));
+    const positionFor = (performerId: string, name: string) => positions.find((position) =>
+      position.kind === 'table' && position.name === name && position.owner.kind === 'performer' && position.owner.performerId === performerId);
     const pattern = sequence.notation.filter((entry) => entry.performerId === representative.id);
     const sourceEntryById = new Map<string, NotationEntry['id']>();
-    const instances = sequence.performers.slice(1).flatMap((performer) => {
-      const linkIds = new Map<string, ReturnType<typeof asLinkId>>();
+    const notation = performers.flatMap((performer, index) => {
+      const links = new Map<string, ReturnType<typeof asLinkId>>();
       return pattern.map((entry) => {
         let action = entry.action;
         if ('linkId' in action && action.linkId) {
-          const mapped = linkIds.get(action.linkId) ?? asLinkId('circle-' + action.linkId + '-' + performer.id);
-          linkIds.set(action.linkId, mapped);
+          const mapped = links.get(action.linkId) ?? asLinkId('circle-' + action.linkId + '-' + performer.id);
+          links.set(action.linkId, mapped);
           action = { ...action, linkId: mapped } as NotationAction;
         }
-        if ('target' in action) {
+        if ('target' in action && action.target.kind === 'circle-position') {
+          const target = action.target;
+          const offset = target.direction ? (target.direction === 'left' ? -1 : 1) * (target.distance ?? 1) : 0;
+          const targetPerformer = performers[(index + offset + performers.length) % performers.length]!;
+          const position = positionFor(targetPerformer.id, target.position);
+          if (position) action = { ...action, target: { kind: 'position', positionId: position.id } } as NotationAction;
+        } else if ('target' in action && action.target.kind === 'position' && index > 0) {
           const sourceTarget = action.target;
-          if (sourceTarget.kind === 'position') {
-            const targetPosition = sequence.positions.find((position) => position.id === sourceTarget.positionId);
-            const matchingPosition = targetPosition?.kind === 'table'
-              ? sequence.positions.find((position) => position.kind === 'table' && position.name === targetPosition.name &&
-                position.owner.kind === 'performer' && position.owner.performerId === performer.id)
-              : targetPosition?.kind === 'hand-back'
-                ? sequence.positions.find((position) => position.kind === 'hand-back' && position.hand === targetPosition.hand && position.performerId === performer.id)
-                : undefined;
-            if (matchingPosition) action = { ...action, target: { kind: 'position', positionId: matchingPosition.id } } as NotationAction;
+          const source = basePositions.find((position) => position.id === sourceTarget.positionId);
+          if (source?.kind === 'table') {
+            const mapped = positionFor(performer.id, source.name);
+            if (mapped) action = { ...action, target: { kind: 'position', positionId: mapped.id } } as NotationAction;
           }
         }
-        const cloneId = asActionEntryId('circle-' + entry.id + '-' + performer.id);
-        sourceEntryById.set(cloneId, entry.id);
+        const cloneId = index === 0 ? entry.id : asActionEntryId('circle-' + entry.id + '-' + performer.id);
+        if (index > 0) sourceEntryById.set(cloneId, entry.id);
         return { ...entry, id: cloneId, performerId: performer.id, action };
       });
     });
-    return { sequence: { ...sequence, notation: [...pattern, ...instances] }, sourceEntryById };
-  }, [sequence]);
+    return { sequence: { ...sequence, performers, positions, notation, tableLayout: { type: 'polygon' as const, sideCount: performers.length } }, sourceEntryById };
+  }, [sequence, visualParticipantCount]);
   const simulationSequence = simulationModel.sequence;
   const simulation = useMemo(() => simulateSequence(simulationSequence), [simulationSequence]);
   const timelineSlots = getTimelineSlots(sequence.beats);
@@ -1092,105 +1103,98 @@ export default function App() {
   };
 
   const changeType = (type: SequenceType) => {
-    if (type === 'circle-passing' && sequence.performers.length < 3) {
-      window.alert('Circle passing requires at least three participants.');
-      return;
-    }
+    const representative = sequence.performers.find((person) => sequence.notation.some((entry) => entry.performerId === person.id)) ?? sequence.performers[0]!;
+    let performers = sequence.performers;
     let positions = sequence.positions;
-    let individualPassingLayout = sequence.individualPassingLayout;
-    if (type === 'circle-passing' || (type === 'individual-passing' && sequence.individualPassingLayout !== 'shared-positions')) {
-      const tables = sequence.positions.filter((position) => position.kind === 'table');
-      const names = [...new Set(tables.map((position) => position.name))];
-      const normalized = sequence.performers.flatMap((performer, performerIndex) => names.map((name) => {
-        const existing = tables.find((position) => position.name === name && position.owner.kind === 'performer' && position.owner.performerId === performer.id)
-          ?? (performerIndex === 0 ? tables.find((position) => position.name === name) : undefined);
-        return existing
-          ? { ...existing, owner: { kind: 'performer' as const, performerId: performer.id } }
-          : { kind: 'table' as const, id: asPositionId(id('position')), name, owner: { kind: 'performer' as const, performerId: performer.id } };
-      }));
-      positions = [...sequence.positions.filter((position) => position.kind === 'hand-back'), ...normalized];
-      individualPassingLayout = 'per-performer-positions';
-    }
-
-    const representativeId = sequence.performers[0]?.id;
-    const sourcePerformerId = sequence.performers.find((person) =>
-      sequence.notation.some((entry) => entry.performerId === person.id),
-    )?.id ?? representativeId;
     let notation = sequence.notation;
+    let initialState = sequence.initialState;
+    const individualPassingLayout = sequence.individualPassingLayout;
     if (type === 'circle-passing') {
-      notation = sequence.notation
-        .filter((entry) => entry.performerId === sourcePerformerId)
-        .map((entry) => ({ ...entry, performerId: representativeId! }));
-    } else if (sequence.sequenceType === 'circle-passing' && representativeId) {
-      const pattern = sequence.notation.filter((entry) => entry.performerId === representativeId);
-      const instances = sequence.performers.slice(1).flatMap((performer) => {
-        const linkIds = new Map<string, ReturnType<typeof asLinkId>>();
-        return pattern.map((entry) => {
-          let action = entry.action;
-          if ('linkId' in action && action.linkId) {
-            const mapped = linkIds.get(action.linkId) ?? asLinkId('mode-' + action.linkId + '-' + performer.id);
-            linkIds.set(action.linkId, mapped);
-            action = { ...action, linkId: mapped } as NotationAction;
-          }
-          if ('target' in action) {
-            const sourceTarget = action.target;
-            const matchingPosition = sourceTarget.kind === 'circle-position'
-              ? positions.find((position) => position.kind === 'table' &&
-                position.name === sourceTarget.position &&
-                position.owner.kind === 'performer' && position.owner.performerId === performer.id)
-              : sourceTarget.kind === 'position'
-                ? (() => {
-                    const previousPosition = positions.find((position) => position.id === sourceTarget.positionId);
-                    return previousPosition?.kind === 'hand-back'
-                      ? positions.find((position) => position.kind === 'hand-back' && position.hand === previousPosition.hand && position.performerId === performer.id)
-                      : undefined;
-                  })()
-                : undefined;
-            if (matchingPosition) action = { ...action, target: { kind: 'position', positionId: matchingPosition.id } } as NotationAction;
-          }
-          return { ...entry, id: asActionEntryId('mode-' + entry.id + '-' + performer.id), performerId: performer.id, action };
-        });
-      });
-      notation = [...pattern, ...instances];
-    }
-
-    notation = notation.map((entry) => {
-      const action = entry.action;
-      if (!('target' in action)) return entry;
-      const currentTarget = action.target;
-      if (type === 'circle-passing' && currentTarget.kind === 'position') {
-        const targetPosition = positions.find((position) => position.id === currentTarget.positionId);
-        if (targetPosition?.kind === 'table' && ['A', 'B', 'C'].includes(targetPosition.name)) {
-          return { ...entry, action: { ...action, target: { kind: 'circle-position' as const, position: targetPosition.name as 'A' | 'B' | 'C' } } as NotationAction };
+      const originalPerformers = sequence.performers;
+      const visualCount = Math.max(3, originalPerformers.length);
+      setVisualParticipantCount(visualCount);
+      const baseTables = sequence.positions.filter((position): position is Extract<PositionDefinition, { kind: 'table' }> => position.kind === 'table' &&
+        position.owner.kind === 'performer' && position.owner.performerId === representative.id);
+      const baseBacks = sequence.positions.filter((position): position is Extract<PositionDefinition, { kind: 'hand-back' }> => position.kind === 'hand-back' && position.performerId === representative.id);
+      const representativeIndex = originalPerformers.findIndex((person) => person.id === representative.id);
+      const mapPerformerIndex = (performerId: string) => {
+        const sourceIndex = originalPerformers.findIndex((person) => person.id === performerId);
+        return sourceIndex < 0 ? 0 : (sourceIndex - representativeIndex + originalPerformers.length) % originalPerformers.length;
+      };
+      const mapPerformerId = (index: number) => index === 0 ? representative.id : asPerformerId('visual-performer-' + (index + 1));
+      const mapPositionId = (positionId: string, index: number) => {
+        const source = sequence.positions.find((position) => position.id === positionId);
+        if (!source) return undefined;
+        let base: PositionDefinition | undefined;
+        if (source.kind === 'table') {
+          const name = source.name;
+          base = baseTables.find((position) => position.name === name);
+        } else {
+          const hand = source.hand;
+          base = baseBacks.find((position) => position.hand === hand);
         }
-      }
-      if (type !== 'circle-passing' && currentTarget.kind === 'circle-position') {
-        const targetPosition = positions.find((position) => position.kind === 'table' && position.name === currentTarget.position &&
-          (position.owner.kind === 'shared' || (position.owner.kind === 'performer' && position.owner.performerId === entry.performerId)));
-        if (targetPosition) return { ...entry, action: { ...action, target: { kind: 'position' as const, positionId: targetPosition.id } } as NotationAction };
-      }
-      return entry;
-    });
-
+        return base ? index === 0 ? base.id : asPositionId('visual-' + index + '-' + base.id) : undefined;
+      };
+      initialState = {
+        placements: sequence.initialState.placements.map((placement) => {
+          const location = placement.location;
+          if (location.kind === 'position') {
+            const source = sequence.positions.find((position) => position.id === location.positionId);
+            const ownerIndex = source?.kind === 'table' && source.owner.kind === 'performer'
+              ? mapPerformerIndex(source.owner.performerId)
+              : source?.kind === 'hand-back' ? mapPerformerIndex(source.performerId) : 0;
+            const mapped = mapPositionId(location.positionId, ownerIndex);
+            return mapped ? { ...placement, location: { kind: 'position' as const, positionId: mapped } } : placement;
+          }
+          if (location.kind === 'hand-held') {
+            const index = mapPerformerIndex(location.performerId);
+            return { ...placement, location: { ...location, performerId: asPerformerId(mapPerformerId(index)) } };
+          }
+          const index = mapPerformerIndex(location.performerId);
+          const mapped = mapPositionId(location.positionId, index);
+          return mapped ? { ...placement, location: { ...location, performerId: asPerformerId(mapPerformerId(index)), positionId: mapped } } : placement;
+        }),
+      };
+      performers = [representative];
+      positions = sequence.positions.filter((position) => position.kind === 'table'
+        ? position.owner.kind === 'performer' && position.owner.performerId === representative.id
+        : position.performerId === representative.id);
+      const names = ['A', 'B', 'C'];
+      const used = new Set(positions.filter((position) => position.kind === 'table').map((position) => position.name));
+      positions = [...positions, ...names.filter((name) => !used.has(name)).map((name) => ({
+        kind: 'table' as const, id: asPositionId(id('position')), name,
+        owner: { kind: 'performer' as const, performerId: representative.id },
+      }))];
+      notation = sequence.notation.filter((entry) => entry.performerId === representative.id).map((entry) => {
+        const action = entry.action;
+        if (!('target' in action) || action.target.kind !== 'position') return entry;
+        const positionTarget = action.target;
+        const target = positions.find((position) => position.id === positionTarget.positionId);
+        return target?.kind === 'table' && names.includes(target.name)
+          ? { ...entry, action: { ...action, target: { kind: 'circle-position' as const, position: target.name as 'A' | 'B' | 'C' } } as NotationAction } : entry;
+      });
+    } else if (sequence.sequenceType === 'circle-passing') {
+      notation = sequence.notation.map((entry) => {
+        const action = entry.action;
+        if (!('target' in action) || action.target.kind !== 'circle-position') return entry;
+        const circleTarget = action.target;
+        const target = positions.find((position) => position.kind === 'table' && position.name === circleTarget.position &&
+          position.owner.kind === 'performer' && position.owner.performerId === representative.id);
+        return target ? { ...entry, action: { ...action, target: { kind: 'position' as const, positionId: target.id } } as NotationAction } : entry;
+      });
+    }
     const seatAssignments = type === 'individual-passing'
-      ? [...sequence.seatAssignments, ...sequence.performers
-          .filter((person) => !sequence.seatAssignments.some((assignment) => assignment.performerId === person.id))
-          .map((person) => {
-            const index = sequence.performers.findIndex((item) => item.id === person.id);
-            return {
-              performerId: person.id,
-              seat: { kind: 'rectangle-side' as const, side: (index % 2 === 0 ? 'long-a' : 'long-b') as 'long-a' | 'long-b', seatIndex: Math.floor(index / 2) },
-            };
-          })]
-      : sequence.seatAssignments;
-    commit({
-      ...sequence, sequenceType: type, positions, notation, individualPassingLayout, seatAssignments,
-      tableLayout: type === 'solo' ? { type: 'solo' }
-        : type === 'circle-passing' ? { type: 'polygon', sideCount: sequence.performers.length }
-          : { type: 'rectangle', longSideSeatCount: Math.max(1, Math.ceil(sequence.performers.length / 2)), shortSideSeatCount: 0 },
-    });
+      ? [...sequence.seatAssignments, ...performers.filter((person) => !sequence.seatAssignments.some((item) => item.performerId === person.id)).map((person) => {
+          const index = performers.findIndex((item) => item.id === person.id);
+          return { performerId: person.id, seat: { kind: 'rectangle-side' as const, side: (index % 2 === 0 ? 'long-a' : 'long-b') as 'long-a' | 'long-b', seatIndex: Math.floor(index / 2) } };
+        })]
+      : sequence.seatAssignments.filter((item) => performers.some((person) => person.id === item.performerId));
+    commit({ ...sequence, sequenceType: type, performers, positions, notation, initialState, individualPassingLayout,
+      seatAssignments, tableLayout: type === 'solo' ? { type: 'solo' } : type === 'circle-passing'
+        ? { type: 'polygon', sideCount: 3 }
+        : { type: 'rectangle', longSideSeatCount: Math.max(1, Math.ceil(performers.length / 2)), shortSideSeatCount: 0 } });
     if (type === 'circle-passing') {
-      if (selected && representativeId) selectCell({ ...selected, performerId: representativeId });
+      if (selected) selectCell({ ...selected, performerId: representative.id });
       else setSelectedCells([]);
     }
   };
@@ -1373,7 +1377,7 @@ export default function App() {
       ...action.target,
       ...(field === 'position' ? { position: value as 'A' | 'B' | 'C' } : {}),
       ...(field === 'direction' ? { direction: value as 'left' | 'right' } : {}),
-      ...(field === 'distance' ? { distance: Math.min(Math.max(1, Number(value) || 1), Math.max(1, sequence.performers.length - 1)) } : {}),
+      ...(field === 'distance' ? { distance: Math.min(Math.max(1, Number(value) || 1), Math.max(1, visualParticipantCount - 1)) } : {}),
     };
     commit({ ...sequence, notation: sequence.notation.map((item) =>
       item.id === entry.id ? { ...item, action: { ...action, target } } : item,
@@ -1457,7 +1461,7 @@ export default function App() {
           <label>Type
             <select value={sequence.sequenceType} onChange={(event) => changeType(event.target.value as SequenceType)}>
               <option value="solo">Solo</option>
-              <option value="circle-passing" disabled={sequence.performers.length < 3}>Circle passing</option>
+              <option value="circle-passing">Circle passing</option>
               <option value="individual-passing">Individual passing</option>
             </select>
           </label>
@@ -1482,27 +1486,19 @@ export default function App() {
           </label>
           <div className="setting-control"><span>Balls</span><div className="stepper"><button type="button" onClick={() => changeBallCount(sequence.balls.length - 1)} disabled={sequence.balls.length <= 1}>−</button><output>{sequence.balls.length}</output><button type="button" onClick={() => changeBallCount(sequence.balls.length + 1)}>+</button></div></div>
           <div className="setting-control"><span>Beats</span><div className="stepper"><button type="button" onClick={removeBeat} disabled={sequence.beats.length <= 1 || sequence.notation.some((entry) => entry.time.beatId === sequence.beats[sequence.beats.length - 1]?.id)}>−</button><output>{sequence.beats.length}</output><button type="button" onClick={addBeat}>+</button></div></div>
-          <div className="performer-settings">
-            <span>{sequence.sequenceType === 'circle-passing' ? 'People' : 'Performers'}</span>
-            {sequence.sequenceType === 'circle-passing' ? (
-              <div className="stepper" aria-label="People in circle">
-                <button type="button" onClick={() => removePerformer(sequence.performers[sequence.performers.length - 1]!.id)} disabled={sequence.performers.length <= 3} aria-label="Remove one person">−</button>
-                <output aria-label="People count">{sequence.performers.length}</output>
-                <button type="button" onClick={addPerformer} aria-label="Add one person">+</button>
-              </div>
-            ) : (
-              <>
-                {sequence.performers.map((performer) => (
-                  <div className="performer-chip" key={performer.id + performer.name + performer.identifier}>
-                    <input className="performer-name" aria-label={'Performer name ' + performer.name} defaultValue={performer.name} onBlur={(event) => updatePerformer(performer.id, 'name', event.target.value)} />
-                    <input className="performer-identifier" aria-label={'Performer identifier ' + (performer.identifier ?? '')} defaultValue={performer.identifier ?? ''} maxLength={1} onBlur={(event) => updatePerformer(performer.id, 'identifier', event.target.value)} />
-                    {sequence.performers.length > 1 && <button type="button" className="remove-chip" onClick={() => removePerformer(performer.id)} aria-label={'Remove ' + performer.name}>×</button>}
-                  </div>
-                ))}
-                <button type="button" onClick={addPerformer}>Add performer</button>
-              </>
-            )}
-          </div>
+          {sequence.sequenceType !== 'circle-passing' && <div className="performer-settings">
+            <span>Performers</span>
+            <>
+              {sequence.performers.map((performer) => (
+                <div className="performer-chip" key={performer.id + performer.name + performer.identifier}>
+                  <input className="performer-name" aria-label={'Performer name ' + performer.name} defaultValue={performer.name} onBlur={(event) => updatePerformer(performer.id, 'name', event.target.value)} />
+                  <input className="performer-identifier" aria-label={'Performer identifier ' + (performer.identifier ?? '')} defaultValue={performer.identifier ?? ''} maxLength={1} onBlur={(event) => updatePerformer(performer.id, 'identifier', event.target.value)} />
+                  {sequence.performers.length > 1 && <button type="button" className="remove-chip" onClick={() => removePerformer(performer.id)} aria-label={'Remove ' + performer.name}>×</button>}
+                </div>
+              ))}
+              <button type="button" onClick={addPerformer}>Add performer</button>
+            </>
+          </div>}
           <div className="position-settings">
             <span>Positions</span>
             {sequence.sequenceType === 'circle-passing' ? <span className="position-summary">A · B · C</span> : <>
@@ -1640,10 +1636,10 @@ export default function App() {
           {!showActionMenu && targetableEntry && targetableEntry.action.target.kind === 'circle-position' && (
             <div className="target-control">
               <label>Position <select value={targetableEntry.action.target.position} onChange={(event) => changeCircleTarget(targetableEntry, 'position', event.target.value)}><option>A</option><option>B</option><option>C</option></select></label>
-              <label>Performer <select value={targetableEntry.action.target.direction ? 'other' : 'self'} onChange={(event) => setCircleTargetMode(targetableEntry, event.target.value as 'self' | 'other')}><option value="self">Self</option><option value="other" disabled={sequence.performers.length < 2}>Other</option></select></label>
+              <label>Performer <select value={targetableEntry.action.target.direction ? 'other' : 'self'} onChange={(event) => setCircleTargetMode(targetableEntry, event.target.value as 'self' | 'other')}><option value="self">Self</option><option value="other" disabled={visualParticipantCount < 2}>Other</option></select></label>
               {targetableEntry.action.target.direction && <>
                 <label>Direction <select value={targetableEntry.action.target.direction} onChange={(event) => changeCircleTarget(targetableEntry, 'direction', event.target.value)}><option value="left">Left</option><option value="right">Right</option></select></label>
-                <label>Distance <input type="number" min="1" max={Math.max(1, sequence.performers.length - 1)} value={targetableEntry.action.target.distance ?? 1} onChange={(event) => changeCircleTarget(targetableEntry, 'distance', event.target.value)} /></label>
+                <label>Distance <input type="number" min="1" max={Math.max(1, visualParticipantCount - 1)} value={targetableEntry.action.target.distance ?? 1} onChange={(event) => changeCircleTarget(targetableEntry, 'distance', event.target.value)} /></label>
               </>}
             </div>
           )}
@@ -1783,6 +1779,8 @@ export default function App() {
           <SequenceRenderer
             sequence={simulationSequence}
             simulation={simulation}
+            visualParticipantCount={visualParticipantCount}
+            onVisualParticipantCountChange={setVisualParticipantCount}
             onSelectHand={(performerId, hand, beatId) => {
               selectCell({ performerId: sequence.sequenceType === 'circle-passing' ? sequence.performers[0]!.id : performerId, hand, beatId });
               setShowActionMenu(false);

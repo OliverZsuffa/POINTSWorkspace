@@ -2,6 +2,8 @@ import { useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
 import type { NotationEntry, ObjectLocation, Sequence, SimulationResult } from '../../domain/model';
 import { getMainBeatDurationSeconds } from '../../domain/time/time-signature';
+import { simulateSequence } from '../../domain/state';
+import { getLoopInitialState } from './playback';
 import {
   getCameraPanOffset,
   getHandPosition,
@@ -20,6 +22,8 @@ import {
 interface SequenceRendererProps {
   readonly sequence: Sequence;
   readonly simulation: SimulationResult;
+  readonly visualParticipantCount: number;
+  readonly onVisualParticipantCountChange: (count: number) => void;
   readonly onSelectHand: (performerId: string, hand: 'left' | 'right', beatId: string) => void;
 }
 
@@ -126,7 +130,7 @@ function getActionTargetPosition(
   return undefined;
 }
 
-export default function SequenceRenderer({ sequence, simulation, onSelectHand }: SequenceRendererProps) {
+export default function SequenceRenderer({ sequence, simulation, visualParticipantCount, onVisualParticipantCountChange, onSelectHand }: SequenceRendererProps) {
   const hostRef = useRef<HTMLDivElement>(null);
   const sceneStateRef = useRef<SceneState>({
     sequence,
@@ -143,14 +147,17 @@ export default function SequenceRenderer({ sequence, simulation, onSelectHand }:
   const [progress, setProgress] = useState(0);
   const [stepAnimating, setStepAnimating] = useState(false);
   const [tempo, setTempo] = useState(sequence.bpm);
-  const [repeat, setRepeat] = useState(false);
+  const [repeat, setRepeat] = useState(true);
   const [layout, setLayout] = useState<SceneLayout>('circle');
   const [palette, setPalette] = useState<keyof typeof BALL_PALETTES>('classic');
+  const [loopSimulation, setLoopSimulation] = useState(simulation);
+  const activeSimulation = loopSimulation;
 
   playheadRef.current = playhead;
-  sceneStateRef.current = { sequence, simulation, playhead, progress, layout, onSelectHand };
+  sceneStateRef.current = { sequence, simulation: activeSimulation, playhead, progress, layout, onSelectHand };
 
   useEffect(() => {
+    setLoopSimulation(simulation);
     setPlaying(false);
     setStepAnimating(false);
     setProgress(0);
@@ -167,25 +174,29 @@ export default function SequenceRenderer({ sequence, simulation, onSelectHand }:
       }
       previousSequenceRef.current = sequence;
     }
-  }, [sequence]);
+  }, [sequence, simulation]);
 
   useEffect(() => {
-    if (!playing || !simulation.validation.isValid || !sequence.beats.length) return;
+    if (!playing || !activeSimulation.validation.isValid || !sequence.beats.length) return;
     let elapsed = 0;
     let previousTime = Date.now();
     const timer = window.setInterval(() => {
       const now = Date.now();
       elapsed += now - previousTime;
       previousTime = now;
-      const duration = getMainBeatDurationSeconds(sequence.timeSignature, playhead, tempo) * 1000;
+      const duration = getMainBeatDurationSeconds(sequence.timeSignature, Math.min(playhead, sequence.beats.length - 1), tempo) * 1000;
       if (elapsed >= duration) {
         elapsed = 0;
         setProgress(0);
+        if (playhead >= sequence.beats.length - 1 && repeat) {
+          const initialState = getLoopInitialState(sequence, activeSimulation);
+          if (initialState) setLoopSimulation(simulateSequence({ ...sequence, initialState }));
+        }
         setPlayhead((current) => {
           if (current >= sequence.beats.length - 1) {
             if (repeat) return 0;
             setPlaying(false);
-            return current;
+            return sequence.beats.length;
           }
           return current + 1;
         });
@@ -194,7 +205,7 @@ export default function SequenceRenderer({ sequence, simulation, onSelectHand }:
       }
     }, 16);
     return () => window.clearInterval(timer);
-  }, [playing, playhead, tempo, repeat, sequence, simulation.validation.isValid]);
+  }, [playing, playhead, tempo, repeat, sequence, activeSimulation]);
 
   useEffect(() => {
     if (!stepAnimating) return;
@@ -359,7 +370,7 @@ export default function SequenceRenderer({ sequence, simulation, onSelectHand }:
         target.add(vector(offset));
       } else {
         theta -= dx * 0.008;
-        phi += dy * 0.006;
+        phi -= dy * 0.006;
       }
       pointerStart = { ...pointerStart, x: event.clientX, y: event.clientY };
       updateCamera();
@@ -374,7 +385,7 @@ export default function SequenceRenderer({ sequence, simulation, onSelectHand }:
         const performerId = selected?.userData.performerId as string | undefined;
         const hand = selected?.userData.hand as 'left' | 'right' | undefined;
         const current = sceneStateRef.current;
-        const beat = current.sequence.beats[current.playhead];
+        const beat = current.sequence.beats[Math.min(current.playhead, current.sequence.beats.length - 1)];
         if (current.simulation.validation.isValid && performerId && hand && beat) {
           current.onSelectHand(performerId, hand, beat.id);
         }
@@ -409,9 +420,9 @@ export default function SequenceRenderer({ sequence, simulation, onSelectHand }:
     const animate = () => {
       frame = window.requestAnimationFrame(animate);
       const current = sceneStateRef.current;
-      const beat = current.sequence.beats[current.playhead];
+      const beat = current.sequence.beats[Math.min(current.playhead, current.sequence.beats.length - 1)];
       const valid = current.simulation.validation.isValid;
-      const progressValue = valid ? current.progress : 0;
+      const progressValue = valid ? (current.playhead >= current.sequence.beats.length ? 1 : current.progress) : 0;
       renderer.domElement.style.visibility = valid ? 'visible' : 'hidden';
 
       if (beat) {
@@ -538,14 +549,13 @@ export default function SequenceRenderer({ sequence, simulation, onSelectHand }:
     };
   }, [sequence, layout, palette]);
 
-  const valid = simulation.validation.isValid;
+  const valid = activeSimulation.validation.isValid;
   const step = (direction: -1 | 1) => {
     if (!valid || !sequence.beats.length) return;
     setPlaying(false);
     setStepAnimating(false);
     setProgress(0);
-    setPlayhead((current) => Math.max(0, Math.min(sequence.beats.length - 1, current + direction)));
-    setStepAnimating(true);
+    setPlayhead((current) => Math.max(0, Math.min(sequence.beats.length, current + direction)));
   };
 
   return (
@@ -556,16 +566,16 @@ export default function SequenceRenderer({ sequence, simulation, onSelectHand }:
             {playing ? 'Pause' : 'Play'}
           </button>
           <button type="button" onClick={() => step(-1)} disabled={!valid || playhead === 0}>Previous</button>
-          <button type="button" onClick={() => step(1)} disabled={!valid || playhead >= sequence.beats.length - 1}>Next</button>
+          <button type="button" onClick={() => step(1)} disabled={!valid || playhead >= sequence.beats.length}>Next</button>
         </div>
         <label className="renderer-control">Beat
-          <input type="range" min="0" max={Math.max(0, sequence.beats.length - 1)} value={playhead} onChange={(event) => {
+          <input type="range" min="0" max={sequence.beats.length} value={playhead} onChange={(event) => {
             setPlaying(false);
             setStepAnimating(false);
             setProgress(0);
             setPlayhead(Number(event.target.value));
           }} />
-          <output>{playhead + 1} / {sequence.beats.length}</output>
+          <output>{playhead} / {sequence.beats.length}</output>
         </label>
         <label className="renderer-control">BPM
           <input type="number" min="20" max="400" value={tempo} onChange={(event) => setTempo(Math.max(20, Math.min(400, Number(event.target.value) || 20)))} />
@@ -574,6 +584,14 @@ export default function SequenceRenderer({ sequence, simulation, onSelectHand }:
           <input type="checkbox" checked={repeat} onChange={(event) => setRepeat(event.target.checked)} />
           Repeat
         </label>
+        {sequence.sequenceType === 'circle-passing' && <div className="renderer-control">
+          <span>Visual jugglers</span>
+          <div className="stepper" aria-label="Visual jugglers">
+            <button type="button" onClick={() => onVisualParticipantCountChange(Math.max(3, visualParticipantCount - 1))} disabled={visualParticipantCount <= 3} aria-label="Remove visual juggler">−</button>
+            <output aria-label="Visual juggler count">{visualParticipantCount}</output>
+            <button type="button" onClick={() => onVisualParticipantCountChange(visualParticipantCount + 1)} aria-label="Add visual juggler">+</button>
+          </div>
+        </div>}
         {sequence.sequenceType !== 'circle-passing' && <label className="renderer-control">Layout
           <select value={layout} onChange={(event) => setLayout(event.target.value as SceneLayout)}>
             <option value="circle">Circle</option>

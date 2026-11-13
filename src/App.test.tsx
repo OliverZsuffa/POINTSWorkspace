@@ -2,13 +2,22 @@ import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 vi.mock('./features/renderer/SequenceRenderer', () => ({
-  default: ({ sequence }: { sequence: { performers: unknown[]; notation: unknown[] } }) => (
+  default: ({ sequence, visualParticipantCount = 3, onVisualParticipantCountChange = () => undefined }: {
+    sequence: { sequenceType: string; performers: unknown[]; notation: unknown[] };
+    visualParticipantCount?: number;
+    onVisualParticipantCountChange?: (count: number) => void;
+  }) => (
     <section
       aria-label="Sequence renderer"
       data-performer-count={sequence.performers.length}
       data-notation-count={sequence.notation.length}
     >
       <button type="button">Play</button>
+      {sequence.sequenceType === 'circle-passing' && <div aria-label="Visual jugglers">
+        <button type="button" aria-label="Remove visual juggler" onClick={() => onVisualParticipantCountChange(Math.max(3, visualParticipantCount - 1))} disabled={visualParticipantCount <= 3}>−</button>
+        <output aria-label="Visual juggler count">{visualParticipantCount}</output>
+        <button type="button" aria-label="Add visual juggler" onClick={() => onVisualParticipantCountChange(visualParticipantCount + 1)}>+</button>
+      </div>}
     </section>
   ),
 }));
@@ -207,8 +216,6 @@ describe('sequence editor', () => {
     const user = userEvent.setup();
     render(<App />);
     await user.click(screen.getByRole('button', { name: 'Settings' }));
-    await user.click(screen.getByRole('button', { name: 'Add performer' }));
-    await user.click(screen.getByRole('button', { name: 'Add performer' }));
     await user.selectOptions(screen.getByLabelText('Type'), 'circle-passing');
     await user.click(screen.getByRole('button', { name: 'Juggler 1 left beat 1 empty' }));
     await user.click(screen.getByRole('button', { name: 'LIFT' }));
@@ -221,8 +228,6 @@ describe('sequence editor', () => {
     const user = userEvent.setup();
     render(<App />);
     await user.click(screen.getByRole('button', { name: 'Settings' }));
-    await user.click(screen.getByRole('button', { name: 'Add performer' }));
-    await user.click(screen.getByRole('button', { name: 'Add performer' }));
     await user.selectOptions(screen.getByLabelText('Type'), 'circle-passing');
     await user.click(screen.getByRole('button', { name: 'Juggler 1 left beat 1 empty' }));
     await user.click(screen.getByRole('button', { name: 'LIFT' }));
@@ -371,12 +376,17 @@ describe('sequence editor', () => {
     expect(screen.getByRole('button', { name: 'Juggler 1 left beat 2 empty' })).toBeInTheDocument();
   });
 
+  it('creates new sequences with four beats', () => {
+    render(<App />);
+    expect(screen.getAllByRole('button', { name: /Juggler 1 left beat/ })).toHaveLength(4);
+  });
+
   it('inserts a beat after the selected timeline column', async () => {
     const user = userEvent.setup();
     render(<App />);
     await user.click(screen.getByRole('button', { name: 'Insert beat after 1' }));
     expect(screen.getByRole('button', { name: 'Select beat 2' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Juggler 1 left beat 9 empty' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Juggler 1 left beat 5 empty' })).toBeInTheDocument();
   });
 
   it('moves an entire ball rectangle when dragging one of its cells', () => {
@@ -458,6 +468,8 @@ describe('sequence editor', () => {
 
   it('moves multiple selected ball rectangles together', () => {
     render(<App />);
+    const addBeat = screen.getByRole('button', { name: 'Add beat' });
+    for (let index = 0; index < 4; index += 1) fireEvent.click(addBeat);
     const draw = (startName: string, endName: string) => {
       fireEvent.mouseDown(screen.getByRole('button', { name: startName }), { shiftKey: true });
       const end = screen.getByRole('button', { name: endName });
@@ -481,6 +493,7 @@ describe('sequence editor', () => {
 
   it('moves both linked ZIP halves with the complete ball rectangle', () => {
     render(<App />);
+    fireEvent.click(screen.getByRole('button', { name: 'Add beat' }));
     const start = screen.getByRole('button', { name: 'Juggler 1 left beat 1 empty' });
     const end = screen.getByRole('button', { name: 'Juggler 1 right beat 4 empty' });
     fireEvent.mouseDown(start, { shiftKey: true });
@@ -648,8 +661,6 @@ describe('sequence editor', () => {
     const user = userEvent.setup();
     const { container } = render(<App />);
     await user.click(screen.getByRole('button', { name: 'Settings' }));
-    await user.click(screen.getByRole('button', { name: 'Add performer' }));
-    await user.click(screen.getByRole('button', { name: 'Add performer' }));
     await user.selectOptions(screen.getByLabelText('Type'), 'circle-passing');
     expect(container.querySelectorAll('.performer-block')).toHaveLength(1);
     expect(container.querySelector('.performer-heading')?.textContent).toBe('Pattern');
@@ -664,13 +675,11 @@ describe('sequence editor', () => {
     const user = userEvent.setup();
     render(<App />);
     await user.click(screen.getByRole('button', { name: 'Settings' }));
-    await user.click(screen.getByRole('button', { name: 'Add performer' }));
-    await user.click(screen.getByRole('button', { name: 'Add performer' }));
     await user.selectOptions(screen.getByLabelText('Type'), 'circle-passing');
-    expect(screen.getByText('People')).toBeInTheDocument();
-    expect(screen.getByLabelText('People count')).toHaveTextContent('3');
-    await user.click(screen.getByRole('button', { name: 'Add one person' }));
-    expect(screen.getByLabelText('People count')).toHaveTextContent('4');
+    expect(screen.getByLabelText('Visual juggler count')).toHaveTextContent('3');
+    await user.click(screen.getByRole('button', { name: 'Add visual juggler' }));
+    expect(screen.getByLabelText('Visual juggler count')).toHaveTextContent('4');
+    expect(document.querySelectorAll('.performer-block')).toHaveLength(1);
   });
 
   it('sets table position targets by typing their labels', () => {
@@ -704,6 +713,7 @@ describe('sequence editor', () => {
   it('copies and pastes both linked ZIP symbols as one structure', async () => {
     const user = userEvent.setup();
     render(<App />);
+    await user.click(screen.getByRole('button', { name: 'Add beat' }));
 
     fireEvent.mouseDown(screen.getByRole('button', { name: 'Juggler 1 left beat 1 empty' }), { shiftKey: true });
     fireEvent.mouseUp(screen.getByRole('button', { name: 'Juggler 1 right beat 4 empty' }));
@@ -799,8 +809,6 @@ describe('sequence editor', () => {
     render(<App />);
 
     await user.click(screen.getByRole('button', { name: 'Settings' }));
-    await user.click(screen.getByRole('button', { name: 'Add performer' }));
-    await user.click(screen.getByRole('button', { name: 'Add performer' }));
     await user.selectOptions(screen.getByLabelText('Type'), 'circle-passing');
     await user.click(screen.getByRole('button', { name: 'Juggler 1 left beat 1 empty' }));
     await user.click(screen.getByRole('button', { name: 'LIFT' }));
