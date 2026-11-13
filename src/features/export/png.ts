@@ -41,7 +41,7 @@ function makeSvg(sequence: Sequence, performers: readonly Sequence['performers']
     `<text x="24" y="88" font-size="12">Page ${page} of ${pageCount} · ${sequence.beats.length} beats</text>`,
   ];
   const x0 = 150;
-  sequence.beats.forEach((beat, index) => {
+  sequence.beats.forEach((_, index) => {
     const x = x0 + index * CELL;
     parts.push(`<text x="${x + CELL / 2}" y="124" font-size="12" text-anchor="middle">${index + 1}</text>`);
     parts.push(`<path d="M${x} 132v${performers.length * 2 * ROW}" stroke="#d4dbe5" stroke-width="1"/>`);
@@ -53,7 +53,7 @@ function makeSvg(sequence: Sequence, performers: readonly Sequence['performers']
       const rowY = y + handIndex * ROW;
       parts.push(`<text x="110" y="${rowY + 22}" font-size="12">${hand === 'left' ? 'L' : 'R'}</text>`);
       parts.push(`<path d="M${x0} ${rowY}h${sequence.beats.length * CELL} M${x0} ${rowY + ROW}h${sequence.beats.length * CELL}" stroke="#d4dbe5" stroke-width="1"/>`);
-      sequence.beats.forEach((_, beatIndex) => {
+      sequence.beats.forEach((beat, beatIndex) => {
         const entries = sequence.notation.filter((entry) => entry.performerId === performer.id && entry.hand === hand && entry.time.beatId === beat.id);
         entries.forEach((entry) => {
           const x = x0 + beatIndex * CELL;
