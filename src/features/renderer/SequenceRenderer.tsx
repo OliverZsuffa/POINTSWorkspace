@@ -590,9 +590,14 @@ export default function SequenceRenderer({ sequence, simulation, visualParticipa
           <input type="checkbox" checked={repeat} onChange={(event) => setRepeat(event.target.checked)} />
           Repeat
         </label>
-        {sequence.sequenceType === 'circle-passing' && <label className="renderer-control">Visual jugglers
-          <input type="number" min="3" max="20" step="1" value={visualParticipantCount} onChange={(event) => onVisualParticipantCountChange(Math.max(3, Math.min(20, Math.floor(Number(event.target.value) || 3))))} />
-        </label>}
+        {sequence.sequenceType === 'circle-passing' && <div className="renderer-control">
+          <span>Visual jugglers</span>
+          <div className="stepper" aria-label="Visual jugglers">
+            <button type="button" onClick={() => onVisualParticipantCountChange(Math.max(3, visualParticipantCount - 1))} disabled={visualParticipantCount <= 3} aria-label="Remove visual juggler">−</button>
+            <output aria-label="Visual juggler count">{visualParticipantCount}</output>
+            <button type="button" onClick={() => onVisualParticipantCountChange(visualParticipantCount + 1)} aria-label="Add visual juggler">+</button>
+          </div>
+        </div>}
         {sequence.sequenceType !== 'circle-passing' && <label className="renderer-control">Layout
           <select value={layout} onChange={(event) => setLayout(event.target.value as SceneLayout)}>
             <option value="circle">Circle</option>

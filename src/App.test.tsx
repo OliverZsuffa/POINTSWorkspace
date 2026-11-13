@@ -667,10 +667,9 @@ describe('sequence editor', () => {
     render(<App />);
     await user.click(screen.getByRole('button', { name: 'Settings' }));
     await user.selectOptions(screen.getByLabelText('Type'), 'circle-passing');
-    expect(screen.getByLabelText('Visual jugglers')).toHaveValue(3);
-    await user.clear(screen.getByLabelText('Visual jugglers'));
-    await user.type(screen.getByLabelText('Visual jugglers'), '4');
-    expect(screen.getByLabelText('Visual jugglers')).toHaveValue(4);
+    expect(screen.getByLabelText('Visual juggler count')).toHaveTextContent('3');
+    await user.click(screen.getByRole('button', { name: 'Add visual juggler' }));
+    expect(screen.getByLabelText('Visual juggler count')).toHaveTextContent('4');
     expect(document.querySelectorAll('.performer-block')).toHaveLength(1);
   });
 
