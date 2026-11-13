@@ -376,7 +376,7 @@ export default function App() {
     const positionFor = (performerId: string, name: string) => positions.find((position) =>
       position.kind === 'table' && position.name === name && position.owner.kind === 'performer' && position.owner.performerId === performerId);
     const basePositionById = new Map(basePositions.map((position) => [position.id, position]));
-    const projectedBalls = performers.flatMap((performer, index) => index === 0 ? sequence.balls : sequence.balls.map((ball) => ({
+    const projectedBalls = performers.flatMap((_, index) => index === 0 ? sequence.balls : sequence.balls.map((ball) => ({
       ...ball,
       id: asBallId('circle-' + index + '-' + ball.id),
     })));
@@ -391,8 +391,9 @@ export default function App() {
       } else if (location.kind === 'hand-held') {
         location = { ...location, performerId: performer.id };
       } else {
-        const mapped = positions.find((item) => item.kind === 'hand-back' && item.performerId === performer.id && item.hand === location.hand);
-        if (mapped?.kind === 'hand-back') location = { ...location, positionId: mapped.id, performerId: performer.id };
+        const handBack = location;
+        const mapped = positions.find((item) => item.kind === 'hand-back' && item.performerId === performer.id && item.hand === handBack.hand);
+        if (mapped?.kind === 'hand-back') location = { ...handBack, positionId: mapped.id, performerId: performer.id };
       }
       return { ...placement, ballId: asBallId('circle-' + index + '-' + ball.id), location };
     }));
