@@ -77,14 +77,14 @@ The curated preset registry is repository data and supports text search. Initial
 - [x] Automatic per tab persistence integrated.
 - [x] Curated presets and search integrated.
 - [x] PNG export and performer based segmentation implemented.
-- [ ] Formatting check.
-- [ ] Lint.
-- [ ] Strict TypeScript check.
-- [ ] Full unit test suite.
-- [ ] Production build.
-- [x] Browser tests cover import, undo, persistence, preset search and PNG download.
-- [ ] Visual inspection of exported PNG at short and long sequence lengths.
-- [ ] Live deployment verification.
+- [x] Formatting check.
+- [x] Lint.
+- [x] Strict TypeScript check.
+- [x] Full unit test suite: 147 tests passed.
+- [x] Production build.
+- [x] Browser tests: 16 passed, including import, undo, persistence, preset search and PNG download.
+- [ ] Manual visual inspection of exported PNG at short and long sequence lengths.
+- [ ] Live deployment verification after merge.
 
 ## Known limitations to review
 
