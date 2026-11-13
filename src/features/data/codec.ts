@@ -8,7 +8,7 @@ function toBase64Url(bytes: Uint8Array): string {
   for (const byte of bytes) binary += String.fromCharCode(byte);
   return btoa(binary).replace(/=/g, '').replace(/\\+/g, '-').replace(/\\//g, '_');
 }
-
+  return btoa(binary).replaceAll('=', '').replaceAll('+', '-').replaceAll('/', '_');
 function fromBase64Url(value: string): Uint8Array {
   if (!/^[A-Za-z0-9_-]*$/.test(value)) throw new Error('Invalid code characters');
   const base64 = value.replace(/-/g, '+').replace(/_/g, '/') + '='.repeat((4 - value.length % 4) % 4);
