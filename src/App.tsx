@@ -210,7 +210,7 @@ function circleSubscript(target: Extract<TableActionTarget, { kind: 'circle-posi
 
 function ActionSymbol({ action, sequence, hand }: { action: NotationAction; sequence: Sequence; hand: Hand }) {
   if (action.type === 'EMPTY') return null;
-  if (action.type === 'SPECIAL') return <span className={'special-symbol' + (action.text === 'Clap' ? ' clap-symbol' : '')} aria-label={action.text === 'Clap' ? 'Clap' : undefined}>{action.text === 'Clap' ? <span className="clap-bar" /> : action.text || 'SPECIAL'}{action.linkId && <span className="special-link-indicator" aria-label="Linked SPECIAL">↔</span>}</span>;
+  if (action.type === 'SPECIAL') return <span className={'special-symbol' + (action.text === 'Clap' ? ' clap-symbol' : '')} aria-label={action.text === 'Clap' ? 'Clap' : undefined}>{action.text === 'Clap' ? <span className="clap-bar" /> : action.text || 'SPECIAL'}{action.linkId && action.text !== 'Clap' && <span className="special-link-indicator" aria-label="Linked SPECIAL">↔</span>}</span>;
   let path = '';
   let target = '';
   let subscript = '';
