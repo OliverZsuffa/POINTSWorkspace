@@ -344,7 +344,7 @@ html, body, #root { min-height: 100%; background: #90d0d5; }
 .notation-cell .notation-symbol { width: 42px; height: 42px; }
 .notation-cell .ball-segment { width: 42px; height: 42px; }
 .notation-cell .special-symbol { line-height: 42px; font-size: 9px; }
-.notation-cell .clap-symbol { display: grid; place-items: center; height: 100%; line-height: normal; }
+.notation-cell .clap-symbol { display: flex; align-items: stretch; justify-content: center; width: 100%; height: var(--notation-cell-size); line-height: normal; }
 .clap-bar { display: block; width: 3px; height: 100%; background: #172033; border-radius: 0; }
 .beat-head .beat-select { min-height: 42px; }
 .notation-cell { border-radius: 0; }
