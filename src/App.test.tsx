@@ -2,13 +2,22 @@ import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 vi.mock('./features/renderer/SequenceRenderer', () => ({
-  default: ({ sequence }: { sequence: { performers: unknown[]; notation: unknown[] } }) => (
+  default: ({ sequence, visualParticipantCount = 3, onVisualParticipantCountChange = () => undefined }: {
+    sequence: { sequenceType: string; performers: unknown[]; notation: unknown[] };
+    visualParticipantCount?: number;
+    onVisualParticipantCountChange?: (count: number) => void;
+  }) => (
     <section
       aria-label="Sequence renderer"
       data-performer-count={sequence.performers.length}
       data-notation-count={sequence.notation.length}
     >
       <button type="button">Play</button>
+      {sequence.sequenceType === 'circle-passing' && <div aria-label="Visual jugglers">
+        <button type="button" aria-label="Remove visual juggler" onClick={() => onVisualParticipantCountChange(Math.max(3, visualParticipantCount - 1))} disabled={visualParticipantCount <= 3}>−</button>
+        <output aria-label="Visual juggler count">{visualParticipantCount}</output>
+        <button type="button" aria-label="Add visual juggler" onClick={() => onVisualParticipantCountChange(visualParticipantCount + 1)}>+</button>
+      </div>}
     </section>
   ),
 }));
