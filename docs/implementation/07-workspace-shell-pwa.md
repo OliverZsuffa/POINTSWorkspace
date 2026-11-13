@@ -507,9 +507,9 @@ The following must be treated as release blocking:
 
 ## Implementation progress
 
-Status: In progress on `implementation/07-renderer-editor-corrections-verify`.
+Status: Implemented and merged through PR #15 on 13 November 2026.
 
-The current implementation includes the circle geometry and one pattern model, square edge based notation cells, HOLD behaviour, target entry, performer specific hand back targets, Ctrl click selection, deletion controls, responsive workspace panels, panel resizing and swapping, collapsed initial state controls, larger responsive cells, and the PWA app shell. The first rendered screenshot review identified a desktop editor toolbar sizing issue, which has been corrected. The latest changes still require a fresh full CI run and screenshot review. PWA offline verification is also pending. No verification item is considered complete until its corresponding check has passed.
+The implementation includes the circle geometry and one pattern model, square edge based notation cells, HOLD behaviour, target entry, performer specific hand back targets, Ctrl click selection, deletion controls, responsive workspace panels, panel resizing and swapping, collapsed initial state controls, larger responsive cells, and the PWA app shell. The final CI run `43393713807` passed formatting, lint, TypeScript, 109 unit tests, the production build and all 10 browser tests. The browser suite verified six viewport sizes, the ten person circle renderer, desktop panel interactions, phone tab switching and offline reload after first load. Screenshots from the CI run were reviewed. The remaining release check is confirmation that the merged build has finished publishing to GitHub Pages. Chromium was the browser used for automated offline verification; additional browser coverage remains a future compatibility check.
 
 ## Approval
 
