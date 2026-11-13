@@ -88,7 +88,7 @@ function getActionTargetPosition(
       const circleTarget = action.target;
       const performerIndex = sequence.performers.findIndex((item) => item.id === entry.performerId);
       const offset = circleTarget.direction
-        ? (circleTarget.direction === 'left' ? -1 : 1) * (circleTarget.distance ?? 1)
+        ? (circleTarget.direction === 'left' ? 1 : -1) * (circleTarget.distance ?? 1)
         : 0;
       const targetIndex = (performerIndex + offset + sequence.performers.length) % sequence.performers.length;
       const targetPerformer = sequence.performers[targetIndex];
@@ -147,6 +147,7 @@ export default function SequenceRenderer({ sequence, simulation, visualParticipa
   const [progress, setProgress] = useState(0);
   const [stepAnimating, setStepAnimating] = useState(false);
   const [tempo, setTempo] = useState(sequence.bpm);
+  const [tempoInput, setTempoInput] = useState(String(sequence.bpm));
   const [repeat, setRepeat] = useState(true);
   const [layout, setLayout] = useState<SceneLayout>('circle');
   const [palette, setPalette] = useState<keyof typeof BALL_PALETTES>('classic');
@@ -155,6 +156,8 @@ export default function SequenceRenderer({ sequence, simulation, visualParticipa
 
   playheadRef.current = playhead;
   sceneStateRef.current = { sequence, simulation: activeSimulation, playhead, progress, layout, onSelectHand };
+
+  useEffect(() => { setTempoInput(String(tempo)); }, [tempo]);
 
   useEffect(() => {
     setLoopSimulation(simulation);
@@ -578,7 +581,7 @@ export default function SequenceRenderer({ sequence, simulation, visualParticipa
           <output>{playhead} / {sequence.beats.length}</output>
         </label>
         <label className="renderer-control">BPM
-          <input type="number" min="20" max="400" value={tempo} onChange={(event) => setTempo(Math.max(20, Math.min(400, Number(event.target.value) || 20)))} />
+          <input type="number" min="1" max="400" value={tempoInput} onChange={(event) => setTempoInput(event.target.value)} onBlur={() => { const value = Number(tempoInput); if (tempoInput.trim() && Number.isFinite(value) && value >= 1 && value <= 400) setTempo(value); else setTempoInput(String(tempo)); }} onKeyDown={(event) => { if (event.key === "Enter") event.currentTarget.blur(); }} />
         </label>
         <label className="renderer-control renderer-inline-control">
           <input type="checkbox" checked={repeat} onChange={(event) => setRepeat(event.target.checked)} />
@@ -587,7 +590,7 @@ export default function SequenceRenderer({ sequence, simulation, visualParticipa
         {sequence.sequenceType === 'circle-passing' && <div className="renderer-control">
           <span>Visual jugglers</span>
           <div className="stepper" aria-label="Visual jugglers">
-            <button type="button" onClick={() => onVisualParticipantCountChange(Math.max(3, visualParticipantCount - 1))} disabled={visualParticipantCount <= 3} aria-label="Remove visual juggler">−</button>
+            <button type="button" onClick={() => onVisualParticipantCountChange(Math.max(2, visualParticipantCount - 1))} disabled={visualParticipantCount <= 2} aria-label="Remove visual juggler">−</button>
             <output aria-label="Visual juggler count">{visualParticipantCount}</output>
             <button type="button" onClick={() => onVisualParticipantCountChange(visualParticipantCount + 1)} aria-label="Add visual juggler">+</button>
           </div>
