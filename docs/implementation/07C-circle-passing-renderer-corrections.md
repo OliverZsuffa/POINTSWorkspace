@@ -106,36 +106,38 @@ The user must still be able to disable looping manually. The selected loop setti
 
 ### Circle passing
 - [x] Circle passing can be selected with one actual pattern performer.
-- [ ] Relative left and right destinations become available immediately.
-- [ ] The editor still contains exactly one authored pattern.
-- [ ] Visual participant count can be changed independently.
-- [ ] Changing visual participant count creates no additional pattern performers, notation rows, balls or authored entries.
-- [ ] Every visual juggler executes the same pattern.
-- [ ] Three visual jugglers produce a triangular table with nine distinct table positions.
-- [ ] Larger circles have correct polygon side counts and non overlapping positions.
-- [ ] Relative destinations map correctly around the complete circle, including wraparound.
+- [x] Relative left and right destinations become available immediately.
+- [x] The editor still contains exactly one authored pattern.
+- [x] Visual participant count can be changed independently.
+- [x] Changing visual participant count creates no additional pattern performers, notation rows, balls or authored entries.
+- [x] Every visual juggler executes the same pattern.
+- [x] Three visual jugglers produce a triangular table with nine distinct table positions.
+- [x] Larger circles have correct polygon side counts and non overlapping positions.
+- [x] Relative destinations map correctly around the complete circle, including wraparound.
 
 ### Renderer and playback
-- [ ] Vertical left drag orbit direction is reversed.
-- [ ] Horizontal orbit remains unchanged.
-- [ ] Three person table positions do not overlap.
-- [ ] Object colours and identities remain continuous across loop boundaries.
-- [ ] New sequences default to four beats.
-- [ ] Existing sequences retain their existing beat counts.
-- [ ] Slider value 0 shows the initial state.
-- [ ] Slider value 1 shows the completed state after beat 1.
-- [ ] Playback, stepping and scrubbing agree on beat state.
-- [ ] Looping is enabled by default and can be disabled.
-- [ ] Looping does not reset object state to the initial arrangement.
+- [x] Vertical left drag orbit direction is reversed.
+- [ ] Manual camera orbit testing confirms horizontal orbit remains unchanged.
+- [x] Three person table positions do not overlap.
+- [x] Object colours and identities remain continuous across loop boundaries.
+- [x] New sequences default to four beats.
+- [x] Existing sequences retain their existing beat counts.
+- [x] Slider value 0 shows the initial state.
+- [x] Slider value 1 shows the completed state after beat 1.
+- [x] Playback, stepping and scrubbing agree on beat state.
+- [x] Looping is enabled by default and can be disabled.
+- [x] Looping does not reset object state to the initial arrangement.
 
 ### General regression
-- [ ] Formatting and lint checks pass.
-- [ ] Strict TypeScript check passes.
-- [ ] Unit and component tests pass.
-- [ ] Production build passes.
-- [ ] Browser tests cover solo and circle passing.
-- [ ] Visual review covers three person and larger circle layouts.
-- [ ] Existing solo and individual passing behaviour remains intact.
+- [x] Formatting and lint checks pass.
+- [x] Strict TypeScript check passes.
+- [x] Unit and component tests pass.
+- [x] Production build passes.
+- [x] Browser tests cover solo and circle passing.
+- [ ] Manual visual inspection covers three person and larger circle layouts. CI captured screenshots for both.
+- [x] Existing solo and individual passing behaviour remains intact.
+
+- [ ] Manually verify vertical orbit direction, horizontal orbit direction, zoom and panning in the live renderer.
 
 ## 10. Superseded assumptions
 
