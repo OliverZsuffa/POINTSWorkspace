@@ -67,21 +67,32 @@ The audit distinguishes observed presentation defects from domain and simulation
 
 ## Verification evidence
 
-The CI run associated with commit `1b28d2450db4ea0bc73afd05c2d994e901d654bc` passed formatting, lint, TypeScript, unit tests, production build and browser checks. Its screenshots were reviewed. A later run built the PWA assets successfully, but its first offline reload assertion did not find the application root. The offline test now checks the actual precache entries and is being rerun.
+The final CI run `43393713807`, on the merged Package 07 head, passed formatting, lint, TypeScript, all 109 unit tests, the production build and all 10 Playwright browser tests. The final screenshots were reviewed.
+
+The offline test initially exposed that the cached HTML loaded but the React application did not mount. The service worker now matches cached resources while ignoring response Vary differences. The final offline reload returned HTTP 200, restored the full application interface and passed the browser assertion. The screenshot `07-pwa-offline-reload.png` records the restored interface while offline.
 
 That screenshot review identified one additional desktop issue: the toolbar retained an old full height minimum, causing the editor grid to be pushed out of view. The minimum height has been removed. A fresh screenshot review is required to verify that correction.
 
 The ten participant screenshot from the same run shows the polygonal table and all ten performers within the scene. No obvious performer or table position overlap is visible at that participant count.
 
-## Remaining review items
+## Final verification results
 
-1. Review the desktop editor screenshot after the toolbar sizing correction.
-2. Review the desktop editor and renderer together at narrow and wide panel proportions.
-3. Review phone and tablet renderer tabs, including scene framing and playback controls.
-4. Review a larger circle with more than ten participants.
-5. Verify all notation action types and edge combinations visually.
-6. Verify light and dark themes.
-7. Verify the PWA manifest, install flow, offline reload and waiting update behaviour.
-8. Verify the deployed GitHub Pages build after merge.
+1. Desktop layout reviewed at 1440 × 900 and 1280 × 800.
+2. Tablet layout reviewed at 1024 × 768 and 768 × 1024.
+3. Phone layout reviewed at 390 × 844 and 320 × 700.
+4. Desktop editor and renderer are displayed side by side, with the divider and panel controls tested.
+5. Phone Editor and Renderer tabs tested, including renderer canvas sizing after tab switching.
+6. Ten participant circle passing screenshot reviewed. The table is a decagon, all ten performers are visible, and no obvious performer or position marker overlap is visible.
+7. Circle passing uses one authored pattern. The expanded simulation model was verified by a unit test.
+8. Square notation cells and action edge rendering are present in the reviewed screenshots.
+9. The offline reload browser test passed. The app shell, JavaScript and stylesheet resources are available offline after first load.
+10. The app manifest and icon are included in the production build.
+
+## Remaining follow up
+
+1. Verify the GitHub Pages deployment itself after merge. The CI production build and offline browser test passed, but they are not a substitute for opening the newly deployed public site.
+2. Verify installation and offline reload in an additional browser beyond Chromium.
+3. The solo renderer scene occupies relatively little of its panel compared with the circle scene. This is a visual refinement opportunity, not a geometry or overlap failure.
+4. Light and dark theme visual review remains separate from the current screenshot evidence.
 
 No item above is considered complete until the corresponding current build has been reviewed.
