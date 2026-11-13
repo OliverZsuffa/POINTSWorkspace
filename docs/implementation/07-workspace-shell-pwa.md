@@ -2,11 +2,9 @@
 
 ## Status
 
-Awaiting approval.
+Implemented and merged through PR #15. The subsequent circle passing and playback corrections were implemented through Package 07C and merged through PR #16.
 
 This revision expands the original Package 07 into the integration and visual refinement milestone for the existing Sequence Editor and Sequence Renderer. It covers the complete user facing workspace, not only the application shell.
-
-Implementation must not begin until Oliver has reviewed and explicitly approved this plan.
 
 ## Goal
 
@@ -399,7 +397,7 @@ Package 07 is complete only when:
 4. Desktop panels can be resized, swapped, hidden and restored. The default split is equal. Layout choices are not persisted between sessions.
 5. PWA updates use a waiting service worker. A compact notice informs the user that an update is ready. The current page is never reloaded automatically, and the update activates only after all existing POINTS tabs have closed.
 6. The editor toolbar sits above the notation grid. Initial object distribution is collapsed by default.
-7. Circle passing uses one authored pattern and a participant count. The renderer uses a regular polygon with one side per participant.
+7. Circle passing uses one authored pattern and a separately configured visual participant count in the renderer. The renderer uses a regular polygon with one side per visual participant.
 
 ## Remaining open decisions
 
@@ -507,9 +505,9 @@ The following must be treated as release blocking:
 
 ## Implementation progress
 
-Status: Implemented and merged through PR #15 on 13 November 2026.
+Status: Implemented and merged through PR #15 on 13 November 2026. Circle passing and playback corrections were implemented and merged through PR #16 on 13 November 2026.
 
-The implementation includes the circle geometry and one pattern model, square edge based notation cells, HOLD behaviour, target entry, performer specific hand back targets, Ctrl click selection, deletion controls, responsive workspace panels, panel resizing and swapping, collapsed initial state controls, larger responsive cells, and the PWA app shell. The final CI run `43393713807` passed formatting, lint, TypeScript, 109 unit tests, the production build and all 10 browser tests. The browser suite verified six viewport sizes, the ten person circle renderer, desktop panel interactions, phone tab switching and offline reload after first load. Screenshots from the CI run were reviewed. The remaining release check is confirmation that the merged build has finished publishing to GitHub Pages. Chromium was the browser used for automated offline verification; additional browser coverage remains a future compatibility check.
+The implementation includes the circle geometry and one pattern model, square edge based notation cells, HOLD behaviour, target entry, performer specific hand back targets, Ctrl click selection, deletion controls, responsive workspace panels, panel resizing and swapping, collapsed initial state controls, larger responsive cells, and the PWA app shell. The final CI run `43393713807` passed formatting, lint, TypeScript, 109 unit tests, the production build and all 10 browser tests. The browser suite verified six viewport sizes, the ten person circle renderer, desktop panel interactions, phone tab switching and offline reload after first load. Screenshots from the CI run were reviewed. The follow up corrections in Package 07C separate one authored pattern performer from the visual participant count, use a renderer control for that count, carry object placements across playback loops, use completed beat boundaries for scrubbing, default to four beats and enable repeat by default. The remaining release check is confirmation that the merged build has finished publishing to GitHub Pages. Chromium was the browser used for automated offline verification; additional browser coverage remains a future compatibility check.
 
 ## Approval
 
