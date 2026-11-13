@@ -3,6 +3,7 @@ import * as THREE from 'three';
 import type { NotationEntry, ObjectLocation, Sequence, SimulationResult } from '../../domain/model';
 import { getMainBeatDurationSeconds } from '../../domain/time/time-signature';
 import { simulateSequence } from '../../domain/state';
+import { getLoopInitialState } from './playback';
 import {
   getCameraPanOffset,
   getHandPosition,
@@ -188,15 +189,8 @@ export default function SequenceRenderer({ sequence, simulation, visualParticipa
         elapsed = 0;
         setProgress(0);
         if (playhead >= sequence.beats.length - 1 && repeat) {
-          const lastBeatId = sequence.beats[sequence.beats.length - 1]!.id;
-          const finalSnapshot = activeSimulation.snapshots.find((snapshot) => snapshot.at.beatId === lastBeatId && snapshot.phase === 'after');
-          if (finalSnapshot) {
-            const placements = sequence.balls.flatMap((ball) => {
-              const location = finalSnapshot.ballLocations[ball.id];
-              return location ? [{ ballId: ball.id, location }] : [];
-            });
-            setLoopSimulation(simulateSequence({ ...sequence, initialState: { placements } }));
-          }
+          const initialState = getLoopInitialState(sequence, activeSimulation);
+          if (initialState) setLoopSimulation(simulateSequence({ ...sequence, initialState }));
         }
         setPlayhead((current) => {
           if (current >= sequence.beats.length - 1) {
