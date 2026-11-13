@@ -94,6 +94,17 @@ describe('sequence editor', () => {
     expect(second).toHaveClass('selected');
   });
 
+  it('allows the BPM value to be replaced and commits it on Enter', async () => {
+    const user = userEvent.setup();
+    render(<App />);
+    await user.click(screen.getByRole('button', { name: 'Settings' }));
+    const bpm = screen.getByRole('spinbutton', { name: 'BPM' });
+    await user.clear(bpm);
+    await user.type(bpm, '85');
+    await user.keyboard('{Enter}');
+    expect(bpm).toHaveValue(85);
+  });
+
   it('adds and renames table positions in sequence settings', async () => {
     const user = userEvent.setup();
     render(<App />);
