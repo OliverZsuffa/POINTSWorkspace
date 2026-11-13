@@ -1438,27 +1438,19 @@ export default function App() {
           </label>
           <div className="setting-control"><span>Balls</span><div className="stepper"><button type="button" onClick={() => changeBallCount(sequence.balls.length - 1)} disabled={sequence.balls.length <= 1}>−</button><output>{sequence.balls.length}</output><button type="button" onClick={() => changeBallCount(sequence.balls.length + 1)}>+</button></div></div>
           <div className="setting-control"><span>Beats</span><div className="stepper"><button type="button" onClick={removeBeat} disabled={sequence.beats.length <= 1 || sequence.notation.some((entry) => entry.time.beatId === sequence.beats[sequence.beats.length - 1]?.id)}>−</button><output>{sequence.beats.length}</output><button type="button" onClick={addBeat}>+</button></div></div>
-          <div className="performer-settings">
-            <span>{sequence.sequenceType === 'circle-passing' ? 'People' : 'Performers'}</span>
-            {sequence.sequenceType === 'circle-passing' ? (
-              <div className="stepper" aria-label="People in circle">
-                <button type="button" onClick={() => removePerformer(sequence.performers[sequence.performers.length - 1]!.id)} disabled={sequence.performers.length <= 3} aria-label="Remove one person">−</button>
-                <output aria-label="People count">{sequence.performers.length}</output>
-                <button type="button" onClick={addPerformer} aria-label="Add one person">+</button>
-              </div>
-            ) : (
-              <>
-                {sequence.performers.map((performer) => (
-                  <div className="performer-chip" key={performer.id + performer.name + performer.identifier}>
-                    <input className="performer-name" aria-label={'Performer name ' + performer.name} defaultValue={performer.name} onBlur={(event) => updatePerformer(performer.id, 'name', event.target.value)} />
-                    <input className="performer-identifier" aria-label={'Performer identifier ' + (performer.identifier ?? '')} defaultValue={performer.identifier ?? ''} maxLength={1} onBlur={(event) => updatePerformer(performer.id, 'identifier', event.target.value)} />
-                    {sequence.performers.length > 1 && <button type="button" className="remove-chip" onClick={() => removePerformer(performer.id)} aria-label={'Remove ' + performer.name}>×</button>}
-                  </div>
-                ))}
-                <button type="button" onClick={addPerformer}>Add performer</button>
-              </>
-            )}
-          </div>
+          {sequence.sequenceType !== 'circle-passing' && <div className="performer-settings">
+            <span>Performers</span>
+            <>
+              {sequence.performers.map((performer) => (
+                <div className="performer-chip" key={performer.id + performer.name + performer.identifier}>
+                  <input className="performer-name" aria-label={'Performer name ' + performer.name} defaultValue={performer.name} onBlur={(event) => updatePerformer(performer.id, 'name', event.target.value)} />
+                  <input className="performer-identifier" aria-label={'Performer identifier ' + (performer.identifier ?? '')} defaultValue={performer.identifier ?? ''} maxLength={1} onBlur={(event) => updatePerformer(performer.id, 'identifier', event.target.value)} />
+                  {sequence.performers.length > 1 && <button type="button" className="remove-chip" onClick={() => removePerformer(performer.id)} aria-label={'Remove ' + performer.name}>×</button>}
+                </div>
+              ))}
+              <button type="button" onClick={addPerformer}>Add performer</button>
+            </>
+          </div>}
           <div className="position-settings">
             <span>Positions</span>
             {sequence.sequenceType === 'circle-passing' ? <span className="position-summary">A · B · C</span> : <>
