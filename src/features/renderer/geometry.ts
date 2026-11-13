@@ -184,13 +184,15 @@ export function getTableFootprint(sequence: Sequence): { width: number; depth: n
         position.kind === 'table' && position.owner.kind === 'performer' && position.owner.performerId === performer.id,
       ).length,
     ));
-    const halfAngleSine = Math.sin(Math.PI / polygonSideCount);
+    const halfAngle = Math.PI / polygonSideCount;
+    const halfAngleSine = Math.sin(halfAngle);
+    const halfAngleCosine = Math.cos(halfAngle);
     const positionHalfSpan = ((maxOwnedPositions - 1) * 0.72) / 2;
-    // Keep the outermost positions far enough from polygon vertices that
-    // positions on neighbouring edges cannot collapse into one another.
-    const vertexClearance = 0.25 / halfAngleSine;
-    const requiredHalfEdge = Math.max(positionHalfSpan + 0.2, positionHalfSpan + vertexClearance);
-    const radius = Math.max(1.6, requiredHalfEdge / halfAngleSine);
+    // Account for the inward position inset when sizing the distance between
+    // the outermost positions on neighbouring polygon edges.
+    const requiredApothem = 0.42 + (positionHalfSpan * halfAngleCosine + 0.225) / halfAngleSine;
+    const radiusForEdgeCapacity = (positionHalfSpan + 0.2) / halfAngleSine;
+    const radius = Math.max(1.6, requiredApothem / halfAngleCosine, radiusForEdgeCapacity);
     const diameter = radius * 2;
     return { width: diameter, depth: diameter, round: true, sideCount: polygonSideCount };
   }
