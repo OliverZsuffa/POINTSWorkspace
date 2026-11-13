@@ -86,8 +86,8 @@ test('circle passing renderer layout with four visual participants', async ({ pa
   await page.getByRole('button', { name: 'Settings' }).click();
   const renderer = page.getByRole('region', { name: 'Sequence renderer' });
   const addPerson = renderer.getByRole('button', { name: 'Add visual juggler' });
-  for (let count = 0; count < 7; count += 1) await addPerson.click();
-  await expect(renderer.getByLabel('Visual juggler count')).toHaveText('10');
+  await addPerson.click();
+  await expect(renderer.getByLabel('Visual juggler count')).toHaveText('4');
 
   const canvas = renderer.locator('canvas');
   await expect(canvas).toBeVisible();
