@@ -78,7 +78,7 @@ test('circle passing renderer layout with three visual participants', async ({ p
   await page.screenshot({ path: 'test-results/07-circle-renderer-three-people.png', fullPage: true });
 });
 
-test('circle passing renderer layout with ten visual participants', async ({ page }) => {
+test('circle passing renderer layout with four visual participants', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto('./');
   await page.getByRole('button', { name: 'Settings' }).click();
@@ -95,7 +95,7 @@ test('circle passing renderer layout with ten visual participants', async ({ pag
   expect(bounds).not.toBeNull();
   expect(bounds!.width).toBeGreaterThan(400);
   expect(bounds!.height).toBeGreaterThan(250);
-  await page.screenshot({ path: 'test-results/07-circle-renderer-ten-people.png', fullPage: true });
+  await page.screenshot({ path: 'test-results/07-circle-renderer-four-people.png', fullPage: true });
 });
 
 
