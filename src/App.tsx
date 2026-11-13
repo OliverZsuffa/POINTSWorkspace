@@ -1125,9 +1125,14 @@ export default function App() {
       const mapPositionId = (positionId: string, index: number) => {
         const source = sequence.positions.find((position) => position.id === positionId);
         if (!source) return undefined;
-        const base = source.kind === 'table'
-          ? baseTables.find((position) => position.name === source.name)
-          : baseBacks.find((position) => position.hand === source.hand);
+        let base: PositionDefinition | undefined;
+        if (source.kind === 'table') {
+          const name = source.name;
+          base = baseTables.find((position) => position.name === name);
+        } else {
+          const hand = source.hand;
+          base = baseBacks.find((position) => position.hand === hand);
+        }
         return base ? index === 0 ? base.id : asPositionId('visual-' + index + '-' + base.id) : undefined;
       };
       initialState = {
