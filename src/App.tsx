@@ -305,6 +305,10 @@ export default function App() {
   const [persistenceReady, setPersistenceReady] = useState(false);
 
   useEffect(() => {
+    if (import.meta.env.MODE === 'test') {
+      setPersistenceReady(true);
+      return;
+    }
     const restored = restoreSequence();
     if (restored) setSequence(restored);
     setPersistenceReady(true);
