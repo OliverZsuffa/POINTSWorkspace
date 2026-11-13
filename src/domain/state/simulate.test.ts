@@ -210,6 +210,35 @@ describe('object state simulation', () => {
     expect(invalidDistance.validation.issues.map((item) => item.code)).toContain('unknown-lift-target');
   });
 
+  it('resolves left and right circle targets to the corresponding adjacent performers', () => {
+    const second = asPerformerId('circle-second');
+    const third = asPerformerId('circle-third');
+    const performers = [
+      representativeSoloSequence.performers[0]!,
+      { id: second, name: 'Juggler 2' },
+      { id: third, name: 'Juggler 3' },
+    ];
+    const positions = performers.map((performer, index) => ({
+      id: asPositionId('circle-position-' + index),
+      kind: 'table' as const,
+      name: 'A' as const,
+      owner: { kind: 'performer' as const, performerId: performer.id },
+    }));
+    const run = (direction: 'left' | 'right', expectedPosition: ReturnType<typeof asPositionId>) => simulateSequence({
+      ...representativeSoloSequence,
+      sequenceType: 'circle-passing',
+      performers,
+      positions,
+      initialState: { placements: [{ ballId: asBallId('ball-1'), location: { kind: 'position' as const, positionId: expectedPosition } }] },
+      notation: [entry('circle-direction-' + direction, 'right', {
+        type: 'LIFT',
+        target: { kind: 'circle-position', position: 'A', direction, distance: 1 },
+      })],
+    });
+    expect(run('left', positions[1]!.id).validation.isValid).toBe(true);
+    expect(run('right', positions[2]!.id).validation.isValid).toBe(true);
+  });
+
   it('allows BOUNCE while a second object is balanced on the same hand', () => {
     const sequence: Sequence = {
       ...representativeSoloSequence,
