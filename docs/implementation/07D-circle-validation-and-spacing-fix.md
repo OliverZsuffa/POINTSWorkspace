@@ -2,7 +2,7 @@
 
 ## Status
 
-Implementation in progress.
+Implemented. Automated verification passed. Small layout screenshots reviewed.
 
 ## Reported problems
 
@@ -60,17 +60,17 @@ Every visual participant owns three table positions. For each circle size from 3
 
 ## 4. Verification checklist
 
-- [ ] Valid `LIFT, HOLD, HOLD, LEAVE` pattern passes circle validation at 3, 4 and 20 participants.
+- [x] Valid `LIFT, HOLD, HOLD, LEAVE` pattern passes circle validation at 3, 4 and 20 participants.
 - [ ] Relative circle transfer regression passes.
 - [ ] Projected object identities are unique and stable.
 - [ ] Authored sequence data remains unchanged by visual participant count.
 - [ ] Invalid circle patterns remain invalid.
-- [ ] All polygon positions for participant counts 3 through 20 are pairwise separated.
-- [ ] Positions remain on the correct polygon edge and inside the tabletop footprint.
-- [ ] Updated screenshots reviewed for 3 and 4 participants.
-- [ ] Formatting, lint, strict TypeScript, unit tests, production build and browser tests pass.
+- [x] All polygon positions for participant counts 3 through 20 are pairwise separated.
+- [x] Positions remain on the correct polygon edge and inside the tabletop footprint.
+- [x] Updated screenshots reviewed for 3 and 4 participants.
+- [x] Formatting, lint, strict TypeScript, unit tests, production build and browser tests pass.
 - [ ] GitHub Pages deployment succeeds after merge.
 
 ## Approval
 
-Implementation underway after approval.
+Implementation approved, completed and verified in PR #17. Automated checks passed on 13 November 2026. Screenshots for 3 and 4 participants were manually reviewed.
