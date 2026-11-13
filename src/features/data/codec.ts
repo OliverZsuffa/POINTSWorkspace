@@ -49,11 +49,12 @@ function decompress(bytes: Uint8Array): string {
   const dictionary = new Map<number, Uint8Array>();
   for (let index = 0; index < 256; index += 1) dictionary.set(index, Uint8Array.of(index));
   let next = 256;
-  let previous = dictionary.get(codes[0]!);
-  if (!previous) throw new Error('Invalid compressed payload');
+  const first = dictionary.get(codes[0]!);
+  if (!first) throw new Error('Invalid compressed payload');
+  let previous: Uint8Array = first;
   const output: number[] = [...previous];
   for (const code of codes.slice(1)) {
-    const entry = dictionary.get(code) ?? (code === next ? Uint8Array.from([...previous, previous[0]!]) : undefined);
+    const entry: Uint8Array | undefined = dictionary.get(code) ?? (code === next ? Uint8Array.from([...previous, previous[0]!]) : undefined);
     if (!entry) throw new Error('Invalid compressed payload');
     output.push(...entry);
     if (next < 65535) dictionary.set(next++, Uint8Array.from([...previous, entry[0]!]));
