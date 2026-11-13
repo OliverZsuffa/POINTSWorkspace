@@ -11,7 +11,7 @@ test('sequence code can be shown, imported and undone', async ({ page }) => {
   await page.getByLabel('Find a preset').fill('Individual passing');
   page.once('dialog', (dialog) => dialog.accept());
   await page.getByRole('button', { name: /Individual passing/ }).click();
-  await expect(page.getByRole('button', { name: 'Undo' })).toBeEnabled();
+  await expect(page.locator('button[title="Undo"]')).toBeEnabled();
 
   await codeField.fill(originalCode);
   page.once('dialog', (dialog) => dialog.accept());
@@ -25,13 +25,13 @@ test('sequence code can be shown, imported and undone', async ({ page }) => {
 test('sequence changes persist across a reload in the same tab', async ({ page }) => {
   await page.goto('./');
   await page.getByRole('button', { name: 'Settings' }).click();
-  const bpm = page.getByLabel('BPM');
+  const bpm = page.getByRole('region', { name: 'Sequence settings' }).getByLabel('BPM');
   await bpm.fill('95');
   await bpm.press('Enter');
   await expect(bpm).toHaveValue('95');
   await page.reload();
   await page.getByRole('button', { name: 'Settings' }).click();
-  await expect(page.getByLabel('BPM')).toHaveValue('95');
+  await expect(page.getByRole('region', { name: 'Sequence settings' }).getByLabel('BPM')).toHaveValue('95');
 });
 
 test('curated presets can be searched and loaded', async ({ page }) => {
