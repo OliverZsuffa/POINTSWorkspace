@@ -48,6 +48,8 @@ test('curated presets can be searched and loaded', async ({ page }) => {
 test('sequence can be exported as a PNG', async ({ page }) => {
   await page.goto('./');
   await page.getByRole('button', { name: /Code, presets and export/ }).click();
+  await expect(page.locator('.export-options input[type="checkbox"]')).toHaveCount(4);
+  await page.locator('.export-options input[type="checkbox"]').nth(2).uncheck();
   const downloadPromise = page.waitForEvent('download');
   await page.getByRole('button', { name: 'Export PNG' }).click();
   const download = await downloadPromise;
