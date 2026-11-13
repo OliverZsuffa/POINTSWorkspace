@@ -20,6 +20,8 @@ import {
 interface SequenceRendererProps {
   readonly sequence: Sequence;
   readonly simulation: SimulationResult;
+  readonly visualParticipantCount: number;
+  readonly onVisualParticipantCountChange: (count: number) => void;
   readonly onSelectHand: (performerId: string, hand: 'left' | 'right', beatId: string) => void;
 }
 
@@ -126,7 +128,7 @@ function getActionTargetPosition(
   return undefined;
 }
 
-export default function SequenceRenderer({ sequence, simulation, onSelectHand }: SequenceRendererProps) {
+export default function SequenceRenderer({ sequence, simulation, visualParticipantCount, onVisualParticipantCountChange, onSelectHand }: SequenceRendererProps) {
   const hostRef = useRef<HTMLDivElement>(null);
   const sceneStateRef = useRef<SceneState>({
     sequence,
@@ -143,7 +145,7 @@ export default function SequenceRenderer({ sequence, simulation, onSelectHand }:
   const [progress, setProgress] = useState(0);
   const [stepAnimating, setStepAnimating] = useState(false);
   const [tempo, setTempo] = useState(sequence.bpm);
-  const [repeat, setRepeat] = useState(false);
+  const [repeat, setRepeat] = useState(true);
   const [layout, setLayout] = useState<SceneLayout>('circle');
   const [palette, setPalette] = useState<keyof typeof BALL_PALETTES>('classic');
 
@@ -359,7 +361,7 @@ export default function SequenceRenderer({ sequence, simulation, onSelectHand }:
         target.add(vector(offset));
       } else {
         theta -= dx * 0.008;
-        phi += dy * 0.006;
+        phi -= dy * 0.006;
       }
       pointerStart = { ...pointerStart, x: event.clientX, y: event.clientY };
       updateCamera();
@@ -574,6 +576,9 @@ export default function SequenceRenderer({ sequence, simulation, onSelectHand }:
           <input type="checkbox" checked={repeat} onChange={(event) => setRepeat(event.target.checked)} />
           Repeat
         </label>
+        {sequence.sequenceType === 'circle-passing' && <label className="renderer-control">Visual jugglers
+          <input type="number" min="3" max="20" step="1" value={visualParticipantCount} onChange={(event) => onVisualParticipantCountChange(Math.max(3, Math.min(20, Math.floor(Number(event.target.value) || 3))))} />
+        </label>}
         {sequence.sequenceType !== 'circle-passing' && <label className="renderer-control">Layout
           <select value={layout} onChange={(event) => setLayout(event.target.value as SceneLayout)}>
             <option value="circle">Circle</option>

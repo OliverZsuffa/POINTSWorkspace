@@ -52,11 +52,7 @@ export function getPerformerSpacingRadius(count: number, minimumDistance = 2.2):
 }
 
 function getPolygonSideCount(sequence: Sequence): number {
-  return sequence.sequenceType === 'circle-passing'
-    ? Math.max(3, sequence.performers.length)
-    : sequence.tableLayout.type === 'polygon'
-      ? Math.max(3, sequence.tableLayout.sideCount)
-      : 0;
+  return sequence.tableLayout.type === 'polygon' ? Math.max(3, sequence.tableLayout.sideCount) : 0;
 }
 
 function getMaximumPositionCount(sequence: Sequence): number {
