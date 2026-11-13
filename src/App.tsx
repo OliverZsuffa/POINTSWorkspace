@@ -1122,7 +1122,8 @@ export default function App() {
       notation = sequence.notation.filter((entry) => entry.performerId === representative.id).map((entry) => {
         const action = entry.action;
         if (!('target' in action) || action.target.kind !== 'position') return entry;
-        const target = positions.find((position) => position.id === action.target.positionId);
+        const positionTarget = action.target;
+        const target = positions.find((position) => position.id === positionTarget.positionId);
         return target?.kind === 'table' && names.includes(target.name)
           ? { ...entry, action: { ...action, target: { kind: 'circle-position' as const, position: target.name as 'A' | 'B' | 'C' } } as NotationAction } : entry;
       });
