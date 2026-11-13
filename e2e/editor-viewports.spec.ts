@@ -160,7 +160,7 @@ test('PWA manifest is installable and the app shell reloads offline', async ({ p
     if (!cacheName) return { paths: [], missing: ['no application cache'] };
     const cache = await caches.open(cacheName);
     const paths = (await cache.keys()).map((request) => new URL(request.url).pathname);
-    const resources = Array.from(document.querySelectorAll('script[src], link[rel="stylesheet"]')).map((element) =>
+    const resources = Array.from(document.querySelectorAll('script[src], link[rel="stylesheet"], link[rel="modulepreload"]')).map((element) =>
       element instanceof HTMLScriptElement ? element.src : (element as HTMLLinkElement).href,
     );
     const missing: string[] = [];
