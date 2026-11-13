@@ -13,6 +13,7 @@ import {
   getPerformerSpacingRadius,
   getTableFootprint,
   getTablePositionPosition,
+  isStationaryHandAction,
 } from './geometry';
 
 function sequence(
@@ -48,6 +49,13 @@ function sequence(
 }
 
 describe('renderer geometry', () => {
+  it('keeps HOLD and EMPTY as stationary hand actions', () => {
+    expect(isStationaryHandAction('HOLD')).toBe(true);
+    expect(isStationaryHandAction('EMPTY')).toBe(true);
+    expect(isStationaryHandAction('BOUNCE')).toBe(false);
+    expect(isStationaryHandAction('TAP')).toBe(false);
+  });
+
   it('places a solo performer opposite their table positions', () => {
     const value = sequence();
     const performer = value.performers[0]!;
@@ -64,6 +72,32 @@ describe('renderer geometry', () => {
     expect(Math.abs(point.x)).toBeLessThanOrEqual(footprint.width / 2);
     expect(Math.abs(point.z)).toBeLessThanOrEqual(footprint.depth / 2);
     expect(point.y).toBeGreaterThan(0);
+  });
+
+  it('keeps rectangular table positions separated across all performer seats', () => {
+    const base = sequence(6, { type: 'rectangle', longSideSeatCount: 3, shortSideSeatCount: 0 });
+    const positions = base.performers.flatMap((performer) => ['A', 'B', 'C'].map((name) => ({
+      id: asPositionId(name + '-' + performer.id),
+      kind: 'table' as const,
+      name,
+      owner: { kind: 'performer' as const, performerId: performer.id },
+    })));
+    const seatAssignments = base.performers.map((performer, index) => ({
+      performerId: performer.id,
+      seat: {
+        kind: 'rectangle-side' as const,
+        side: (index % 2 === 0 ? 'long-a' : 'long-b') as 'long-a' | 'long-b',
+        seatIndex: Math.floor(index / 2),
+      },
+    }));
+    const value = { ...base, positions, seatAssignments };
+    const points = positions.map((position) => getTablePositionPosition(value, position, 'circle'));
+    for (let i = 0; i < points.length; i += 1) {
+      for (let j = i + 1; j < points.length; j += 1) {
+        const distance = Math.hypot(points[i]!.x - points[j]!.x, points[i]!.z - points[j]!.z);
+        expect(distance).toBeGreaterThan(0.4);
+      }
+    }
   });
 
   it('aligns rectangle table positions with the assigned seat edge', () => {
@@ -93,6 +127,42 @@ describe('renderer geometry', () => {
       const distance = point.x * Math.cos(angle) + point.z * Math.sin(angle);
       expect(distance).toBeLessThanOrEqual(apothem + 1e-9);
     }
+  });
+
+  it('uses exactly one polygon side per circle passing participant', () => {
+    const value = { ...sequence(10, { type: 'rectangle', longSideSeatCount: 10, shortSideSeatCount: 0 }), sequenceType: 'circle-passing' as const };
+    const footprint = getTableFootprint(value);
+    expect(footprint.round).toBe(true);
+    expect(footprint.sideCount).toBe(value.performers.length);
+  });
+
+  it('keeps owned positions distinct along a circle table edge', () => {
+    const value = { ...sequence(10, { type: 'polygon', sideCount: 10 }), sequenceType: 'circle-passing' as const };
+    const performer = value.performers[0]!;
+    const positions = ['A', 'B', 'C'].map((name) => ({
+      id: asPositionId('position-' + name),
+      kind: 'table' as const,
+      name,
+      owner: { kind: 'performer' as const, performerId: performer.id },
+    }));
+    const configured = { ...value, positions };
+    const points = positions.map((position) => getTablePositionPosition(configured, position, 'circle'));
+    expect(Math.hypot(points[0]!.x - points[1]!.x, points[0]!.z - points[1]!.z)).toBeGreaterThanOrEqual(0.7);
+    expect(Math.hypot(points[1]!.x - points[2]!.x, points[1]!.z - points[2]!.z)).toBeGreaterThanOrEqual(0.7);
+  });
+
+  it('places circle performers close to the table without overlapping neighbours', () => {
+    const value = { ...sequence(10, { type: 'polygon', sideCount: 10 }), sequenceType: 'circle-passing' as const };
+    const anchors = value.performers.map((performer) => getPerformerAnchor(value, performer, 'circle'));
+    const neighbourDistances = anchors.map((point, index) => {
+      const next = anchors[(index + 1) % anchors.length]!;
+      return Math.hypot(point.x - next.x, point.z - next.z);
+    });
+    expect(Math.min(...neighbourDistances)).toBeGreaterThan(0.76);
+    const firstPosition = value.positions[0]!;
+    const tablePoint = getTablePositionPosition(value, firstPosition, 'circle');
+    const firstAnchor = getPerformerAnchor(value, value.performers[0]!, 'circle');
+    expect(Math.hypot(firstAnchor.x - tablePoint.x, firstAnchor.z - tablePoint.z)).toBeLessThan(1.7);
   });
 
   it('places left and right hands on opposite sides', () => {

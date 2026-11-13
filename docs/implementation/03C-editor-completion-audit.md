@@ -47,14 +47,14 @@ Audit all of the following, including requirements that appear to be implemented
 11. Typing targets after action selection, including replacing an existing target.
 12. Drag drawing of complete ball rectangles and atomic undo.
 13. Moving complete rectangles, linked actions and multiple selected rectangles.
-14. Shift drag drawing and Ctrl drag erasing.
+14. Shift drag drawing and Ctrl click additive multi selection.
 15. ZIP pairing, reciprocal symbols and paired deletion.
 16. Linked SPECIAL text, visual connection, movement and deletion behaviour.
 17. Copy and paste, including linked actions, multi selection, conflict rejection and atomicity.
 18. Undo and redo, including complete multi step editing workflows.
 19. Validation markings, error list and navigation from an error to the relevant notation.
 20. Object state overview, selected beat state, invalid beat handling and simulator derived results.
-21. Mobile Select, Draw, Move and Erase modes and touch equivalents.
+21. Mobile Select, Draw and Move modes, with deletion through the Delete control.
 22. Responsive behaviour and preservation of all editing functionality on desktop, tablet and phone.
 23. Correct notation symbols, labels, subscripts, rectangle geometry and legibility.
 24. All correction requirements from Package 03B, including its default initial distribution and target controls.
@@ -104,7 +104,7 @@ Already specified interactions that must remain working:
 - Shift plus arrow extends selection.
 - Escape clears or cancels the current selection or interaction.
 - Backspace deletes selected notation.
-- Ctrl plus drag erases.
+- Ctrl plus click adds a cell to the current selection. Deletion is performed only through the Delete control, Delete key or Backspace key.
 - Shift plus drag draws.
 
 Add and document a coherent shortcut set for:

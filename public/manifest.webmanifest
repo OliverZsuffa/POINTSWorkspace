@@ -1,0 +1,20 @@
+{
+  "name": "POINTS Workspace",
+  "short_name": "POINTS",
+  "description": "Create, explore and visualise juggling patterns using POINTS notation.",
+  "start_url": "/POINTSWorkspace/",
+  "scope": "/POINTSWorkspace/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#f3f5f8",
+  "theme_color": "#3569bd",
+  "categories": ["productivity", "education"],
+  "icons": [
+    {
+      "src": "/POINTSWorkspace/icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

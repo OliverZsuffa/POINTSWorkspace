@@ -12,6 +12,7 @@ import {
   getPerformerFacing,
   getTableFootprint,
   getTablePositionPosition,
+  isStationaryHandAction,
   type Point3,
   type SceneLayout,
 } from './geometry';
@@ -218,9 +219,9 @@ export default function SequenceRenderer({ sequence, simulation, onSelectHand }:
     scene.background = new THREE.Color('#f5f7fb');
     const camera = new THREE.PerspectiveCamera(42, 1, 0.1, 100);
     const target = new THREE.Vector3(0, 0.8, 0);
-    let radius = 10.5;
+    let radius = Math.max(7.5, (getTableFootprint(sequence).width / 2 + 1.05) * 2.8);
     let theta = 0;
-    let phi = 0.92;
+    let phi = 0.35;
     const updateCamera = () => {
       phi = Math.max(0.25, Math.min(1.48, phi));
       camera.position.set(
@@ -443,6 +444,8 @@ export default function SequenceRenderer({ sequence, simulation, onSelectHand }:
               const otherHand = visual.hand === 'left' ? 'right' : 'left';
               const other = getHandPosition(current.sequence, visual.performerId, otherHand, current.layout);
               targetPoint = { x: (base.x + other.x) / 2, y: 1.15, z: (base.z + other.z) / 2 };
+            } else if (isStationaryHandAction(action.type)) {
+              targetPoint = undefined;
             }
           }
           const handPoint = targetPoint
@@ -571,12 +574,12 @@ export default function SequenceRenderer({ sequence, simulation, onSelectHand }:
           <input type="checkbox" checked={repeat} onChange={(event) => setRepeat(event.target.checked)} />
           Repeat
         </label>
-        <label className="renderer-control">Layout
+        {sequence.sequenceType !== 'circle-passing' && <label className="renderer-control">Layout
           <select value={layout} onChange={(event) => setLayout(event.target.value as SceneLayout)}>
             <option value="circle">Circle</option>
             <option value="line">Line</option>
           </select>
-        </label>
+        </label>}
         <label className="renderer-control">Ball colours
           <select value={palette} onChange={(event) => setPalette(event.target.value as keyof typeof BALL_PALETTES)}>
             <option value="classic">Classic</option>

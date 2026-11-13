@@ -22,21 +22,22 @@ for (const viewport of viewports) {
     const cell = page.locator('.notation-cell').first();
     const bounds = await cell.boundingBox();
     expect(bounds).not.toBeNull();
-    expect(bounds!.width).toBe(42);
-    expect(bounds!.height).toBe(42);
+    const expectedCellSize = viewport.width <= 700 ? 44 : viewport.width <= 1100 ? 52 : 56;
+    expect(bounds!.width).toBe(expectedCellSize);
+    expect(bounds!.height).toBe(expectedCellSize);
 
     const background = await main.evaluate((element) => getComputedStyle(element).backgroundColor);
-    expect(background).toBe('rgb(144, 208, 213)');
+    expect(background).toBe('rgb(243, 245, 248)');
 
     await cell.click();
     await page.getByRole('button', { name: 'LIFT' }).click();
     const symbol = cell.locator('svg.ball-segment');
     await expect(symbol).toBeVisible();
     await expect(symbol).toHaveAttribute('viewBox', '0 0 100 100');
-    await expect(symbol.locator('text')).toHaveAttribute('font-size', '38');
+    await expect(symbol.locator('text')).toHaveAttribute('font-size', '46');
 
     if (viewport.width <= 1100) {
-      for (const mode of ['Select', 'Draw', 'Move', 'Erase']) {
+      for (const mode of ['Select', 'Draw', 'Move']) {
         const button = page.getByRole('button', { name: mode, exact: true });
         await expect(button).toBeVisible();
       }
@@ -56,3 +57,154 @@ for (const viewport of viewports) {
     });
   });
 }
+
+
+test('circle passing renderer layout with ten participants', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto('./');
+  await page.getByRole('button', { name: 'Settings' }).click();
+  await page.getByRole('button', { name: 'Add performer' }).click();
+  await page.getByRole('button', { name: 'Add performer' }).click();
+  await page.getByLabel('Type').selectOption('circle-passing');
+  const addPerson = page.getByRole('button', { name: 'Add one person' });
+  for (let count = 0; count < 7; count += 1) await addPerson.click();
+  await expect(page.getByLabel('People count')).toHaveText('10');
+  await page.getByRole('button', { name: 'Settings' }).click();
+
+  const renderer = page.getByRole('region', { name: 'Sequence renderer' });
+  await expect(renderer).toBeVisible();
+  const canvas = renderer.locator('canvas');
+  await expect(canvas).toBeVisible();
+  const bounds = await canvas.boundingBox();
+  expect(bounds).not.toBeNull();
+  expect(bounds!.width).toBeGreaterThan(400);
+  expect(bounds!.height).toBeGreaterThan(250);
+  await page.screenshot({ path: 'test-results/07-circle-renderer-ten-people.png', fullPage: true });
+});
+
+
+test('desktop workspace panels can be resized, swapped, hidden and restored', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto('./');
+  const editor = page.locator('.editor-workspace-panel');
+  const renderer = page.locator('.renderer-workspace-panel');
+  await expect(editor).toBeVisible();
+  await expect(renderer).toBeVisible();
+
+  const before = await editor.boundingBox();
+  const divider = await page.locator('.workspace-divider').boundingBox();
+  expect(before).not.toBeNull();
+  expect(divider).not.toBeNull();
+  await page.mouse.move(divider!.x + divider!.width / 2, divider!.y + divider!.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(divider!.x + divider!.width / 2 + 100, divider!.y + divider!.height / 2);
+  await page.mouse.up();
+  const after = await editor.boundingBox();
+  expect(after!.width).toBeGreaterThan(before!.width + 50);
+
+  await page.getByRole('button', { name: 'Swap panels' }).click();
+  expect((await renderer.boundingBox())!.x).toBeLessThan((await editor.boundingBox())!.x);
+
+  await editor.locator('.workspace-panel-header button').click();
+  await expect(editor).toBeHidden();
+  await page.getByRole('button', { name: 'Show editor' }).click();
+  await expect(editor).toBeVisible();
+});
+
+test('phone workspace switches between editor and renderer tabs', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto('./');
+  const editor = page.locator('.editor-workspace-panel');
+  const renderer = page.locator('.renderer-workspace-panel');
+  await expect(page.getByRole('navigation', { name: 'Workspace views' })).toBeVisible();
+  await expect(editor).toBeVisible();
+  await expect(renderer).toBeHidden();
+
+  await page.getByRole('button', { name: 'Renderer', exact: true }).click();
+  await expect(renderer).toBeVisible();
+  await expect(editor).toBeHidden();
+  const canvas = renderer.locator('canvas');
+  await expect(canvas).toBeVisible();
+  const canvasBounds = await canvas.boundingBox();
+  expect(canvasBounds).not.toBeNull();
+  expect(canvasBounds!.width).toBeGreaterThan(200);
+  expect(canvasBounds!.height).toBeGreaterThan(200);
+
+  await page.getByRole('button', { name: 'Editor', exact: true }).click();
+  await expect(editor).toBeVisible();
+  await expect(renderer).toBeHidden();
+});
+
+
+test('PWA manifest is installable and the app shell reloads offline', async ({ page, context }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto('./');
+
+  const manifest = await page.evaluate(async () => {
+    const link = document.querySelector<HTMLLinkElement>('link[rel="manifest"]');
+    if (!link?.href) throw new Error('Manifest link is missing');
+    const response = await fetch(link.href);
+    if (!response.ok) throw new Error('Manifest could not be loaded');
+    return response.json() as Promise<{ display: string; start_url: string; icons: Array<{ src: string }> }>;
+  });
+  expect(manifest.display).toBe('standalone');
+  expect(manifest.start_url).toBe('/POINTSWorkspace/');
+  expect(manifest.icons.length).toBeGreaterThan(0);
+
+  await page.evaluate(async () => {
+    await navigator.serviceWorker.ready;
+  });
+  await page.waitForFunction(() => Boolean(navigator.serviceWorker.controller));
+  const cacheCoverage = await page.evaluate(async () => {
+    const cacheName = (await caches.keys()).find((key) => key.startsWith('points-workspace-'));
+    if (!cacheName) return { paths: [], missing: ['no application cache'] };
+    const cache = await caches.open(cacheName);
+    const paths = (await cache.keys()).map((request) => new URL(request.url).pathname);
+    const resources = Array.from(document.querySelectorAll('script[src], link[rel="stylesheet"], link[rel="modulepreload"]')).map((element) =>
+      element instanceof HTMLScriptElement ? element.src : (element as HTMLLinkElement).href,
+    );
+    const missing: string[] = [];
+    for (const resource of resources) {
+      if (!(await cache.match(resource))) missing.push(new URL(resource).pathname);
+    }
+    return { paths, missing };
+  });
+  expect(cacheCoverage.paths).toContain('/POINTSWorkspace/index.html');
+  expect(cacheCoverage.paths.some((path) => path.endsWith('.js'))).toBe(true);
+  expect(cacheCoverage.missing).toEqual([]);
+
+  page.on('console', (message) => console.log('PWA browser console:', message.type(), message.text()));
+  page.on('pageerror', (error) => console.log('PWA browser page error:', error.message));
+  page.on('requestfailed', (request) => console.log('PWA failed request:', request.url(), request.failure()?.errorText));
+  const serviceWorkerState = await page.evaluate(async () => {
+    const registration = await navigator.serviceWorker.ready;
+    const appShellUrl = new URL('index.html', registration.scope).href;
+    const cacheName = (await caches.keys()).find((key) => key.startsWith('points-workspace-'));
+    const cache = cacheName ? await caches.open(cacheName) : undefined;
+    return {
+      scope: registration.scope,
+      controller: navigator.serviceWorker.controller?.scriptURL ?? null,
+      appShellUrl,
+      appShellCached: Boolean(cache && await cache.match(appShellUrl)),
+    };
+  });
+  console.log('PWA service worker state before offline reload:', JSON.stringify(serviceWorkerState));
+  await context.setOffline(true);
+  const offlineResponse = await page.reload();
+  const offlineState = await page.evaluate(() => ({
+    url: location.href,
+    title: document.title,
+    bodyText: document.body.innerText.slice(0, 500),
+    html: document.documentElement.outerHTML.slice(0, 1000),
+    controller: navigator.serviceWorker.controller?.scriptURL ?? null,
+  }));
+  console.log('PWA offline reload diagnostics:', JSON.stringify({
+    responseStatus: offlineResponse?.status() ?? null,
+    state: offlineState,
+  }));
+  await page.screenshot({ path: 'test-results/07-pwa-offline-reload.png', fullPage: true });
+  await expect(page.locator('.app-root')).toBeVisible();
+  await expect(page.getByRole('region', { name: 'Notation editor' })).toBeVisible();
+  await expect(page.getByRole('region', { name: 'Sequence renderer' })).toBeVisible();
+  await context.setOffline(false);
+});

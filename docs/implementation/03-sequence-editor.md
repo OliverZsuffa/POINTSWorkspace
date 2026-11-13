@@ -65,7 +65,7 @@ The editor uses the existing domain model and Package 02 simulator and validator
 - After choosing an action, the user can type its target. Typing a new target while an existing action is selected replaces that target.
 - Escape cancels and clears selection. Backspace deletes selected notation. Arrow keys move selection. Shift plus arrow extends selection.
 - Clicking empty editor space clears selection.
-- Shift plus drag draws notation. Ctrl plus drag erases notation. Right click opens text input where applicable.
+- Shift plus drag draws notation. Ctrl plus click adds a cell to the current selection. Right click opens text input where applicable.
 - Drawing over existing notation never overwrites it. Conflicting edits are rejected without partial changes.
 - Dragging creates a complete ball rectangle rather than repeated symbols.
 - Dragging any part of a rectangle moves the entire rectangle, including LIFT, HOLD or BOUNCE, and LEAVE. Linked ZIP notation moves with it. Multi selected rectangles move together.
@@ -174,9 +174,9 @@ Package 04 has not been implemented. The editor must work independently of the r
 ## Risks and unresolved decisions
 
 1. Compound meter grouping is not fully represented by the current binary subdivision model. Do not silently approximate its musical grouping.
-2. Exact shortcut mappings beyond the already agreed arrow, Shift plus arrow, Escape, Backspace, Ctrl plus drag and Shift plus drag interactions remain to be finalised.
+2. Exact shortcut mappings beyond the already agreed arrow, Shift plus arrow, Escape, Delete, Backspace, Ctrl plus click and Shift plus drag interactions remain to be finalised.
 3. Double click behaviour and a separate gesture for opening selected notation properties remain undecided. Do not assign them a new meaning without review.
-4. Mobile touch equivalents are implemented through explicit Select, Draw, Move and Erase modes. Automated interaction tests pass.
+4. Mobile touch equivalents are implemented through explicit Select, Draw and Move modes. Selected notation is deleted through the Delete control. Automated interaction tests pass.
 5. The current simulator evaluates actions at main beat level. Subdivision entries are stored and editable, but the simulator does not distinguish their offsets. The editor displays an explicit warning rather than implying separate simulation timing.
 6. The state overview is implemented, hidden by default and derived from simulator snapshots.
 

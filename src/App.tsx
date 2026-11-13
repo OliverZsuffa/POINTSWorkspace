@@ -1,4 +1,4 @@
-import { useMemo, useState, type KeyboardEvent } from 'react';
+import { useEffect, useMemo, useState, type KeyboardEvent } from 'react';
 import {
   asActionEntryId,
   asBallId,
@@ -246,8 +246,7 @@ function ActionSymbol({ action, sequence, hand }: { action: NotationAction; sequ
   }
   return (
     <svg className="notation-symbol" viewBox="0 0 48 48" aria-hidden="true">
-      <rect x="1.5" y="1.5" width="45" height="45" rx="5" fill="#ffffff" stroke="#cbd5e1" strokeWidth="1.2" />
-      <path d={path} fill="none" stroke="#263238" strokeWidth="2.6" strokeLinecap="square" strokeLinejoin="miter" />
+      <path d={path} fill="none" stroke="#172033" strokeWidth="3.5" strokeLinecap="square" strokeLinejoin="miter" />
       {circledTarget && <circle cx="20" cy="23" r="8" fill="none" stroke="#263238" strokeWidth="1.8" />}
       {target && <text x={subscript ? 20 : 24} y={subscript ? 23 : 24} textAnchor="middle" dominantBaseline="middle" fontFamily="Arial,sans-serif" fontSize={target.length > 3 ? 18 : subscript ? 22 : 25} fill="#263238">{target}{subscript && <tspan fontSize="14" baselineShift="sub">{subscript}</tspan>}</text>}
     </svg>
@@ -257,41 +256,44 @@ function ActionSymbol({ action, sequence, hand }: { action: NotationAction; sequ
 function NotationMark({ action, sequence, hand }: { action: NotationAction; sequence: Sequence; hand: Hand }) {
   if (action.type === 'EMPTY') return null;
   if (action.type === 'SPECIAL') return <span className="special-symbol">{action.text || 'SPECIAL'}{action.linkId && <span className="special-link-indicator" aria-label="Linked SPECIAL">↔</span>}</span>;
-  if (action.type === 'TAP') return <ActionSymbol action={action} sequence={sequence} hand={hand} />;
   let path = '';
   let label = '';
   let subscript = '';
   let circledTarget = false;
   switch (action.type) {
+    case 'TAP':
+      if (action.target.kind === 'position') label = positionReference(sequence, action.target.positionId);
+      else { label = action.target.position; subscript = circleSubscript(action.target); }
+      break;
     case 'LIFT':
-      path = 'M0 19H100 M0 19V81 M0 81H100';
+      path = 'M0 0H100 M0 0V100 M0 100H100';
       if (action.target.kind === 'position') label = positionReference(sequence, action.target.positionId);
       else if (action.target.kind === 'circle-position') { label = action.target.position; subscript = circleSubscript(action.target); }
       else if ('performerId' in action.target) { const targetPerformerId = action.target.performerId; label = 'X'; subscript = sequence.performers.find((person) => person.id === targetPerformerId)?.identifier ?? '?'; }
       break;
-    case 'HOLD': path = 'M0 19H100 M0 81H100'; break;
+    case 'HOLD': path = 'M0 0H100 M0 100H100'; break;
     case 'LEAVE':
-      path = 'M0 19H100 M100 19V81 M0 81H100';
+      path = 'M0 0H100 M100 0V100 M0 100H100';
       if (action.target.kind === 'position') label = positionReference(sequence, action.target.positionId);
       else if (action.target.kind === 'circle-position') { label = action.target.position; subscript = circleSubscript(action.target); }
       else if ('hand' in action.target) { const targetHand = action.target.hand; const targetPerformerId = action.target.performerId; label = targetHand === 'left' ? 'L' : 'R'; circledTarget = true; subscript = sequence.performers.find((person) => person.id === targetPerformerId)?.identifier ?? '?'; }
       break;
     case 'BOUNCE':
-      path = 'M0 19H100 M0 81H100';
+      path = 'M0 0H100 M0 100H100';
       if (action.target.kind === 'position') label = positionReference(sequence, action.target.positionId);
       else { label = action.target.position; subscript = circleSubscript(action.target); }
       break;
     case 'ZIP':
       path = action.role === 'source'
-        ? hand === 'left' ? 'M0 19H100 M100 19V81' : 'M0 81H100 M100 19V81'
-        : hand === 'left' ? 'M0 19H100 M0 19V81' : 'M0 81H100 M0 19V81';
+        ? hand === 'left' ? 'M0 0H100 M100 0V100' : 'M0 100H100 M100 0V100'
+        : hand === 'left' ? 'M0 0H100 M0 0V100' : 'M0 100H100 M0 0V100';
       break;
   }
   return (
     <svg className="ball-segment" viewBox="0 0 100 100" aria-hidden="true">
-      <path d={path} fill="none" stroke="#263238" strokeWidth="2.6" strokeLinecap="square" strokeLinejoin="miter" />
+      <path d={path} fill="none" stroke="#172033" strokeWidth="5.5" strokeLinecap="square" strokeLinejoin="miter" />
       {circledTarget && <circle cx="36" cy="50" r="13" fill="none" stroke="#263238" strokeWidth="1.8" />}
-      {label && <text x={subscript ? 38 : 50} y="50" textAnchor="middle" dominantBaseline="middle" fontFamily="Arial,sans-serif" fontSize={label.length > 3 ? 34 : 38} fontWeight="600" fill="#172033">{label}{subscript && <tspan fontSize="25" baselineShift="sub">{subscript}</tspan>}</text>}
+      {label && <text x={subscript ? 38 : 50} y="50" textAnchor="middle" dominantBaseline="middle" fontFamily="Arial,sans-serif" fontSize={label.length > 3 ? 38 : 46} fontWeight="700" fill="#172033">{label}{subscript && <tspan fontSize="28" baselineShift="sub">{subscript}</tspan>}</text>}
     </svg>
   );
 }
@@ -301,13 +303,19 @@ export default function App() {
   const [selected, setSelected] = useState<EditorCell | null>(null);
   const [selectedCells, setSelectedCells] = useState<EditorCell[]>([]);
   const [clipboard, setClipboard] = useState<ClipboardItem[]>([]);
-  const [eraseStart, setEraseStart] = useState<EditorCell | null>(null);
   const [moveStart, setMoveStart] = useState<EditorCell | null>(null);
-  const [touchMode, setTouchMode] = useState<'select' | 'draw' | 'move' | 'erase' | null>(null);
+  const [touchMode, setTouchMode] = useState<'select' | 'draw' | 'move' | null>(null);
   const [history, setHistory] = useState<Sequence[]>([]);
   const [future, setFuture] = useState<Sequence[]>([]);
   const [showSettings, setShowSettings] = useState(false);
-  const [showRenderer, setShowRenderer] = useState(false);
+  const [showEditor, setShowEditor] = useState(true);
+  const [showRenderer, setShowRenderer] = useState(true);
+  const [activeWorkspaceTab, setActiveWorkspaceTab] = useState<'editor' | 'renderer'>('editor');
+  const [panelsSwapped, setPanelsSwapped] = useState(false);
+  const [editorShare, setEditorShare] = useState(50);
+  const [resizingPanels, setResizingPanels] = useState(false);
+  const [showInitialPositions, setShowInitialPositions] = useState(false);
+  const [updateReady, setUpdateReady] = useState(false);
   const [showActionMenu, setShowActionMenu] = useState(false);
   const [showState, setShowState] = useState(false);
   const [showShortcutHelp, setShowShortcutHelp] = useState(false);
@@ -315,17 +323,106 @@ export default function App() {
   const [passRecipientId, setPassRecipientId] = useState('');
   const [passRecipientHand, setPassRecipientHand] = useState<Hand>('left');
 
-  const simulation = useMemo(() => simulateSequence(sequence), [sequence]);
+  useEffect(() => {
+    if (!resizingPanels) return;
+    const move = (event: PointerEvent) => {
+      const workspace = document.querySelector('.workspace-panels');
+      if (!workspace) return;
+      const bounds = workspace.getBoundingClientRect();
+      if (bounds.width <= 0) return;
+      const percentage = ((event.clientX - bounds.left) / bounds.width) * 100;
+      setEditorShare(Math.max(25, Math.min(75, panelsSwapped ? 100 - percentage : percentage)));
+    };
+    const stop = () => setResizingPanels(false);
+    window.addEventListener('pointermove', move);
+    window.addEventListener('pointerup', stop);
+    window.addEventListener('pointercancel', stop);
+    return () => {
+      window.removeEventListener('pointermove', move);
+      window.removeEventListener('pointerup', stop);
+      window.removeEventListener('pointercancel', stop);
+    };
+  }, [resizingPanels, panelsSwapped]);
+
+  useEffect(() => {
+    if (resizingPanels) return;
+    window.dispatchEvent(new Event('resize'));
+  }, [activeWorkspaceTab, editorShare, panelsSwapped, showEditor, showRenderer, resizingPanels]);
+
+  useEffect(() => {
+    const announceUpdate = () => setUpdateReady(true);
+    window.addEventListener('points-update-ready', announceUpdate);
+    return () => window.removeEventListener('points-update-ready', announceUpdate);
+  }, []);
+
+  const editorPerformers = sequence.sequenceType === 'circle-passing' ? sequence.performers.slice(0, 1) : sequence.performers;
+  const editorPositions = sequence.positions.filter((position) =>
+    position.kind === 'table' && (sequence.sequenceType !== 'circle-passing' ||
+      (position.owner.kind === 'performer' && position.owner.performerId === sequence.performers[0]?.id)),
+  );
+  const simulationModel = useMemo(() => {
+    if (sequence.sequenceType !== 'circle-passing' || sequence.performers.length <= 1) {
+      return { sequence, sourceEntryById: new Map<string, NotationEntry['id']>() };
+    }
+    const representative = sequence.performers[0]!;
+    const pattern = sequence.notation.filter((entry) => entry.performerId === representative.id);
+    const sourceEntryById = new Map<string, NotationEntry['id']>();
+    const instances = sequence.performers.slice(1).flatMap((performer) => {
+      const linkIds = new Map<string, ReturnType<typeof asLinkId>>();
+      return pattern.map((entry) => {
+        let action = entry.action;
+        if ('linkId' in action && action.linkId) {
+          const mapped = linkIds.get(action.linkId) ?? asLinkId('circle-' + action.linkId + '-' + performer.id);
+          linkIds.set(action.linkId, mapped);
+          action = { ...action, linkId: mapped } as NotationAction;
+        }
+        if ('target' in action) {
+          const sourceTarget = action.target;
+          if (sourceTarget.kind === 'position') {
+            const targetPosition = sequence.positions.find((position) => position.id === sourceTarget.positionId);
+            const matchingPosition = targetPosition?.kind === 'table'
+              ? sequence.positions.find((position) => position.kind === 'table' && position.name === targetPosition.name &&
+                position.owner.kind === 'performer' && position.owner.performerId === performer.id)
+              : targetPosition?.kind === 'hand-back'
+                ? sequence.positions.find((position) => position.kind === 'hand-back' && position.hand === targetPosition.hand && position.performerId === performer.id)
+                : undefined;
+            if (matchingPosition) action = { ...action, target: { kind: 'position', positionId: matchingPosition.id } } as NotationAction;
+          }
+        }
+        const cloneId = asActionEntryId('circle-' + entry.id + '-' + performer.id);
+        sourceEntryById.set(cloneId, entry.id);
+        return { ...entry, id: cloneId, performerId: performer.id, action };
+      });
+    });
+    return { sequence: { ...sequence, notation: [...pattern, ...instances] }, sourceEntryById };
+  }, [sequence]);
+  const simulationSequence = simulationModel.sequence;
+  const simulation = useMemo(() => simulateSequence(simulationSequence), [simulationSequence]);
   const timelineSlots = getTimelineSlots(sequence.beats);
   const issuesByEntry = useMemo(() => {
     const map = new Map<string, string[]>();
     for (const issue of simulation.validation.issues) {
       for (const entryId of issue.affectedEntries) {
-        map.set(entryId, [...(map.get(entryId) ?? []), issue.description]);
+        const sourceId = simulationModel.sourceEntryById.get(entryId) ?? entryId;
+        map.set(sourceId, [...(map.get(sourceId) ?? []), issue.description]);
       }
     }
     return map;
-  }, [simulation]);
+  }, [simulation, simulationModel]);
+  const displayedIssues = useMemo(() => {
+    const grouped = new Map<string, (typeof simulation.validation.issues)[number]>();
+    for (const issue of simulation.validation.issues) {
+      const key = issue.code + '|' + issue.description;
+      const affectedEntries = [...new Set(issue.affectedEntries.map((entryId) =>
+        simulationModel.sourceEntryById.get(entryId) ?? entryId,
+      ))];
+      const existing = grouped.get(key);
+      grouped.set(key, existing
+        ? { ...existing, affectedEntries: [...new Set([...existing.affectedEntries, ...affectedEntries])] }
+        : { ...issue, affectedEntries });
+    }
+    return [...grouped.values()];
+  }, [simulation, simulationModel]);
 
   const selectCell = (cell: EditorCell, extend = false) => {
     setSelected(cell);
@@ -336,7 +433,7 @@ export default function App() {
       : [cell]);
   };
 
-  const clearSelection = () => { setSelected(null); setSelectedCells([]); setDragStart(null); setEraseStart(null); setMoveStart(null); setTouchMode(null); setShowActionMenu(false); };
+  const clearSelection = () => { setSelected(null); setSelectedCells([]); setDragStart(null); setMoveStart(null); setTouchMode(null); setShowActionMenu(false); };
 
   const commit = (next: Sequence) => {
     setHistory((items) => [...items.slice(-99), sequence]);
@@ -432,29 +529,57 @@ export default function App() {
     }
     const selectedEntry = entryAt(selected.performerId, selected.hand, selected.beatId, selected.offset ?? rational(0));
     const targetKey = event.key.toUpperCase();
-    if (!modifier && selectedEntry && ['A', 'B', 'C', 'L', 'R'].includes(targetKey)) {
-      const action = selectedEntry.action;
-      if ('target' in action && action.target.kind === 'circle-position' && ['A', 'B', 'C'].includes(targetKey)) {
-        event.preventDefault();
-        changeCircleTarget(selectedEntry, 'position', targetKey);
-        return;
-      }
-      if (action.type === 'LEAVE' && 'hand' in action.target && 'performerId' in action.target) {
+    if (!modifier && /^[A-Z]$/.test(targetKey)) {
+      if (selectedEntry?.action.type === 'LEAVE' && 'hand' in selectedEntry.action.target && 'performerId' in selectedEntry.action.target) {
         const recipient = sequence.performers.find((person) => person.identifier?.toUpperCase() === targetKey && person.id !== selected.performerId);
-        if (recipient) { event.preventDefault(); changePassTarget(selectedEntry, recipient.id, action.target.hand); return; }
+        if (recipient) { event.preventDefault(); changePassTarget(selectedEntry, recipient.id, selectedEntry.action.target.hand); return; }
       }
-      if (action.type === 'LIFT' && 'performerId' in action.target) {
+      if (selectedEntry?.action.type === 'LIFT' && 'performerId' in selectedEntry.action.target) {
         const source = sequence.performers.find((person) => person.identifier?.toUpperCase() === targetKey && person.id !== selected.performerId);
         if (source) { event.preventDefault(); changePassTarget(selectedEntry, source.id); return; }
       }
-      if (['LIFT', 'LEAVE', 'TAP', 'BOUNCE'].includes(action.type) && 'target' in action && action.target.kind === 'position') {
-        const position = sequence.positions.find((item) =>
-          item.name.toUpperCase() === targetKey &&
-          (item.kind === 'table'
-            ? item.owner.kind === 'shared' || item.owner.performerId === selected.performerId
-            : (action.type === 'LIFT' || action.type === 'LEAVE') && item.performerId === selected.performerId),
-        );
-        if (position) { event.preventDefault(); changeTarget(selectedEntry, position.id); return; }
+      const circlePositionKey = sequence.sequenceType === 'circle-passing' && ['A', 'B', 'C'].includes(targetKey);
+      const position = circlePositionKey ? undefined : sequence.positions.find((item) =>
+        item.name.toUpperCase() === targetKey &&
+        (item.kind === 'table'
+          ? item.owner.kind === 'shared' || item.owner.performerId === selected.performerId
+          : (selectedEntry?.action.type === 'LIFT' || selectedEntry?.action.type === 'LEAVE') && item.performerId === selected.performerId),
+      );
+      if (circlePositionKey || position) {
+        event.preventDefault();
+        const currentAction = selectedEntry?.action;
+        const nextType: ActionName = currentAction?.type === 'HOLD' ? 'BOUNCE'
+          : currentAction?.type === 'EMPTY' || !currentAction ? 'TAP'
+            : ['LIFT', 'LEAVE', 'TAP', 'BOUNCE'].includes(currentAction.type) ? currentAction.type
+              : 'TAP';
+        const target: TableActionTarget = circlePositionKey
+          ? { kind: 'circle-position', position: targetKey as 'A' | 'B' | 'C' }
+          : { kind: 'position', positionId: position!.id };
+        const nextAction = { type: nextType, target } as NotationAction;
+        const nextEntry: NotationEntry = selectedEntry
+          ? { ...selectedEntry, action: nextAction }
+          : {
+              id: asActionEntryId(id('entry')),
+              performerId: asPerformerId(selected.performerId),
+              hand: selected.hand,
+              time: { beatId: asBeatId(selected.beatId), offset: selected.offset ?? rational(0) },
+              action: nextAction,
+            };
+        let notation = sequence.notation.filter((entry) => entry.id !== selectedEntry?.id);
+        const oldAction = selectedEntry?.action;
+        const oldLinkId = oldAction && 'linkId' in oldAction ? oldAction.linkId : undefined;
+        if (oldLinkId && (oldAction?.type === 'ZIP' ||
+          (oldAction?.type === 'LEAVE' && 'target' in oldAction && oldAction.target.kind === 'pass-recipient-hand') ||
+          (oldAction?.type === 'LIFT' && 'target' in oldAction && oldAction.target.kind === 'pass-source'))) {
+          notation = notation.filter((entry) => !('linkId' in entry.action && entry.action.linkId === oldLinkId));
+        } else if (oldLinkId && oldAction?.type === 'SPECIAL') {
+          notation = notation.map((entry) => entry.action.type === 'SPECIAL' && entry.action.linkId === oldLinkId
+            ? { ...entry, action: { type: 'SPECIAL', text: entry.action.text } }
+            : entry);
+        }
+        commit({ ...sequence, notation: [...notation, nextEntry] });
+        setShowActionMenu(false);
+        return;
       }
     }
     const actionShortcuts: Record<string, ActionName> = {
@@ -468,7 +593,7 @@ export default function App() {
     }
     if (!['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(event.key)) return;
     event.preventDefault();
-    const rows = sequence.performers.flatMap((performer) =>
+    const rows = editorPerformers.flatMap((performer) =>
       hands.map((hand) => ({ performerId: performer.id, hand })),
     );
     const rowIndex = rows.findIndex((row) => row.performerId === selected.performerId && row.hand === selected.hand);
@@ -634,28 +759,11 @@ export default function App() {
     if (selected) setSelected(shiftCell(selected));
   };
 
-  const eraseRectangle = (first: EditorCell, last: EditorCell) => {
-    const rows = sequence.performers.flatMap((performer) => hands.map((hand) => ({ performerId: performer.id, hand })));
-    const firstRow = rows.findIndex((row) => row.performerId === first.performerId && row.hand === first.hand);
-    const lastRow = rows.findIndex((row) => row.performerId === last.performerId && row.hand === last.hand);
-    const firstSlot = timelineSlots.findIndex((slot) => slot.beatId === first.beatId && compareRational(slot.offset, first.offset ?? rational(0)) === 0);
-    const lastSlot = timelineSlots.findIndex((slot) => slot.beatId === last.beatId && compareRational(slot.offset, last.offset ?? rational(0)) === 0);
-    const cells: EditorCell[] = [];
-    for (let row = Math.min(firstRow, lastRow); row <= Math.max(firstRow, lastRow); row += 1) {
-      for (let index = Math.min(firstSlot, lastSlot); index <= Math.max(firstSlot, lastSlot); index += 1) {
-        const targetRow = rows[row];
-        const slot = timelineSlots[index];
-        if (targetRow && slot) cells.push({ ...targetRow, beatId: slot.beatId, offset: slot.offset, duration: slot.duration });
-      }
-    }
-    removeCells(cells);
-  };
-
   const copySelected = () => {
     const cells = selectedCells.length ? selectedCells : selected ? [selected] : [];
     if (!cells.length) return;
     const anchor = cells[0]!;
-    const anchorRow = sequence.performers.findIndex((person) => person.id === anchor.performerId) * 2 + hands.indexOf(anchor.hand);
+    const anchorRow = editorPerformers.findIndex((person) => person.id === anchor.performerId) * 2 + hands.indexOf(anchor.hand);
     const anchorBeat = sequence.beats.findIndex((beat) => beat.id === anchor.beatId);
     const entries = cells.map((cell) => entryAt(cell.performerId, cell.hand, cell.beatId, cell.offset ?? rational(0))).filter((entry): entry is NotationEntry => Boolean(entry));
     const links = new Set(entries.flatMap((entry) => 'linkId' in entry.action && entry.action.linkId ? [entry.action.linkId] : []));
@@ -665,14 +773,14 @@ export default function App() {
     if (!entries.length) { setClipboard([]); return; }
     setClipboard(entries.map((entry) => ({
       entry,
-      rowOffset: sequence.performers.findIndex((person) => person.id === entry.performerId) * 2 + hands.indexOf(entry.hand) - anchorRow,
+      rowOffset: editorPerformers.findIndex((person) => person.id === entry.performerId) * 2 + hands.indexOf(entry.hand) - anchorRow,
       beatOffset: sequence.beats.findIndex((beat) => beat.id === entry.time.beatId) - anchorBeat,
     })));
   };
 
   const pasteSelected = () => {
     if (!selected || !clipboard.length) return;
-    const rows = sequence.performers.flatMap((performer) => hands.map((hand) => ({ performerId: performer.id, hand })));
+    const rows = editorPerformers.flatMap((performer) => hands.map((hand) => ({ performerId: performer.id, hand })));
     const anchorRow = rows.findIndex((row) => row.performerId === selected.performerId && row.hand === selected.hand);
     const anchorBeat = sequence.beats.findIndex((beat) => beat.id === selected.beatId);
     const destinations = clipboard.map((item) => {
@@ -709,12 +817,12 @@ export default function App() {
   };
 
   const selectInterval = (beatId: string, offset: Rational, duration: Rational) => {
-    const cells = sequence.performers.flatMap((performer) => hands.map((hand) => ({ performerId: performer.id, hand, beatId, offset, duration })));
+    const cells = editorPerformers.flatMap((performer) => hands.map((hand) => ({ performerId: performer.id, hand, beatId, offset, duration })));
     if (cells[0]) { setSelected(cells[0]); setSelectedCells(cells); setPassRecipientId(''); setPassRecipientHand('left'); setShowActionMenu(false); }
   };
 
   const selectBeat = (beatId: string) => {
-    const cells = sequence.performers.flatMap((performer) => hands.flatMap((hand) =>
+    const cells = editorPerformers.flatMap((performer) => hands.flatMap((hand) =>
       timelineSlots.filter((slot) => slot.beatId === beatId).map((slot) => ({
         performerId: performer.id, hand, beatId, offset: slot.offset, duration: slot.duration,
       })),
@@ -853,7 +961,16 @@ export default function App() {
     const initialC: ObjectLocation = sharedLayout
       ? sharedC && !sharedCOccupied ? { kind: 'position', positionId: sharedC.id } : { kind: 'hand-held', performerId, hand: 'right' }
       : { kind: 'position', positionId: ownedPositions[2]!.id };
-    const seatAssignments = [...sequence.seatAssignments, {
+    const missingSeatAssignments = sequence.performers
+      .filter((person) => !sequence.seatAssignments.some((assignment) => assignment.performerId === person.id))
+      .map((person) => {
+        const index = sequence.performers.findIndex((item) => item.id === person.id);
+        return {
+          performerId: person.id,
+          seat: { kind: 'rectangle-side' as const, side: (index % 2 === 0 ? 'long-a' : 'long-b') as 'long-a' | 'long-b', seatIndex: Math.floor(index / 2) },
+        };
+      });
+    const seatAssignments = [...sequence.seatAssignments, ...missingSeatAssignments, {
       performerId, seat: { kind: 'rectangle-side' as const, side: (performerNumber % 2 ? 'long-a' : 'long-b') as 'long-a' | 'long-b', seatIndex: Math.floor((performerNumber - 1) / 2) },
     }];
     commit({
@@ -863,7 +980,9 @@ export default function App() {
         { ballId: newBalls[0]!.id, location: initialA },
         { ballId: newBalls[1]!.id, location: initialC },
       ] },
-      tableLayout: sequence.sequenceType === 'solo' ? { type: 'rectangle', longSideSeatCount: Math.ceil((performerNumber + 1) / 2), shortSideSeatCount: 0 } : sequence.tableLayout,
+      tableLayout: sequence.sequenceType === 'circle-passing'
+        ? { type: 'polygon', sideCount: performerNumber }
+        : sequence.sequenceType === 'solo' ? { type: 'rectangle', longSideSeatCount: Math.max(1, Math.ceil(performerNumber / 2)), shortSideSeatCount: 0 } : sequence.tableLayout,
     });
   };
 
@@ -903,13 +1022,26 @@ export default function App() {
       positions,
       balls: sequence.balls.filter((ball) => !removedBalls.has(ball.id)),
       initialState: { placements: sequence.initialState.placements.filter((placement) => !removedBalls.has(placement.ballId)) },
-      notation: sequence.notation.filter((entry) => entry.performerId !== performerId),
+      notation: sequence.sequenceType === 'circle-passing' && sequence.performers[0]?.id === performerId
+        ? sequence.notation.filter((entry) => entry.performerId === performerId).map((entry) => ({ ...entry, performerId: sequence.performers.find((item) => item.id !== performerId)!.id }))
+        : sequence.notation.filter((entry) => entry.performerId !== performerId),
       seatAssignments: sequence.seatAssignments.filter((assignment) => assignment.performerId !== performerId),
       tableLayout: sequence.sequenceType === 'solo'
         ? { type: 'solo' }
-        : { type: 'rectangle', longSideSeatCount: Math.max(1, sequence.performers.length - 1), shortSideSeatCount: 0 },
+        : sequence.sequenceType === 'circle-passing'
+          ? { type: 'polygon', sideCount: Math.max(3, sequence.performers.length - 1) }
+          : { type: 'rectangle', longSideSeatCount: Math.max(1, Math.ceil((sequence.performers.length - 1) / 2)), shortSideSeatCount: 0 },
     });
-    if (selected?.performerId === performerId) clearSelection();
+    const remainingPerformers = sequence.performers.filter((person) => person.id !== performerId);
+    if (selected?.performerId === performerId) {
+      if (sequence.sequenceType === 'circle-passing' && remainingPerformers[0]) {
+        selectCell({ ...selected, performerId: remainingPerformers[0].id });
+      } else {
+        clearSelection();
+      }
+    } else {
+      setSelectedCells((cells) => cells.filter((cell) => cell.performerId !== performerId));
+    }
   };
 
   const addPosition = () => {
@@ -933,25 +1065,37 @@ export default function App() {
     if (!cleanName) return;
     const current = sequence.positions.find((position) => position.id === positionId);
     if (!current || current.kind !== 'table') return;
+    const circlePositionIds = sequence.sequenceType === 'circle-passing'
+      ? new Set(sequence.positions.filter((position) => position.kind === 'table' && position.name === current.name).map((position) => position.id))
+      : new Set([positionId]);
     const duplicate = sequence.positions.some((position) =>
-      position.kind === 'table' && position.id !== positionId && position.name === cleanName &&
-      (position.owner.kind === current.owner.kind &&
-       (position.owner.kind === 'shared' || (current.owner.kind === 'performer' && position.owner.performerId === current.owner.performerId))),
+      position.kind === 'table' && !circlePositionIds.has(position.id) && position.name === cleanName &&
+      (sequence.sequenceType === 'circle-passing' ||
+       (position.owner.kind === current.owner.kind &&
+        (position.owner.kind === 'shared' || (current.owner.kind === 'performer' && position.owner.performerId === current.owner.performerId)))),
     );
     if (duplicate) {
       window.alert('A position with this name already exists in the same layout.');
       return;
     }
     commit({ ...sequence, positions: sequence.positions.map((position) =>
-      position.id === positionId && position.kind === 'table' ? { ...position, name: cleanName } : position,
+      circlePositionIds.has(position.id) && position.kind === 'table' ? { ...position, name: cleanName } : position,
     ) });
   };
 
   const removePosition = (positionId: string) => {
-    commit({ ...sequence, positions: sequence.positions.filter((position) => position.id !== positionId) });
+    const current = sequence.positions.find((position) => position.id === positionId);
+    const removeIds = sequence.sequenceType === 'circle-passing' && current?.kind === 'table'
+      ? new Set(sequence.positions.filter((position) => position.kind === 'table' && position.name === current.name).map((position) => position.id))
+      : new Set([positionId]);
+    commit({ ...sequence, positions: sequence.positions.filter((position) => !removeIds.has(position.id)) });
   };
 
   const changeType = (type: SequenceType) => {
+    if (type === 'circle-passing' && sequence.performers.length < 3) {
+      window.alert('Circle passing requires at least three participants.');
+      return;
+    }
     let positions = sequence.positions;
     let individualPassingLayout = sequence.individualPassingLayout;
     if (type === 'circle-passing' || (type === 'individual-passing' && sequence.individualPassingLayout !== 'shared-positions')) {
@@ -967,10 +1111,88 @@ export default function App() {
       positions = [...sequence.positions.filter((position) => position.kind === 'hand-back'), ...normalized];
       individualPassingLayout = 'per-performer-positions';
     }
-    commit({
-      ...sequence, sequenceType: type, positions, individualPassingLayout,
-      tableLayout: type === 'solo' ? { type: 'solo' } : { type: 'rectangle', longSideSeatCount: Math.max(1, sequence.performers.length), shortSideSeatCount: 0 },
+
+    const representativeId = sequence.performers[0]?.id;
+    const sourcePerformerId = sequence.performers.find((person) =>
+      sequence.notation.some((entry) => entry.performerId === person.id),
+    )?.id ?? representativeId;
+    let notation = sequence.notation;
+    if (type === 'circle-passing') {
+      notation = sequence.notation
+        .filter((entry) => entry.performerId === sourcePerformerId)
+        .map((entry) => ({ ...entry, performerId: representativeId! }));
+    } else if (sequence.sequenceType === 'circle-passing' && representativeId) {
+      const pattern = sequence.notation.filter((entry) => entry.performerId === representativeId);
+      const instances = sequence.performers.slice(1).flatMap((performer) => {
+        const linkIds = new Map<string, ReturnType<typeof asLinkId>>();
+        return pattern.map((entry) => {
+          let action = entry.action;
+          if ('linkId' in action && action.linkId) {
+            const mapped = linkIds.get(action.linkId) ?? asLinkId('mode-' + action.linkId + '-' + performer.id);
+            linkIds.set(action.linkId, mapped);
+            action = { ...action, linkId: mapped } as NotationAction;
+          }
+          if ('target' in action) {
+            const sourceTarget = action.target;
+            const matchingPosition = sourceTarget.kind === 'circle-position'
+              ? positions.find((position) => position.kind === 'table' &&
+                position.name === sourceTarget.position &&
+                position.owner.kind === 'performer' && position.owner.performerId === performer.id)
+              : sourceTarget.kind === 'position'
+                ? (() => {
+                    const previousPosition = positions.find((position) => position.id === sourceTarget.positionId);
+                    return previousPosition?.kind === 'hand-back'
+                      ? positions.find((position) => position.kind === 'hand-back' && position.hand === previousPosition.hand && position.performerId === performer.id)
+                      : undefined;
+                  })()
+                : undefined;
+            if (matchingPosition) action = { ...action, target: { kind: 'position', positionId: matchingPosition.id } } as NotationAction;
+          }
+          return { ...entry, id: asActionEntryId('mode-' + entry.id + '-' + performer.id), performerId: performer.id, action };
+        });
+      });
+      notation = [...pattern, ...instances];
+    }
+
+    notation = notation.map((entry) => {
+      const action = entry.action;
+      if (!('target' in action)) return entry;
+      const currentTarget = action.target;
+      if (type === 'circle-passing' && currentTarget.kind === 'position') {
+        const targetPosition = positions.find((position) => position.id === currentTarget.positionId);
+        if (targetPosition?.kind === 'table' && ['A', 'B', 'C'].includes(targetPosition.name)) {
+          return { ...entry, action: { ...action, target: { kind: 'circle-position' as const, position: targetPosition.name as 'A' | 'B' | 'C' } } as NotationAction };
+        }
+      }
+      if (type !== 'circle-passing' && currentTarget.kind === 'circle-position') {
+        const targetPosition = positions.find((position) => position.kind === 'table' && position.name === currentTarget.position &&
+          (position.owner.kind === 'shared' || (position.owner.kind === 'performer' && position.owner.performerId === entry.performerId)));
+        if (targetPosition) return { ...entry, action: { ...action, target: { kind: 'position' as const, positionId: targetPosition.id } } as NotationAction };
+      }
+      return entry;
     });
+
+    const seatAssignments = type === 'individual-passing'
+      ? [...sequence.seatAssignments, ...sequence.performers
+          .filter((person) => !sequence.seatAssignments.some((assignment) => assignment.performerId === person.id))
+          .map((person) => {
+            const index = sequence.performers.findIndex((item) => item.id === person.id);
+            return {
+              performerId: person.id,
+              seat: { kind: 'rectangle-side' as const, side: (index % 2 === 0 ? 'long-a' : 'long-b') as 'long-a' | 'long-b', seatIndex: Math.floor(index / 2) },
+            };
+          })]
+      : sequence.seatAssignments;
+    commit({
+      ...sequence, sequenceType: type, positions, notation, individualPassingLayout, seatAssignments,
+      tableLayout: type === 'solo' ? { type: 'solo' }
+        : type === 'circle-passing' ? { type: 'polygon', sideCount: sequence.performers.length }
+          : { type: 'rectangle', longSideSeatCount: Math.max(1, Math.ceil(sequence.performers.length / 2)), shortSideSeatCount: 0 },
+    });
+    if (type === 'circle-passing') {
+      if (selected && representativeId) selectCell({ ...selected, performerId: representativeId });
+      else setSelectedCells([]);
+    }
   };
 
   const changeIndividualLayout = (layout: 'shared-positions' | 'per-performer-positions') => {
@@ -1214,18 +1436,28 @@ export default function App() {
         <div className="top-actions">
           <button type="button" onClick={undo} disabled={!history.length} title="Undo">↶</button>
           <button type="button" onClick={redo} disabled={!future.length} title="Redo">↷</button>
-          <button type="button" onClick={() => setShowRenderer((value) => !value)} aria-expanded={showRenderer}>Renderer</button>
+          {showEditor && showRenderer && <button type="button" onClick={() => setPanelsSwapped((value) => !value)} aria-label="Swap panels" title="Swap panels">⇄</button>}
+          {!showEditor && <button type="button" onClick={() => setShowEditor(true)}>Show editor</button>}
+          {!showRenderer && <button type="button" onClick={() => setShowRenderer(true)}>Show renderer</button>}
           <button type="button" onClick={() => setShowSettings((value) => !value)} aria-expanded={showSettings}>Settings</button>
           <button type="button" onClick={() => setShowShortcutHelp(true)} aria-label="Keyboard shortcuts" title="Keyboard shortcuts">?</button>
         </div>
       </header>
+      {updateReady && <div className="update-banner" role="status">
+        <span>An update is ready. It will activate after all POINTS tabs are closed. This tab will not reload automatically.</span>
+        <button type="button" onClick={() => setUpdateReady(false)} aria-label="Dismiss update notice">Dismiss</button>
+      </div>}
+      <nav className="workspace-tabs" aria-label="Workspace views">
+        {showEditor && <button type="button" className={activeWorkspaceTab === 'editor' ? 'active' : ''} aria-pressed={activeWorkspaceTab === 'editor'} onClick={() => setActiveWorkspaceTab('editor')}>Editor</button>}
+        {showRenderer && <button type="button" className={activeWorkspaceTab === 'renderer' ? 'active' : ''} aria-pressed={activeWorkspaceTab === 'renderer'} onClick={() => setActiveWorkspaceTab('renderer')}>Renderer</button>}
+      </nav>
 
       {showSettings && (
         <section className="settings-panel" aria-label="Sequence settings">
           <label>Type
             <select value={sequence.sequenceType} onChange={(event) => changeType(event.target.value as SequenceType)}>
               <option value="solo">Solo</option>
-              <option value="circle-passing">Circle passing</option>
+              <option value="circle-passing" disabled={sequence.performers.length < 3}>Circle passing</option>
               <option value="individual-passing">Individual passing</option>
             </select>
           </label>
@@ -1250,16 +1482,49 @@ export default function App() {
           </label>
           <div className="setting-control"><span>Balls</span><div className="stepper"><button type="button" onClick={() => changeBallCount(sequence.balls.length - 1)} disabled={sequence.balls.length <= 1}>−</button><output>{sequence.balls.length}</output><button type="button" onClick={() => changeBallCount(sequence.balls.length + 1)}>+</button></div></div>
           <div className="setting-control"><span>Beats</span><div className="stepper"><button type="button" onClick={removeBeat} disabled={sequence.beats.length <= 1 || sequence.notation.some((entry) => entry.time.beatId === sequence.beats[sequence.beats.length - 1]?.id)}>−</button><output>{sequence.beats.length}</output><button type="button" onClick={addBeat}>+</button></div></div>
-          <div className="performer-settings"><span>Performers</span>{sequence.performers.map((performer) => <div className="performer-chip" key={performer.id + performer.name + performer.identifier}><input className="performer-name" aria-label={'Performer name ' + performer.name} defaultValue={performer.name} onBlur={(event) => updatePerformer(performer.id, 'name', event.target.value)} /><input className="performer-identifier" aria-label={'Performer identifier ' + (performer.identifier ?? '')} defaultValue={performer.identifier ?? ''} maxLength={1} onBlur={(event) => updatePerformer(performer.id, 'identifier', event.target.value)} />{sequence.performers.length > 1 && <button type="button" className="remove-chip" onClick={() => removePerformer(performer.id)} aria-label={'Remove ' + performer.name}>×</button>}</div>)}<button type="button" onClick={addPerformer}>Add performer</button></div>
-          <div className="position-settings"><span>Positions</span>{sequence.positions.filter((position) => position.kind === 'table').map((position) => <div className="position-edit" key={position.id + position.name}><input aria-label={'Rename position ' + position.name} defaultValue={position.name} onBlur={(event) => renamePosition(position.id, event.target.value)} /><button type="button" onClick={() => removePosition(position.id)} aria-label={'Remove position ' + position.name}>×</button></div>)}<button type="button" onClick={addPosition}>Add position</button></div>
+          <div className="performer-settings">
+            <span>{sequence.sequenceType === 'circle-passing' ? 'People' : 'Performers'}</span>
+            {sequence.sequenceType === 'circle-passing' ? (
+              <div className="stepper" aria-label="People in circle">
+                <button type="button" onClick={() => removePerformer(sequence.performers[sequence.performers.length - 1]!.id)} disabled={sequence.performers.length <= 3} aria-label="Remove one person">−</button>
+                <output aria-label="People count">{sequence.performers.length}</output>
+                <button type="button" onClick={addPerformer} aria-label="Add one person">+</button>
+              </div>
+            ) : (
+              <>
+                {sequence.performers.map((performer) => (
+                  <div className="performer-chip" key={performer.id + performer.name + performer.identifier}>
+                    <input className="performer-name" aria-label={'Performer name ' + performer.name} defaultValue={performer.name} onBlur={(event) => updatePerformer(performer.id, 'name', event.target.value)} />
+                    <input className="performer-identifier" aria-label={'Performer identifier ' + (performer.identifier ?? '')} defaultValue={performer.identifier ?? ''} maxLength={1} onBlur={(event) => updatePerformer(performer.id, 'identifier', event.target.value)} />
+                    {sequence.performers.length > 1 && <button type="button" className="remove-chip" onClick={() => removePerformer(performer.id)} aria-label={'Remove ' + performer.name}>×</button>}
+                  </div>
+                ))}
+                <button type="button" onClick={addPerformer}>Add performer</button>
+              </>
+            )}
+          </div>
+          <div className="position-settings">
+            <span>Positions</span>
+            {sequence.sequenceType === 'circle-passing' ? <span className="position-summary">A · B · C</span> : <>
+              {editorPositions.map((position) => (
+                <div className="position-edit" key={position.id + position.name}>
+                  <input aria-label={'Rename position ' + position.name} defaultValue={position.name} onBlur={(event) => renamePosition(position.id, event.target.value)} />
+                  <button type="button" onClick={() => removePosition(position.id)} aria-label={'Remove position ' + position.name}>×</button>
+                </div>
+              ))}
+              <button type="button" onClick={addPosition}>Add position</button>
+            </>}
+          </div>
         </section>
       )}
 
       <section className="initial-positions" aria-label="Initial positions">
-        <div className="initial-positions-heading">
+        <button type="button" className="initial-positions-heading" onClick={() => setShowInitialPositions((value) => !value)} aria-expanded={showInitialPositions}>
           <strong>Initial positions</strong>
           <span>{sequence.initialState.placements.length} / {sequence.balls.length}</span>
-        </div>
+          <span className="disclosure-indicator">{showInitialPositions ? '−' : '+'}</span>
+        </button>
+        {showInitialPositions && <div className="initial-positions-content">
         {sequence.performers.map((performer) => {
           const tablePositions = sequence.positions.filter((position) =>
             position.kind === 'table' &&
@@ -1315,26 +1580,30 @@ export default function App() {
             </div>
           );
         })}
+        </div>}
       </section>
 
-      {showRenderer && <SequenceRenderer
-        sequence={sequence}
-        simulation={simulation}
-        onSelectHand={(performerId, hand, beatId) => {
-          selectCell({ performerId, hand, beatId });
-          setShowActionMenu(false);
-        }}
-      />}
-
-      <div className="editor-workspace">
+      <section
+        className={'workspace-panels' + (panelsSwapped && showEditor && showRenderer ? ' swapped' : '') + ' active-' + activeWorkspaceTab}
+        style={{ gridTemplateColumns: showEditor && showRenderer
+          ? panelsSwapped
+            ? `calc(${100 - editorShare}% - 4px) 8px calc(${editorShare}% - 4px)`
+            : `calc(${editorShare}% - 4px) 8px calc(${100 - editorShare}% - 4px)`
+          : 'minmax(0, 1fr)' }}
+      >
+        {showEditor && <div className="editor-workspace-panel">
+          <div className="workspace-panel-header">
+            <strong>Sequence editor</strong>
+            <button type="button" onClick={() => { setShowEditor(false); setActiveWorkspaceTab('renderer'); }} disabled={!showRenderer}>Hide</button>
+          </div>
+          <div className="editor-workspace">
       <section className="editor-toolbar" aria-label="Notation actions">
         <div className="action-tools">
-          <button type="button" className={'tool mode-tool' + (touchMode === 'select' ? ' active' : '')} onClick={() => { setTouchMode(touchMode === 'select' ? null : 'select'); setDragStart(null); setMoveStart(null); setEraseStart(null); setShowActionMenu(false); }}>Select</button>
+          <button type="button" className={'tool mode-tool' + (touchMode === 'select' ? ' active' : '')} onClick={() => { setTouchMode(touchMode === 'select' ? null : 'select'); setDragStart(null); setMoveStart(null); setShowActionMenu(false); }}>Select</button>
           <button type="button" className="tool clipboard-tool" onClick={copySelected} disabled={!selected || !(selectedCells.length ? selectedCells : [selected]).some((cell) => Boolean(entryAt(cell.performerId, cell.hand, cell.beatId, cell.offset ?? rational(0))))}>Copy</button>
           <button type="button" className="tool clipboard-tool" onClick={pasteSelected} disabled={!selected || clipboard.length === 0}>Paste</button>
           <button type="button" className={'tool mode-tool' + (touchMode === 'draw' ? ' active' : '')} onClick={() => { setTouchMode(touchMode === 'draw' ? null : 'draw'); setDragStart(null); setShowActionMenu(false); }}>Draw</button>
           <button type="button" className={'tool mode-tool' + (touchMode === 'move' ? ' active' : '')} onClick={() => { setTouchMode(touchMode === 'move' ? null : 'move'); setMoveStart(null); setShowActionMenu(false); }}>Move</button>
-          <button type="button" className={'tool mode-tool' + (touchMode === 'erase' ? ' active' : '')} onClick={() => { setTouchMode(touchMode === 'erase' ? null : 'erase'); setEraseStart(null); setShowActionMenu(false); }}>Erase</button>
           {selectedEntry && <button type="button" className="tool change-action-tool" onClick={() => setShowActionMenu((open) => !open)}>Change action</button>}
           {showActionMenu && actionNames.map((name) => (
             <button type="button" key={name} aria-label={name} title={name} className={'tool' + (name === 'ZIP' ? ' zip-tool' : '')} onClick={() => { if (selected) addAction(name); }}>
@@ -1349,14 +1618,22 @@ export default function App() {
           {showActionMenu && <button type="button" className="tool" onClick={addClap} disabled={!selected}>CLAP</button>}
           <button type="button" className="tool delete-tool" onClick={removeSelected} disabled={!selected || !(selectedCells.length ? selectedCells : [selected]).some((cell) => Boolean(entryAt(cell.performerId, cell.hand, cell.beatId, cell.offset ?? rational(0))))}>Delete</button>
         </div>
-        <span className="selection-label">{selected ? sequence.performers.find((item) => item.id === selected.performerId)?.name + ' · ' + selected.hand + ' · beat ' + (sequence.beats.findIndex((beat) => beat.id === selected.beatId) + 1) : 'Select a cell'}</span>
+        <span className="selection-label">{selected ? (sequence.sequenceType === 'circle-passing' ? 'Pattern' : sequence.performers.find((item) => item.id === selected.performerId)?.name) + ' · ' + selected.hand + ' · beat ' + (sequence.beats.findIndex((beat) => beat.id === selected.beatId) + 1) : 'Select a cell'}</span>
         <div className="target-tools">
           {!showActionMenu && targetableEntry && targetableEntry.action.target.kind === 'position' && (
             <label className="target-control">Target
               <select value={targetableEntry.action.target.positionId} onChange={(event) => changeTarget(targetableEntry, event.target.value)}>
-                {sequence.positions.filter((position) => position.kind === 'table' || ((targetableEntry.action.type === 'LIFT' || targetableEntry.action.type === 'LEAVE') && position.kind === 'hand-back' && position.performerId === targetableEntry.performerId)).map((position) => (
-                  <option key={position.id} value={position.id}>{position.name}</option>
-                ))}
+                {sequence.positions.filter((position) => position.kind === 'table' || ((targetableEntry.action.type === 'LIFT' || targetableEntry.action.type === 'LEAVE') && position.kind === 'hand-back')).map((position) => {
+                  const ownerPerformerId = position.kind === 'table' && position.owner.kind === 'performer'
+                    ? position.owner.performerId
+                    : undefined;
+                  const ownerName = position.kind === 'hand-back'
+                    ? sequence.performers.find((person) => person.id === position.performerId)?.name
+                    : ownerPerformerId
+                      ? sequence.performers.find((person) => person.id === ownerPerformerId)?.name
+                      : undefined;
+                  return <option key={position.id} value={position.id}>{ownerName ? ownerName + ' · ' + position.name : position.name}</option>;
+                })}
               </select>
             </label>
           )}
@@ -1384,8 +1661,8 @@ export default function App() {
 
       <section className="editor-scroll" aria-label="Notation editor" onClick={(event) => { if (event.target === event.currentTarget) clearSelection(); }}>
         <div className="notation-grid">
-          <div className="grid-head" style={{ gridTemplateColumns: `82px repeat(${timelineSlots.length}, 42px) 18px` }}>
-            <div className="row-label heading-label">PERFORMER</div>
+          <div className="grid-head" style={{ gridTemplateColumns: `82px repeat(${timelineSlots.length}, var(--notation-cell-size)) 18px` }}>
+            <div className="row-label heading-label">{sequence.sequenceType === 'circle-passing' ? 'PATTERN' : 'JUGGLER'}</div>
             {timelineSlots.map((slot, index) => {
               const beatIndex = sequence.beats.findIndex((beat) => beat.id === slot.beatId);
               const beat = sequence.beats[beatIndex]!;
@@ -1404,11 +1681,11 @@ export default function App() {
             <button type="button" className="add-beat" onClick={addBeat} aria-label="Add beat">+</button>
           </div>
           {(sequence.beats.some((beat) => beat.subdivisions.length > 0) || (sequence.timeSignature.numerator === 6 && sequence.timeSignature.denominator === 8)) && <p className="timeline-note">Subdivisions are shown in the notation grid, but the simulator currently evaluates all actions in a main beat simultaneously. The current binary subdivision model does not represent triplet subdivisions in 6/8.</p>}
-          {sequence.performers.map((performer) => (
+          {editorPerformers.map((performer) => (
             <div className="performer-block" key={performer.id}>
-              <div className="performer-heading">{performer.name}<span>{performer.identifier ?? ''}</span></div>
+              <div className="performer-heading">{sequence.sequenceType === 'circle-passing' ? 'Pattern' : performer.name}<span>{sequence.sequenceType === 'circle-passing' ? '' : performer.identifier ?? ''}</span></div>
               {hands.map((hand) => (
-                <div className="hand-row" key={hand} style={{ gridTemplateColumns: `82px repeat(${timelineSlots.length}, 42px) 18px` }}>
+                <div className="hand-row" key={hand} style={{ gridTemplateColumns: `82px repeat(${timelineSlots.length}, var(--notation-cell-size)) 18px` }}>
                   <div className="row-label">{hand === 'left' ? 'L' : 'R'}</div>
                   {timelineSlots.map((slot) => {
                     const beatIndex = sequence.beats.findIndex((beat) => beat.id === slot.beatId);
@@ -1426,7 +1703,6 @@ export default function App() {
                           const cell = { performerId: performer.id, hand, beatId: beat.id, offset: slot.offset, duration: slot.duration };
                           if (event.ctrlKey) {
                             event.preventDefault();
-                            setEraseStart(cell);
                             setShowActionMenu(false);
                           } else if (event.shiftKey) {
                             event.preventDefault();
@@ -1440,7 +1716,6 @@ export default function App() {
                         onMouseUp={() => {
                           if (touchMode) return;
                           const cell = { performerId: performer.id, hand, beatId: beat.id, offset: slot.offset, duration: slot.duration };
-                          if (eraseStart) { eraseRectangle(eraseStart, cell); setEraseStart(null); return; }
                           if (dragStart) { drawRectangle(dragStart, cell); setDragStart(null); return; }
                           if (moveStart) {
                             const sameCell = moveStart.performerId === cell.performerId && moveStart.hand === cell.hand && moveStart.beatId === cell.beatId && compareRational(moveStart.offset ?? rational(0), cell.offset ?? rational(0)) === 0;
@@ -1450,15 +1725,11 @@ export default function App() {
                         }}
                         onClick={(event) => {
                           const cell = { performerId: performer.id, hand, beatId: beat.id, offset: slot.offset, duration: slot.duration };
+                          if (event.ctrlKey) { selectCell(cell, true); setShowActionMenu(false); return; }
                           if (touchMode === 'select') { selectCell(cell, true); setShowActionMenu(false); return; }
                           if (touchMode === 'draw') {
                             if (!dragStart) { selectCell(cell); setDragStart(cell); }
                             else { drawRectangle(dragStart, cell); setDragStart(null); setTouchMode(null); }
-                            return;
-                          }
-                          if (touchMode === 'erase') {
-                            if (!eraseStart) setEraseStart(cell);
-                            else { eraseRectangle(eraseStart, cell); setEraseStart(null); setTouchMode(null); }
                             return;
                           }
                           if (touchMode === 'move') {
@@ -1467,7 +1738,7 @@ export default function App() {
                             } else { moveRectangle(moveStart, cell); setMoveStart(null); setTouchMode(null); }
                             return;
                           }
-                          if (dragStart || eraseStart || moveStart) return;
+                          if (dragStart || moveStart) return;
                           selectCell(cell, event.shiftKey);
                           if (!event.shiftKey) setShowActionMenu(!entry);
                         }}
@@ -1487,14 +1758,48 @@ export default function App() {
         </div>
       </section>
 
-      </div>
+          </div>
+        </div>}
+        {showEditor && showRenderer && <div
+          className="workspace-divider"
+          role="separator"
+          aria-orientation="vertical"
+          aria-label="Resize workspace panels"
+          aria-valuemin={25}
+          aria-valuemax={75}
+          aria-valuenow={editorShare}
+          tabIndex={0}
+          onPointerDown={(event) => { event.preventDefault(); setResizingPanels(true); }}
+          onKeyDown={(event) => {
+            if (event.key === 'ArrowLeft') setEditorShare((value) => panelsSwapped ? Math.min(75, value + 3) : Math.max(25, value - 3));
+            if (event.key === 'ArrowRight') setEditorShare((value) => panelsSwapped ? Math.max(25, value - 3) : Math.min(75, value + 3));
+          }}
+        />}
+        {showRenderer && <div className="renderer-workspace-panel">
+          <div className="workspace-panel-header">
+            <strong>Sequence renderer</strong>
+            <button type="button" onClick={() => { setShowRenderer(false); setActiveWorkspaceTab('editor'); }} disabled={!showEditor}>Hide</button>
+          </div>
+          <SequenceRenderer
+            sequence={simulationSequence}
+            simulation={simulation}
+            onSelectHand={(performerId, hand, beatId) => {
+              selectCell({ performerId: sequence.sequenceType === 'circle-passing' ? sequence.performers[0]!.id : performerId, hand, beatId });
+              setShowActionMenu(false);
+            }}
+          />
+        </div>}
+      </section>
 
       <section className="bottom-panels">
         <div className="validation-panel" role="region" aria-label="Validation">
-          <div className="panel-heading"><strong>Validation</strong><span className={simulation.validation.isValid ? 'valid-count' : 'error-count'}>{simulation.validation.issues.length} {simulation.validation.issues.length === 1 ? 'issue' : 'issues'}</span></div>
-          {simulation.validation.issues.length === 0 ? <p className="no-issues">Sequence valid</p> : <ul>{simulation.validation.issues.map((issue, index) => (
+          <div className="panel-heading"><strong>Validation</strong><span className={simulation.validation.isValid ? 'valid-count' : 'error-count'}>{displayedIssues.length} {displayedIssues.length === 1 ? 'issue' : 'issues'}</span></div>
+          {displayedIssues.length === 0 ? <p className="no-issues">Sequence valid</p> : <ul>{displayedIssues.map((issue, index) => (
             <li key={issue.code + index}><span>{issue.description}</span>{issue.affectedEntries[0] && <button type="button" onClick={() => {
-              const entry = sequence.notation.find((item) => item.id === issue.affectedEntries[0]);
+              const affectedEntryId = issue.affectedEntries[0];
+              if (!affectedEntryId) return;
+              const sourceId = simulationModel.sourceEntryById.get(affectedEntryId) ?? affectedEntryId;
+              const entry = sequence.notation.find((item) => item.id === sourceId);
               if (entry) {
                 const slot = timelineSlots.find((item) =>
                   item.beatId === entry.time.beatId &&
@@ -1545,7 +1850,7 @@ export default function App() {
           <div><kbd>Escape</kbd><span>Clear selection or close this help</span></div>
           <div><kbd>?</kbd><span>Show this reference</span></div>
           <div><kbd>Shift + drag</kbd><span>Draw a ball rectangle</span></div>
-          <div><kbd>Ctrl + drag</kbd><span>Erase a ball rectangle</span></div>
+          <div><kbd>Ctrl + click</kbd><span>Add a cell to the selection</span></div>
         </div>
       </section>
     </div>}
