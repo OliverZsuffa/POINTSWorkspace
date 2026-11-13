@@ -98,8 +98,14 @@ test('circle passing renderer supports two opposite visual participants', async 
   const firstCell = page.locator('.notation-cell').first();
   await firstCell.click();
   await page.getByRole('button', { name: 'CLAP' }).click();
-  await expect(page.locator('.notation-cell .clap-bar').first()).toBeVisible();
+  const clapBar = page.locator('.notation-cell .clap-bar').first();
+  await expect(clapBar).toBeVisible();
   await expect(page.getByText('Clap', { exact: true })).toHaveCount(0);
+  const barBounds = await clapBar.boundingBox();
+  const cellBounds = await clapBar.locator('xpath=ancestor::button[contains(@class, "notation-cell")]').boundingBox();
+  expect(barBounds).not.toBeNull();
+  expect(cellBounds).not.toBeNull();
+  expect(Math.abs((barBounds!.x + barBounds!.width / 2) - (cellBounds!.x + cellBounds!.width / 2))).toBeLessThan(1.5);
   await page.screenshot({ path: 'test-results/07-circle-renderer-two-people-clap.png', fullPage: true });
 });
 
