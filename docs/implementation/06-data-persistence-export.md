@@ -2,7 +2,7 @@
 
 ## Status
 
-Implemented on branch `implementation/06-data-persistence-export`. Automated verification is in progress.
+Implemented and merged through PR #19 on 13 November 2026. CI and GitHub Pages deployment completed successfully. Manual visual inspection of exported PNG files remains outstanding.
 
 ## User facing data format
 
@@ -84,7 +84,7 @@ The curated preset registry is repository data and supports text search. Initial
 - [x] Production build.
 - [x] Browser tests: 16 passed, including import, undo, persistence, preset search and PNG download.
 - [ ] Manual visual inspection of exported PNG at short and long sequence lengths.
-- [ ] Live deployment verification after merge.
+- [x] GitHub Pages deployment completed successfully after merge.
 
 ## Known limitations to review
 
