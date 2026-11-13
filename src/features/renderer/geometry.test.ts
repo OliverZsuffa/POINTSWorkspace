@@ -181,6 +181,17 @@ describe('renderer geometry', () => {
       })));
       const value = { ...base, sequenceType: 'circle-passing' as const, positions };
       const points = positions.map((position) => getTablePositionPosition(value, position, 'circle'));
+      const apothem = (getTableFootprint(value).width / 2) * Math.cos(Math.PI / participantCount);
+      positions.forEach((position, index) => {
+        if (position.owner.kind !== 'performer') throw new Error('Expected performer owned position');
+        const edgeIndex = value.performers.findIndex((performer) => performer.id === position.owner.performerId);
+        const angle = Math.PI / 2 + ((edgeIndex + 0.5) * Math.PI * 2) / participantCount;
+        expect(points[index]!.x * Math.cos(angle) + points[index]!.z * Math.sin(angle)).toBeCloseTo(apothem - 0.42);
+        for (let edge = 0; edge < participantCount; edge += 1) {
+          const edgeAngle = Math.PI / 2 + ((edge + 0.5) * Math.PI * 2) / participantCount;
+          expect(points[index]!.x * Math.cos(edgeAngle) + points[index]!.z * Math.sin(edgeAngle)).toBeLessThanOrEqual(apothem + 1e-9);
+        }
+      });
       for (let i = 0; i < points.length; i += 1) {
         for (let j = i + 1; j < points.length; j += 1) {
           const distance = Math.hypot(points[i]!.x - points[j]!.x, points[i]!.z - points[j]!.z);
