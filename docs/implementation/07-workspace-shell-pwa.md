@@ -425,17 +425,17 @@ The existing three dimensional arrangement is not acceptable while table positio
 
 ### Circle passing pattern semantics
 
-Circle passing defines one pattern, not a separate independently authored pattern for every participant.
+The original Package 07 assumptions in this section were superseded by Package 07C and implemented through PR #16.
 
-1. The user authors the notation for one representative participant.
-2. The circle participant count is a separate sequence property. For example, a pattern defined once can be instantiated for ten people arranged around the circle.
-3. The renderer repeats the same authored pattern for every participant, rotated or mapped consistently around the circle.
-4. Do not require duplicate performer notation rows or separate edits for each participant in circle passing mode.
-5. The editor must make clear that the displayed notation is the representative pattern, label it Pattern, and provide a direct People count control that determines how many times it is instantiated.
-6. Circle passing target distance and direction are interpreted relative to the participant's position in the circle. The same relative instruction applies consistently to every participant.
-7. The number of sides in the rendered polygon must update whenever the participant count changes. The editor must not permit a circle passing configuration with fewer than three participants.
-7. Circle passing validation must validate the representative pattern and its repeated interactions around the configured circle, including wraparound between the last and first participant.
-8. The sequence data model and renderer integration must represent this distinction explicitly. Do not simulate circle passing by asking the user to manually duplicate identical patterns.
+1. The sequence contains one actual authored pattern performer.
+2. Circle passing can be selected while that single performer is present.
+3. The visual participant count is a renderer setting, not a sequence performer count or an editor control.
+4. The renderer projects the one authored pattern onto each visual participant. It does not add authored performers, notation rows, balls or separately editable pattern state.
+5. Relative left and right targets are interpreted around the visual circle, including wraparound.
+6. The regular polygon has one side per visual participant and at least three sides.
+7. Changing the visual participant count updates the renderer projection and table layout only.
+
+The completed implementation and its remaining manual review items are documented in [07C-circle-passing-renderer-corrections.md](07C-circle-passing-renderer-corrections.md).
 
 ### Notation grid rendering: spreadsheet cell model
 
