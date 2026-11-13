@@ -78,6 +78,37 @@ test('circle passing renderer layout with three visual participants', async ({ p
   await page.screenshot({ path: 'test-results/07-circle-renderer-three-people.png', fullPage: true });
 });
 
+test('circle passing renderer supports two opposite visual participants', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto('./');
+  await page.getByRole('button', { name: 'Settings' }).click();
+  await page.getByLabel('Type').selectOption('circle-passing');
+  await page.getByRole('button', { name: 'Settings' }).click();
+
+  const renderer = page.getByRole('region', { name: 'Sequence renderer' });
+  await renderer.getByRole('button', { name: 'Remove visual juggler' }).click();
+  await expect(renderer.getByLabel('Visual juggler count')).toHaveText('2');
+  const canvas = renderer.locator('canvas');
+  await expect(canvas).toBeVisible();
+  const bounds = await canvas.boundingBox();
+  expect(bounds).not.toBeNull();
+  expect(bounds!.width).toBeGreaterThan(400);
+  expect(bounds!.height).toBeGreaterThan(250);
+
+  const firstCell = page.locator('.notation-cell').first();
+  await firstCell.click();
+  await page.getByRole('button', { name: 'CLAP' }).click();
+  const clapBar = page.locator('.notation-cell .clap-bar').first();
+  await expect(clapBar).toBeVisible();
+  await expect(page.getByText('Clap', { exact: true })).toHaveCount(0);
+  const barBounds = await clapBar.boundingBox();
+  const cellBounds = await clapBar.locator('xpath=ancestor::button[contains(@class, "notation-cell")]').boundingBox();
+  expect(barBounds).not.toBeNull();
+  expect(cellBounds).not.toBeNull();
+  expect(Math.abs((barBounds!.x + barBounds!.width / 2) - (cellBounds!.x + cellBounds!.width / 2))).toBeLessThan(1.5);
+  await page.screenshot({ path: 'test-results/07-circle-renderer-two-people-clap.png', fullPage: true });
+});
+
 test('circle passing renderer layout with four visual participants', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto('./');

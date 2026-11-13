@@ -56,7 +56,7 @@ function resolvePosition(sequence: Sequence, performerId: PerformerId, target: T
   let targetPerformer = sequence.performers[index];
   if (target.direction !== undefined || target.distance !== undefined) {
     if (sequence.performers.length < 2 || !target.direction || !Number.isSafeInteger(target.distance) || target.distance! < 1 || target.distance! >= sequence.performers.length) return undefined;
-    const direction = target.direction === 'left' ? -1 : 1;
+    const direction = target.direction === 'left' ? 1 : -1;
     const count = sequence.performers.length;
     targetPerformer = sequence.performers[((index + direction * target.distance!) % count + count) % count];
   }

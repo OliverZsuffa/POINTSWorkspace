@@ -10,6 +10,7 @@ import {
   getObjectPosition,
   getPassMeetingPoint,
   getPerformerAnchor,
+  getPerformerFacing,
   getPerformerSpacingRadius,
   getTableFootprint,
   getTablePositionPosition,
@@ -63,6 +64,49 @@ describe('renderer geometry', () => {
     const position = getTablePositionPosition(value, value.positions[0]!, 'circle');
     expect(anchor.z).toBeGreaterThan(0);
     expect(position.z).toBeLessThan(anchor.z);
+  });
+
+  it('places two circle participants opposite each other with distinct table positions', () => {
+    const base = sequence(2, { type: 'polygon', sideCount: 2 });
+    const positions = base.performers.flatMap((performer) => ['A', 'B', 'C'].map((name) => ({
+      id: asPositionId(name + '-' + performer.id),
+      kind: 'table' as const,
+      name,
+      owner: { kind: 'performer' as const, performerId: performer.id },
+    })));
+    const value = { ...base, sequenceType: 'circle-passing' as const, positions };
+    const anchors = value.performers.map((performer) => getPerformerAnchor(value, performer, 'circle'));
+    expect(anchors[0]!.z).toBeGreaterThan(0);
+    expect(anchors[1]!.z).toBeLessThan(0);
+    expect(anchors[0]!.x).toBeCloseTo(anchors[1]!.x);
+    const points = positions.map((position) => getTablePositionPosition(value, position, 'circle'));
+    for (let i = 0; i < points.length; i += 1) {
+      for (let j = i + 1; j < points.length; j += 1) {
+        expect(Math.hypot(points[i]!.x - points[j]!.x, points[i]!.z - points[j]!.z)).toBeGreaterThan(0.4);
+      }
+    }
+  });
+
+  it('orders A, B and C from left to right from each circle participant perspective', () => {
+    const base = sequence(3, { type: 'polygon', sideCount: 3 });
+    const positions = base.performers.flatMap((performer) => ['A', 'B', 'C'].map((name) => ({
+      id: asPositionId(name + '-' + performer.id),
+      kind: 'table' as const,
+      name,
+      owner: { kind: 'performer' as const, performerId: performer.id },
+    })));
+    const value = { ...base, sequenceType: 'circle-passing' as const, positions };
+    for (const performer of value.performers) {
+      const points = ['A', 'B', 'C'].map((name) => {
+        const position = positions.find((item) => item.name === name && item.owner.kind === 'performer' && item.owner.performerId === performer.id)!;
+        return getTablePositionPosition(value, position, 'circle');
+      });
+      const facing = getPerformerFacing(value, performer, 'circle');
+      const right = { x: -facing.z, z: facing.x };
+      const across = points.map((point) => point.x * right.x + point.z * right.z);
+      expect(across[0]!).toBeLessThan(across[1]!);
+      expect(across[1]!).toBeLessThan(across[2]!);
+    }
   });
 
   it('keeps performer owned table positions on the tabletop footprint', () => {

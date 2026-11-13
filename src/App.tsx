@@ -210,7 +210,7 @@ function circleSubscript(target: Extract<TableActionTarget, { kind: 'circle-posi
 
 function ActionSymbol({ action, sequence, hand }: { action: NotationAction; sequence: Sequence; hand: Hand }) {
   if (action.type === 'EMPTY') return null;
-  if (action.type === 'SPECIAL') return <span className="special-symbol">{action.text || 'SPECIAL'}{action.linkId && <span className="special-link-indicator" aria-label="Linked SPECIAL">↔</span>}</span>;
+  if (action.type === 'SPECIAL') return <span className={'special-symbol' + (action.text === 'Clap' ? ' clap-symbol' : '')} aria-label={action.text === 'Clap' ? 'Clap' : undefined}>{action.text === 'Clap' ? <span className="clap-bar" /> : action.text || 'SPECIAL'}{action.linkId && action.text !== 'Clap' && <span className="special-link-indicator" aria-label="Linked SPECIAL">↔</span>}</span>;
   let path = '';
   let target = '';
   let subscript = '';
@@ -255,7 +255,7 @@ function ActionSymbol({ action, sequence, hand }: { action: NotationAction; sequ
 
 function NotationMark({ action, sequence, hand }: { action: NotationAction; sequence: Sequence; hand: Hand }) {
   if (action.type === 'EMPTY') return null;
-  if (action.type === 'SPECIAL') return <span className="special-symbol">{action.text || 'SPECIAL'}{action.linkId && <span className="special-link-indicator" aria-label="Linked SPECIAL">↔</span>}</span>;
+  if (action.type === 'SPECIAL') return <span className={'special-symbol' + (action.text === 'Clap' ? ' clap-symbol' : '')} aria-label={action.text === 'Clap' ? 'Clap' : undefined}>{action.text === 'Clap' ? <span className="clap-bar" /> : action.text || 'SPECIAL'}{action.linkId && <span className="special-link-indicator" aria-label="Linked SPECIAL">↔</span>}</span>;
   let path = '';
   let label = '';
   let subscript = '';
@@ -323,6 +323,9 @@ export default function App() {
   const [passRecipientId, setPassRecipientId] = useState('');
   const [passRecipientHand, setPassRecipientHand] = useState<Hand>('left');
   const [visualParticipantCount, setVisualParticipantCount] = useState(3);
+  const [bpmInput, setBpmInput] = useState(String(sequence.bpm));
+
+  useEffect(() => { setBpmInput(String(sequence.bpm)); }, [sequence.bpm]);
 
   useEffect(() => {
     if (!resizingPanels) return;
@@ -410,7 +413,7 @@ export default function App() {
         }
         if ('target' in action && action.target.kind === 'circle-position') {
           const target = action.target;
-          const offset = target.direction ? (target.direction === 'left' ? -1 : 1) * (target.distance ?? 1) : 0;
+          const offset = target.direction ? (target.direction === 'left' ? 1 : -1) * (target.distance ?? 1) : 0;
           const targetPerformer = performers[(index + offset + performers.length) % performers.length]!;
           const position = positionFor(targetPerformer.id, target.position);
           if (position) action = { ...action, target: { kind: 'position', positionId: position.id } } as NotationAction;
@@ -1317,7 +1320,12 @@ export default function App() {
   };
 
   const changeBpm = (value: number) => {
-    if (Number.isFinite(value) && value > 0) commit({ ...sequence, bpm: value });
+    if (Number.isFinite(value) && value >= 1 && value <= 400) commit({ ...sequence, bpm: value });
+  };
+  const commitBpmInput = () => {
+    const value = Number(bpmInput);
+    if (bpmInput.trim() && Number.isFinite(value) && value >= 1 && value <= 400) changeBpm(value);
+    else setBpmInput(String(sequence.bpm));
   };
 
   const toggleInitialLocation = (location: ObjectLocation) => {
@@ -1494,7 +1502,7 @@ export default function App() {
             </select>
           </label>}
           <label>BPM
-            <input type="number" min="1" max="400" value={sequence.bpm} onChange={(event) => changeBpm(Number(event.target.value))} />
+            <input type="number" min="1" max="400" value={bpmInput} onChange={(event) => setBpmInput(event.target.value)} onBlur={commitBpmInput} onKeyDown={(event) => { if (event.key === "Enter") event.currentTarget.blur(); }} />
           </label>
           <label>Time
             <select value={sequence.timeSignature.numerator + '/' + sequence.timeSignature.denominator} onChange={(event) => {
