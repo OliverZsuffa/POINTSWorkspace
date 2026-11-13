@@ -2,7 +2,7 @@
 
 ## Status
 
-Implemented on branch `implementation/06-data-persistence-export`. Pending CI and review.
+Implemented on branch `implementation/06-data-persistence-export`. Automated verification is in progress.
 
 ## User facing data format
 
@@ -46,7 +46,9 @@ The curated preset registry is repository data and supports text search. Initial
 
 - Export uses a separate print layout rather than capturing the live editor.
 - Output is PNG at 2x raster resolution.
-- The print view includes sequence type, tempo, time signature, beat labels, performer names, hand rows, notation, initial object overview and a compact sequence code reference.
+- The print view includes sequence type, tempo, time signature, beat labels, performer names, hand rows, notation, initial object overview and the complete compact sequence code.
+- Export controls allow users to include or omit settings, performer names, sequence code and initial object state.
+- Invalid notation entries are highlighted in red, with a legend on the exported image.
 - Export does not require a valid sequence. Existing notation and validation state are not changed.
 - Long exports are segmented between complete performer sections. A performer section is never split between images.
 - A single unusually tall performer section is kept intact rather than split.
@@ -80,7 +82,7 @@ The curated preset registry is repository data and supports text search. Initial
 - [ ] Strict TypeScript check.
 - [ ] Full unit test suite.
 - [ ] Production build.
-- [ ] Browser tests for import, undo, persistence and preset selection.
+- [x] Browser tests cover import, undo, persistence, preset search and PNG download.
 - [ ] Visual inspection of exported PNG at short and long sequence lengths.
 - [ ] Live deployment verification.
 
