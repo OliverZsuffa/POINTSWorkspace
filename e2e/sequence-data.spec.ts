@@ -8,7 +8,7 @@ test('sequence code can be shown, imported and undone', async ({ page }) => {
   const originalCode = await codeField.inputValue();
   expect(originalCode.startsWith('P1.')).toBe(true);
 
-  await page.getByRole('button', { name: 'Find a preset' }).fill('Individual passing');
+  await page.getByLabel('Find a preset').fill('Individual passing');
   page.once('dialog', (dialog) => dialog.accept());
   await page.getByRole('button', { name: /Individual passing/ }).click();
   await expect(page.getByRole('button', { name: 'Undo' })).toBeEnabled();
