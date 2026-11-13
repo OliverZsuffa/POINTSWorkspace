@@ -1631,10 +1631,10 @@ export default function App() {
           {!showActionMenu && targetableEntry && targetableEntry.action.target.kind === 'circle-position' && (
             <div className="target-control">
               <label>Position <select value={targetableEntry.action.target.position} onChange={(event) => changeCircleTarget(targetableEntry, 'position', event.target.value)}><option>A</option><option>B</option><option>C</option></select></label>
-              <label>Performer <select value={targetableEntry.action.target.direction ? 'other' : 'self'} onChange={(event) => setCircleTargetMode(targetableEntry, event.target.value as 'self' | 'other')}><option value="self">Self</option><option value="other" disabled={sequence.performers.length < 2}>Other</option></select></label>
+              <label>Performer <select value={targetableEntry.action.target.direction ? 'other' : 'self'} onChange={(event) => setCircleTargetMode(targetableEntry, event.target.value as 'self' | 'other')}><option value="self">Self</option><option value="other" disabled={visualParticipantCount < 2}>Other</option></select></label>
               {targetableEntry.action.target.direction && <>
                 <label>Direction <select value={targetableEntry.action.target.direction} onChange={(event) => changeCircleTarget(targetableEntry, 'direction', event.target.value)}><option value="left">Left</option><option value="right">Right</option></select></label>
-                <label>Distance <input type="number" min="1" max={Math.max(1, sequence.performers.length - 1)} value={targetableEntry.action.target.distance ?? 1} onChange={(event) => changeCircleTarget(targetableEntry, 'distance', event.target.value)} /></label>
+                <label>Distance <input type="number" min="1" max={Math.max(1, visualParticipantCount - 1)} value={targetableEntry.action.target.distance ?? 1} onChange={(event) => changeCircleTarget(targetableEntry, 'distance', event.target.value)} /></label>
               </>}
             </div>
           )}
