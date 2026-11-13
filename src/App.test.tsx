@@ -657,21 +657,29 @@ describe('sequence editor', () => {
     expect(labels).toContain('Juggler 2 · R');
   });
 
-  it('validates the authored LIFT HOLD HOLD LEAVE pattern in circle passing mode', async () => {
-    const user = userEvent.setup();
-    render(<App />);
-    await user.click(screen.getByRole('button', { name: 'Juggler 1 left beat 1 empty' }));
-    await user.click(screen.getByRole('button', { name: 'LIFT' }));
-    await user.click(screen.getByRole('button', { name: 'Juggler 1 left beat 2 empty' }));
-    await user.click(screen.getByRole('button', { name: 'HOLD' }));
-    await user.click(screen.getByRole('button', { name: 'Juggler 1 left beat 3 empty' }));
-    await user.click(screen.getByRole('button', { name: 'HOLD' }));
-    await user.click(screen.getByRole('button', { name: 'Juggler 1 left beat 4 empty' }));
-    await user.click(screen.getByRole('button', { name: 'LEAVE' }));
-    await user.click(screen.getByRole('button', { name: 'Settings' }));
-    await user.selectOptions(screen.getByLabelText('Type'), 'circle-passing');
-    expect(screen.getByText('Sequence valid')).toBeInTheDocument();
-  });
+  it.each([3, 4, 20])(
+    'validates LIFT HOLD HOLD LEAVE in circle passing mode with %i visual participants',
+    async (participantCount) => {
+      const user = userEvent.setup();
+      render(<App />);
+      await user.click(screen.getByRole('button', { name: 'Juggler 1 left beat 1 empty' }));
+      await user.click(screen.getByRole('button', { name: 'LIFT' }));
+      await user.click(screen.getByRole('button', { name: 'Juggler 1 left beat 2 empty' }));
+      await user.click(screen.getByRole('button', { name: 'HOLD' }));
+      await user.click(screen.getByRole('button', { name: 'Juggler 1 left beat 3 empty' }));
+      await user.click(screen.getByRole('button', { name: 'HOLD' }));
+      await user.click(screen.getByRole('button', { name: 'Juggler 1 left beat 4 empty' }));
+      await user.click(screen.getByRole('button', { name: 'LEAVE' }));
+      await user.click(screen.getByRole('button', { name: 'Settings' }));
+      await user.selectOptions(screen.getByLabelText('Type'), 'circle-passing');
+      for (let index = 3; index < participantCount; index += 1) {
+        await user.click(screen.getByRole('button', { name: 'Add visual juggler' }));
+      }
+      expect(screen.getByText('Sequence valid')).toBeInTheDocument();
+      expect(document.querySelector('[data-performer-count]')).toHaveAttribute('data-performer-count', String(participantCount));
+      expect(document.querySelectorAll('.performer-block')).toHaveLength(1);
+    },
+  );
 
   it('shows one authored notation pattern in circle passing mode', async () => {
     const user = userEvent.setup();
