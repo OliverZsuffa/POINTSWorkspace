@@ -66,18 +66,20 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  if (['script', 'style', 'image', 'font', 'worker', 'manifest'].includes(request.destination)) {
-    event.respondWith((async () => {
-      const cached = await caches.match(request);
-      if (cached) return cached;
+  event.respondWith((async () => {
+    const cached = await caches.match(request);
+    if (cached) return cached;
+    try {
       const response = await fetch(request);
       if (response.ok && response.type === 'basic') {
         const cache = await caches.open(CACHE_NAME);
         await cache.put(request, response.clone());
       }
       return response;
-    })());
-  }
+    } catch {
+      return new Response('', { status: 503, statusText: 'Offline resource unavailable' });
+    }
+  })());
 });
 `;
       writeFileSync(resolve('dist/service-worker.js'), serviceWorker);
