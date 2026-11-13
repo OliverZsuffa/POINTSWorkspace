@@ -1116,7 +1116,11 @@ export default function App() {
       const baseTables = sequence.positions.filter((position) => position.kind === 'table' &&
         position.owner.kind === 'performer' && position.owner.performerId === representative.id);
       const baseBacks = sequence.positions.filter((position) => position.kind === 'hand-back' && position.performerId === representative.id);
-      const mapPerformerIndex = (performerId: string) => Math.max(0, originalPerformers.findIndex((person) => person.id === performerId));
+      const representativeIndex = originalPerformers.findIndex((person) => person.id === representative.id);
+      const mapPerformerIndex = (performerId: string) => {
+        const sourceIndex = originalPerformers.findIndex((person) => person.id === performerId);
+        return sourceIndex < 0 ? 0 : (sourceIndex - representativeIndex + originalPerformers.length) % originalPerformers.length;
+      };
       const mapPerformerId = (index: number) => index === 0 ? representative.id : asPerformerId('visual-performer-' + (index + 1));
       const mapPositionId = (positionId: string, index: number) => {
         const source = sequence.positions.find((position) => position.id === positionId);
