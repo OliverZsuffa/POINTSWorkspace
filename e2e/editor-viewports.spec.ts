@@ -59,20 +59,36 @@ for (const viewport of viewports) {
 }
 
 
-test('circle passing renderer layout with ten participants', async ({ page }) => {
+test('circle passing renderer layout with three visual participants', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto('./');
   await page.getByRole('button', { name: 'Settings' }).click();
-  await page.getByRole('button', { name: 'Add performer' }).click();
-  await page.getByRole('button', { name: 'Add performer' }).click();
   await page.getByLabel('Type').selectOption('circle-passing');
-  const addPerson = page.getByRole('button', { name: 'Add one person' });
-  for (let count = 0; count < 7; count += 1) await addPerson.click();
-  await expect(page.getByLabel('People count')).toHaveText('10');
   await page.getByRole('button', { name: 'Settings' }).click();
 
   const renderer = page.getByRole('region', { name: 'Sequence renderer' });
   await expect(renderer).toBeVisible();
+  await expect(renderer.getByLabel('Visual juggler count')).toHaveText('3');
+  const canvas = renderer.locator('canvas');
+  await expect(canvas).toBeVisible();
+  const bounds = await canvas.boundingBox();
+  expect(bounds).not.toBeNull();
+  expect(bounds!.width).toBeGreaterThan(400);
+  expect(bounds!.height).toBeGreaterThan(250);
+  await page.screenshot({ path: 'test-results/07-circle-renderer-three-people.png', fullPage: true });
+});
+
+test('circle passing renderer layout with ten visual participants', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto('./');
+  await page.getByRole('button', { name: 'Settings' }).click();
+  await page.getByLabel('Type').selectOption('circle-passing');
+  await page.getByRole('button', { name: 'Settings' }).click();
+  const renderer = page.getByRole('region', { name: 'Sequence renderer' });
+  const addPerson = renderer.getByRole('button', { name: 'Add visual juggler' });
+  for (let count = 0; count < 7; count += 1) await addPerson.click();
+  await expect(renderer.getByLabel('Visual juggler count')).toHaveText('10');
+
   const canvas = renderer.locator('canvas');
   await expect(canvas).toBeVisible();
   const bounds = await canvas.boundingBox();
