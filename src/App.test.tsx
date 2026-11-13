@@ -71,9 +71,11 @@ describe('sequence editor', () => {
     await user.click(screen.getByRole('button', { name: 'CLAP' }));
     expect(screen.getByRole('button', { name: 'Juggler 1 right beat 1 Clap' })).toBeInTheDocument();
     expect(screen.getAllByLabelText('Linked SPECIAL')).toHaveLength(2);
-    expect(screen.getAllByLabelText('Clap')).toHaveLength(2);
-    expect(screen.getAllByLabelText('Clap')[0]).toHaveClass('clap-symbol');
-    expect(screen.getAllByLabelText('Clap')[0].querySelector('.clap-bar')).toBeInTheDocument();
+    const clapMarks = screen.getAllByLabelText('Clap');
+    expect(clapMarks).toHaveLength(2);
+    expect(clapMarks[0]!).toHaveClass('clap-symbol');
+    expect(clapMarks[0]!.querySelector('.clap-bar')).toBeInTheDocument();
+    expect(screen.queryByText('Clap')).not.toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: 'Delete' }));
 
