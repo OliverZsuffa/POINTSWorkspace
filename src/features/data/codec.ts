@@ -2,7 +2,6 @@ import type { Sequence, SequenceDecodeResult } from '../../domain/model';
 import type { SequenceCodec } from '../../contracts';
 
 const PREFIX = 'P1.';
-const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_';
 
 function toBase64Url(bytes: Uint8Array): string {
   let binary = '';
