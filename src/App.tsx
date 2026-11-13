@@ -393,7 +393,8 @@ export default function App() {
           const position = positionFor(targetPerformer.id, target.position);
           if (position) action = { ...action, target: { kind: 'position', positionId: position.id } } as NotationAction;
         } else if ('target' in action && action.target.kind === 'position' && index > 0) {
-          const source = basePositions.find((position) => position.id === action.target.positionId);
+          const sourceTarget = action.target;
+          const source = basePositions.find((position) => position.id === sourceTarget.positionId);
           if (source?.kind === 'table') {
             const mapped = positionFor(performer.id, source.name);
             if (mapped) action = { ...action, target: { kind: 'position', positionId: mapped.id } } as NotationAction;
@@ -1130,7 +1131,8 @@ export default function App() {
       notation = sequence.notation.map((entry) => {
         const action = entry.action;
         if (!('target' in action) || action.target.kind !== 'circle-position') return entry;
-        const target = positions.find((position) => position.kind === 'table' && position.name === action.target.position &&
+        const circleTarget = action.target;
+        const target = positions.find((position) => position.kind === 'table' && position.name === circleTarget.position &&
           position.owner.kind === 'performer' && position.owner.performerId === representative.id);
         return target ? { ...entry, action: { ...action, target: { kind: 'position' as const, positionId: target.id } } as NotationAction } : entry;
       });
