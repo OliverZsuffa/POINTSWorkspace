@@ -60,21 +60,23 @@ self.addEventListener('fetch', (event) => {
   if (url.origin !== self.location.origin || !url.pathname.startsWith(SCOPE)) return;
 
   if (request.mode === 'navigate') {
-    event.respondWith(
-      caches.match(SCOPE + 'index.html').then((cached) => cached || fetch(request)),
-    );
+    event.respondWith((async () => {
+      const cache = await caches.open(CACHE_NAME);
+      const appShellUrl = new URL('index.html', self.registration.scope).href;
+      const cached = await cache.match(appShellUrl);
+      if (cached) return cached;
+      return fetch(request);
+    })());
     return;
   }
 
   event.respondWith((async () => {
-    const cached = await caches.match(request);
+    const cache = await caches.open(CACHE_NAME);
+    const cached = await cache.match(request);
     if (cached) return cached;
     try {
       const response = await fetch(request);
-      if (response.ok && response.type === 'basic') {
-        const cache = await caches.open(CACHE_NAME);
-        await cache.put(request, response.clone());
-      }
+      if (response.ok && response.type === 'basic') await cache.put(request, response.clone());
       return response;
     } catch {
       return new Response('', { status: 503, statusText: 'Offline resource unavailable' });
