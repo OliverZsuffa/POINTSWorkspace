@@ -655,9 +655,9 @@ describe('sequence editor', () => {
     expect(container.querySelector('.performer-heading')?.textContent).toBe('Pattern');
     await user.click(screen.getByRole('button', { name: 'Juggler 1 left beat 1 empty' }));
     await user.click(screen.getByRole('button', { name: 'LIFT' }));
-    const renderer = screen.getByRole('region', { name: 'Sequence renderer' });
-    expect(renderer).toHaveAttribute('data-performer-count', '3');
-    expect(renderer).toHaveAttribute('data-notation-count', '3');
+    const rendererModel = container.querySelector('[data-performer-count]');
+    expect(rendererModel).toHaveAttribute('data-performer-count', '3');
+    expect(rendererModel).toHaveAttribute('data-notation-count', '3');
   });
 
   it('shows a participant count control for circle passing', async () => {
