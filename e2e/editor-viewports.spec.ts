@@ -173,8 +173,33 @@ test('PWA manifest is installable and the app shell reloads offline', async ({ p
   expect(cacheCoverage.paths.some((path) => path.endsWith('.js'))).toBe(true);
   expect(cacheCoverage.missing).toEqual([]);
 
+  const serviceWorkerState = await page.evaluate(async () => {
+    const registration = await navigator.serviceWorker.ready;
+    const appShellUrl = new URL('index.html', registration.scope).href;
+    const cacheName = (await caches.keys()).find((key) => key.startsWith('points-workspace-'));
+    const cache = cacheName ? await caches.open(cacheName) : undefined;
+    return {
+      scope: registration.scope,
+      controller: navigator.serviceWorker.controller?.scriptURL ?? null,
+      appShellUrl,
+      appShellCached: Boolean(cache && await cache.match(appShellUrl)),
+    };
+  });
+  console.log('PWA service worker state before offline reload:', JSON.stringify(serviceWorkerState));
   await context.setOffline(true);
-  await page.reload();
+  const offlineResponse = await page.reload();
+  const offlineState = await page.evaluate(() => ({
+    url: location.href,
+    title: document.title,
+    bodyText: document.body.innerText.slice(0, 500),
+    html: document.documentElement.outerHTML.slice(0, 1000),
+    controller: navigator.serviceWorker.controller?.scriptURL ?? null,
+  }));
+  console.log('PWA offline reload diagnostics:', JSON.stringify({
+    responseStatus: offlineResponse?.status() ?? null,
+    state: offlineState,
+  }));
+  await page.screenshot({ path: 'test-results/07-pwa-offline-reload.png', fullPage: true });
   await expect(page.locator('.app-root')).toBeVisible();
   await expect(page.getByRole('region', { name: 'Notation editor' })).toBeVisible();
   await expect(page.getByRole('region', { name: 'Sequence renderer' })).toBeVisible();
