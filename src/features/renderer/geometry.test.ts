@@ -10,6 +10,7 @@ import {
   getObjectPosition,
   getPassMeetingPoint,
   getPerformerAnchor,
+  getPerformerFacing,
   getPerformerSpacingRadius,
   getTableFootprint,
   getTablePositionPosition,
