@@ -169,6 +169,27 @@ describe('renderer geometry', () => {
     expect(Math.hypot(points[1]!.x - points[2]!.x, points[1]!.z - points[2]!.z)).toBeGreaterThanOrEqual(0.7);
   });
 
+  it.each(Array.from({ length: 18 }, (_, index) => index + 3))(
+    'keeps all three positions per edge separated for %i polygon participants',
+    (participantCount) => {
+      const base = sequence(participantCount, { type: 'polygon', sideCount: participantCount });
+      const positions = base.performers.flatMap((performer) => ['A', 'B', 'C'].map((name) => ({
+        id: asPositionId(name + '-' + performer.id),
+        kind: 'table' as const,
+        name,
+        owner: { kind: 'performer' as const, performerId: performer.id },
+      })));
+      const value = { ...base, sequenceType: 'circle-passing' as const, positions };
+      const points = positions.map((position) => getTablePositionPosition(value, position, 'circle'));
+      for (let i = 0; i < points.length; i += 1) {
+        for (let j = i + 1; j < points.length; j += 1) {
+          const distance = Math.hypot(points[i]!.x - points[j]!.x, points[i]!.z - points[j]!.z);
+          expect(distance).toBeGreaterThan(0.4);
+        }
+      }
+    },
+  );
+
   it('places circle performers close to the table without overlapping neighbours', () => {
     const value = { ...sequence(10, { type: 'polygon', sideCount: 10 }), sequenceType: 'circle-passing' as const };
     const anchors = value.performers.map((performer) => getPerformerAnchor(value, performer, 'circle'));
