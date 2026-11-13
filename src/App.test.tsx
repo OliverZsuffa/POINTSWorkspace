@@ -14,7 +14,7 @@ vi.mock('./features/renderer/SequenceRenderer', () => ({
     >
       <button type="button">Play</button>
       {sequence.sequenceType === 'circle-passing' && <div aria-label="Visual jugglers">
-        <button type="button" aria-label="Remove visual juggler" onClick={() => onVisualParticipantCountChange(Math.max(3, visualParticipantCount - 1))} disabled={visualParticipantCount <= 3}>−</button>
+        <button type="button" aria-label="Remove visual juggler" onClick={() => onVisualParticipantCountChange(Math.max(2, visualParticipantCount - 1))} disabled={visualParticipantCount <= 2}>−</button>
         <output aria-label="Visual juggler count">{visualParticipantCount}</output>
         <button type="button" aria-label="Add visual juggler" onClick={() => onVisualParticipantCountChange(visualParticipantCount + 1)}>+</button>
       </div>}
@@ -71,6 +71,9 @@ describe('sequence editor', () => {
     await user.click(screen.getByRole('button', { name: 'CLAP' }));
     expect(screen.getByRole('button', { name: 'Juggler 1 right beat 1 Clap' })).toBeInTheDocument();
     expect(screen.getAllByLabelText('Linked SPECIAL')).toHaveLength(2);
+    expect(screen.getAllByLabelText('Clap')).toHaveLength(2);
+    expect(screen.getAllByLabelText('Clap')[0]).toHaveClass('clap-symbol');
+    expect(screen.getAllByLabelText('Clap')[0].querySelector('.clap-bar')).toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: 'Delete' }));
 
@@ -210,6 +213,18 @@ describe('sequence editor', () => {
     expect(liftCell.querySelector('tspan')?.textContent).toBe('a');
     expect(screen.getByLabelText('Recipient')).toBeInTheDocument();
     expect(screen.getAllByLabelText('Hand')).toHaveLength(1);
+  });
+
+  it('allows two visual participants in circle passing without adding authored performers', async () => {
+    const user = userEvent.setup();
+    render(<App />);
+    await user.click(screen.getByRole('button', { name: 'Settings' }));
+    await user.selectOptions(screen.getByLabelText('Type'), 'circle-passing');
+    await user.click(screen.getByRole('button', { name: 'Remove visual juggler' }));
+    expect(screen.getByLabelText('Visual juggler count')).toHaveTextContent('2');
+    expect(screen.getByRole('region', { name: 'Sequence renderer' })).toHaveAttribute('data-performer-count', '2');
+    expect(screen.getByRole('button', { name: 'Juggler 1 left beat 1 empty' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Juggler 2 left beat 1 empty' })).not.toBeInTheDocument();
   });
 
   it('uses the acting performer as the default circle passing target', async () => {
