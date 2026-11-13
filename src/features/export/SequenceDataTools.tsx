@@ -14,6 +14,10 @@ export default function SequenceDataTools({ sequence, onReplace }: Props) {
   const [message, setMessage] = useState('');
   const [query, setQuery] = useState('');
   const [open, setOpen] = useState(false);
+  const [includeSettings, setIncludeSettings] = useState(true);
+  const [includePerformerNames, setIncludePerformerNames] = useState(true);
+  const [includeCode, setIncludeCode] = useState(true);
+  const [includeObjectState, setIncludeObjectState] = useState(true);
   const presets = useMemo(() => searchPresets(query), [query]);
   const currentCode = useMemo(() => sequenceCodec.encode(sequence), [sequence]);
 
@@ -53,9 +57,15 @@ export default function SequenceDataTools({ sequence, onReplace }: Props) {
         <button type="button" onClick={() => setOpen((value) => !value)} aria-expanded={open}>Code, presets and export {open ? '−' : '+'}</button>
       </div>
       {open && <div className="data-tools-content">
+        <div className="export-options" aria-label="PNG export contents">
+          <label><input type="checkbox" checked={includeSettings} onChange={(event) => setIncludeSettings(event.target.checked)} /> Settings</label>
+          <label><input type="checkbox" checked={includePerformerNames} onChange={(event) => setIncludePerformerNames(event.target.checked)} /> Performer names</label>
+          <label><input type="checkbox" checked={includeCode} onChange={(event) => setIncludeCode(event.target.checked)} /> Sequence code</label>
+          <label><input type="checkbox" checked={includeObjectState} onChange={(event) => setIncludeObjectState(event.target.checked)} /> Initial object state</label>
+        </div>
         <div className="data-tools-row">
           <button type="button" onClick={copyCode}>Copy sequence code</button>
-          <button type="button" onClick={() => void exportSequencePng(sequence).catch((error: unknown) => setMessage(error instanceof Error ? error.message : 'Image export failed.'))}>Export PNG</button>
+          <button type="button" onClick={() => void exportSequencePng(sequence, { includeSettings, includePerformerNames, includeCode, includeObjectState }).catch((error: unknown) => setMessage(error instanceof Error ? error.message : 'Image export failed.'))}>Export PNG</button>
         </div>
         <label>Import sequence code
           <textarea value={code} onChange={(event) => setCode(event.target.value)} rows={3} spellCheck={false} placeholder="Paste a POINTS sequence code" />
