@@ -1113,9 +1113,9 @@ export default function App() {
       const originalPerformers = sequence.performers;
       const visualCount = Math.max(3, originalPerformers.length);
       setVisualParticipantCount(visualCount);
-      const baseTables = sequence.positions.filter((position) => position.kind === 'table' &&
+      const baseTables = sequence.positions.filter((position): position is Extract<PositionDefinition, { kind: 'table' }> => position.kind === 'table' &&
         position.owner.kind === 'performer' && position.owner.performerId === representative.id);
-      const baseBacks = sequence.positions.filter((position) => position.kind === 'hand-back' && position.performerId === representative.id);
+      const baseBacks = sequence.positions.filter((position): position is Extract<PositionDefinition, { kind: 'hand-back' }> => position.kind === 'hand-back' && position.performerId === representative.id);
       const representativeIndex = originalPerformers.findIndex((person) => person.id === representative.id);
       const mapPerformerIndex = (performerId: string) => {
         const sourceIndex = originalPerformers.findIndex((person) => person.id === performerId);
