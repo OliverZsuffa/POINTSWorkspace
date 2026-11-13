@@ -129,11 +129,29 @@ describe('renderer geometry', () => {
     }
   });
 
-  it('uses exactly one polygon side per circle passing participant', () => {
-    const value = { ...sequence(10, { type: 'rectangle', longSideSeatCount: 10, shortSideSeatCount: 0 }), sequenceType: 'circle-passing' as const };
+  it('uses the configured polygon side count for circle passing projections', () => {
+    const value = { ...sequence(10, { type: 'polygon', sideCount: 10 }), sequenceType: 'circle-passing' as const };
     const footprint = getTableFootprint(value);
     expect(footprint.round).toBe(true);
     expect(footprint.sideCount).toBe(value.performers.length);
+  });
+
+  it('gives three circle participants nine distinct table positions', () => {
+    const base = sequence(3, { type: 'polygon', sideCount: 3 });
+    const positions = base.performers.flatMap((performer) => ['A', 'B', 'C'].map((name) => ({
+      id: asPositionId(name + '-' + performer.id),
+      kind: 'table' as const,
+      name,
+      owner: { kind: 'performer' as const, performerId: performer.id },
+    })));
+    const value = { ...base, sequenceType: 'circle-passing' as const, positions };
+    const points = positions.map((position) => getTablePositionPosition(value, position, 'circle'));
+    for (let i = 0; i < points.length; i += 1) {
+      for (let j = i + 1; j < points.length; j += 1) {
+        const distance = Math.hypot(points[i]!.x - points[j]!.x, points[i]!.z - points[j]!.z);
+        expect(distance).toBeGreaterThan(0.4);
+      }
+    }
   });
 
   it('keeps owned positions distinct along a circle table edge', () => {
