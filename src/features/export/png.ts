@@ -1,4 +1,5 @@
 import type { Sequence, NotationEntry } from '../../domain/model';
+import { simulateSequence } from '../../domain/state';
 import { sequenceCodec } from '../data/codec';
 
 const CELL = 54;
@@ -28,10 +29,11 @@ function escapeXml(value: string): string {
   return value.replace(/[&<>"']/g, (character) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&apos;' })[character]!);
 }
 
-function makeSvg(sequence: Sequence, performers: readonly Sequence['performers'][number][], page: number, pageCount: number): string {
+function makeSvg(sequence: Sequence, performers: readonly Sequence['performers'][number][], page: number, pageCount: number, invalidEntries: ReadonlySet<string>): string {
   const width = 180 + sequence.beats.length * CELL;
-  const height = HEADER + performers.length * 2 * ROW + FOOTER;
   const code = sequenceCodec.encode(sequence);
+  const codeLines = code.match(/.{1,110}/g) ?? [code];
+  const height = HEADER + performers.length * 2 * ROW + 28 + codeLines.length * 12;
   const parts: string[] = [
     `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">`,
     '<rect width="100%" height="100%" fill="#ffffff"/>',
@@ -59,7 +61,8 @@ function makeSvg(sequence: Sequence, performers: readonly Sequence['performers']
           const x = x0 + beatIndex * CELL;
           const label = entryText(entry, sequence);
           const special = entry.action.type === 'SPECIAL';
-          const color = special ? '#8b5cf6' : entry.action.type === 'ZIP' ? '#0f766e' : '#172033';
+          const invalid = invalidEntries.has(entry.id);
+          const color = invalid ? '#dc2626' : special ? '#8b5cf6' : entry.action.type === 'ZIP' ? '#0f766e' : '#172033';
           if (entry.action.type === 'HOLD') {
             parts.push(`<path d="M${x + 4} ${rowY + 5}h${CELL - 8} M${x + 4} ${rowY + ROW - 5}h${CELL - 8}" stroke="${color}" stroke-width="3"/>`);
           } else {
@@ -83,8 +86,9 @@ function makeSvg(sequence: Sequence, performers: readonly Sequence['performers']
     }
     return (ball?.id ?? '?') + ' at ' + location;
   }).join(' · ');
-  parts.push(`<text x="24" y="${height - 48}" font-size="11">Initial objects: ${escapeXml(state || 'None')}</text>`);
-  parts.push(`<text x="24" y="${height - 25}" font-size="9" fill="#64748b">Code: ${escapeXml(code.slice(0, 100))}${code.length > 100 ? '…' : ''}</text>`);
+  parts.push(`<text x="24" y="${height - 16 - codeLines.length * 12}" font-size="11">Initial objects: ${escapeXml(state || 'None')}</text>`);
+  codeLines.forEach((line, index) => parts.push(`<text x="24" y="${height - 18 - (codeLines.length - index - 1) * 12}" font-size="8" fill="#64748b">Code: ${escapeXml(line)}</text>`));
+  if (invalidEntries.size) parts.push(`<text x="${width - 12}" y="36" text-anchor="end" font-size="10" fill="#dc2626">Red marks invalid notation</text>`);
   parts.push('</g></svg>');
   return parts.join('');
 }
@@ -119,6 +123,7 @@ async function svgToPng(svg: string): Promise<Blob> {
 }
 
 export async function exportSequencePng(sequence: Sequence): Promise<void> {
+  const invalidEntries = new Set(simulateSequence(sequence).validation.issues.flatMap((issue) => issue.affectedEntries));
   const groups: Sequence['performers'][number][][] = [];
   let current: Sequence['performers'][number][] = [];
   for (const performer of sequence.performers) {
@@ -132,7 +137,7 @@ export async function exportSequencePng(sequence: Sequence): Promise<void> {
   if (current.length || groups.length === 0) groups.push(current);
   const segmented = groups.length > 1;
   for (let index = 0; index < groups.length; index += 1) {
-    const svg = makeSvg(sequence, groups[index]!, index + 1, groups.length);
+    const svg = makeSvg(sequence, groups[index]!, index + 1, groups.length, invalidEntries);
     const blob = await svgToPng(svg);
     downloadBlob(blob, segmented ? `points-sequence-${index + 1}.png` : 'points-sequence.png');
   }
