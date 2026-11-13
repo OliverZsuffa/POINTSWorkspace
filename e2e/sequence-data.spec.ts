@@ -13,11 +13,12 @@ test('sequence code can be shown, imported and undone', async ({ page }) => {
   await page.getByRole('button', { name: /Individual passing/ }).click();
   await expect(page.locator('button[title="Undo"]')).toBeEnabled();
 
+  await page.getByRole('button', { name: /Code, presets and export/ }).click();
   await codeField.fill(originalCode);
   page.once('dialog', (dialog) => dialog.accept());
   await page.getByRole('button', { name: 'Import', exact: true }).click();
-  await expect(page.getByRole('button', { name: 'Undo' })).toBeEnabled();
-  await page.getByRole('button', { name: 'Undo' }).click();
+  await expect(page.locator('button[title="Undo"]')).toBeEnabled();
+  await page.locator('button[title="Undo"]').click();
   await page.getByRole('button', { name: 'Show current code' }).click();
   await expect(codeField).not.toHaveValue('');
 });
@@ -41,7 +42,7 @@ test('curated presets can be searched and loaded', async ({ page }) => {
   await expect(page.getByRole('button', { name: /Solo basics/ })).toBeVisible();
   page.once('dialog', (dialog) => dialog.accept());
   await page.getByRole('button', { name: /Solo basics/ }).click();
-  await expect(page.getByRole('button', { name: 'Undo' })).toBeEnabled();
+  await expect(page.locator('button[title="Undo"]')).toBeEnabled();
 });
 
 test('sequence can be exported as a PNG', async ({ page }) => {
