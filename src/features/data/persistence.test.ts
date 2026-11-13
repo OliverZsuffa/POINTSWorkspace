@@ -1,8 +1,13 @@
-import { beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { representativeSoloSequence } from '../../fixtures/sequences';
 import { clearSavedSequence, restoreSequence, saveSequence } from './persistence';
 
 describe('tab local sequence persistence', () => {
+  afterEach(() => {
+    sessionStorage.clear();
+    localStorage.clear();
+  });
+
   beforeEach(() => {
     sessionStorage.clear();
     localStorage.clear();
