@@ -9,442 +9,558 @@ import {
   asSequenceId, asSubdivisionId,
 } from '../../domain/ids';
 
-const PREFIX = 'P2.';
-type Packed = unknown[];
+const PREFIX = 'P3;';
+const SECTION_NAMES = ['S', 'Q', 'T', 'B', 'P', 'X', 'O', 'I', 'D', 'A', 'J', 'M', 'C'] as const;
+type SectionName = (typeof SECTION_NAMES)[number];
+type Sections = Record<SectionName, string>;
 
-const ACTION_TO_CODE: Record<NotationAction['type'], string> = {
-  HOLD: 'H', LIFT: 'L', LEAVE: 'V', BOUNCE: 'B', TAP: 'T', EMPTY: 'E', ZIP: 'Z', SPECIAL: 'S',
+const ACTION_CODES: Record<NotationAction['type'], string> = {
+  HOLD: 'H',
+  LIFT: 'L',
+  LEAVE: 'V',
+  BOUNCE: 'B',
+  TAP: 'T',
+  EMPTY: 'E',
+  ZIP: 'Z',
+  SPECIAL: 'S',
 };
-const CODE_TO_ACTION = Object.fromEntries(Object.entries(ACTION_TO_CODE).map(([key, value]) => [value, key])) as Record<string, NotationAction['type']>;
 
 function indexOf<T extends { readonly id: string }>(items: readonly T[], id: string): number {
   const index = items.findIndex((item) => item.id === id);
-  if (index < 0) throw new Error(`Unknown reference: ${id}`);
+  if (index < 0) throw new Error(`Unknown sequence reference: ${id}`);
   return index;
 }
-function fraction(value: { numerator: number; denominator: number }): string {
-  return value.denominator === 1 ? String(value.numerator) : `${value.numerator}/${value.denominator}`;
+
+function numberText(value: number): string {
+  if (!Number.isFinite(value)) throw new Error('Sequence numbers must be finite.');
+  return Object.is(value, -0) ? '-0' : String(value);
 }
-function parseFraction(value: string): { numerator: number; denominator: number } {
-  if (!/^-?(?:0|[1-9]\d*)(?:\/[1-9]\d*)?$/.test(value)) throw new Error('Invalid fraction');
-  const [n, d] = value.split('/');
-  const numerator = Number(n);
-  const denominator = d === undefined ? 1 : Number(d);
-  if (!Number.isSafeInteger(numerator) || !Number.isSafeInteger(denominator) || denominator <= 0) throw new Error('Invalid fraction');
+
+function integerText(value: number): string {
+  if (!Number.isSafeInteger(value)) throw new Error('Sequence integer is outside the safe integer range.');
+  return String(value);
+}
+
+function parseNumber(value: string, label: string): number {
+  if (!/^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?$/.test(value)) {
+    throw new Error(`Invalid ${label}.`);
+  }
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) throw new Error(`Invalid ${label}.`);
+  return parsed;
+}
+
+function parseInteger(value: string, label: string, minimum = 0): number {
+  if (!/^(?:0|[1-9]\d*)$/.test(value)) throw new Error(`Invalid ${label}.`);
+  const parsed = Number(value);
+  if (!Number.isSafeInteger(parsed) || parsed < minimum) throw new Error(`Invalid ${label}.`);
+  return parsed;
+}
+
+function encodeText(value: string): string {
+  const encoded = encodeURIComponent(value)
+    .replace(/\./g, '%2E')
+    .replace(/~/g, '%7E');
+  return `~${new TextEncoder().encode(value).length}:${encoded}`;
+}
+
+function decodeText(value: string): string {
+  const match = /^~(0|[1-9]\d*):(.*)$/.exec(value);
+  if (!match) throw new Error('Invalid text value.');
+  const decoded = decodeURIComponent(match[2]!);
+  if (new TextEncoder().encode(decoded).length !== Number(match[1])) {
+    throw new Error('Text length does not match its encoded value.');
+  }
+  return decoded;
+}
+
+function encodeRational(value: { numerator: number; denominator: number }): string {
+  if (!Number.isSafeInteger(value.numerator) || !Number.isSafeInteger(value.denominator) || value.denominator <= 0) {
+    throw new Error('Invalid rational value.');
+  }
+  return value.denominator === 1
+    ? integerText(value.numerator)
+    : `${integerText(value.numerator)}/${integerText(value.denominator)}`;
+}
+
+function decodeRational(value: string): { numerator: number; denominator: number } {
+  const match = /^(-?(?:0|[1-9]\d*))(?:\/([1-9]\d*))?$/.exec(value);
+  if (!match) throw new Error('Invalid rational value.');
+  const numerator = Number(match[1]);
+  const denominator = match[2] === undefined ? 1 : Number(match[2]);
+  if (!Number.isSafeInteger(numerator) || !Number.isSafeInteger(denominator)) {
+    throw new Error('Rational value is outside the safe integer range.');
+  }
   return { numerator, denominator };
 }
-function encodeLocation(location: ObjectLocation, sequence: Sequence): Packed {
-  if (location.kind === 'position') return ['P', indexOf(sequence.positions, location.positionId)];
-  if (location.kind === 'hand-held') return ['H', indexOf(sequence.performers, location.performerId), location.hand === 'left' ? 'L' : 'R'];
-  return ['B', indexOf(sequence.positions, location.positionId), indexOf(sequence.performers, location.performerId), location.hand === 'left' ? 'L' : 'R'];
+
+function records(value: string): string[] {
+  return value === '' ? [] : value.split(',');
 }
-function encodeTarget(target: Extract<NotationAction, { type: 'LIFT' | 'LEAVE' | 'BOUNCE' | 'TAP' }>['target'], sequence: Sequence): Packed {
-  if (target.kind === 'position') return ['P', indexOf(sequence.positions, target.positionId)];
-  if (target.kind === 'circle-position') return ['C', target.position, target.direction === 'left' ? 'L' : target.direction === 'right' ? 'R' : '', target.distance === undefined ? 0 : 1, target.distance ?? 0];
-  if (target.kind === 'pass-source') return ['S', indexOf(sequence.performers, target.performerId)];
-  return ['R', indexOf(sequence.performers, target.performerId), target.hand === 'left' ? 'L' : 'R'];
+
+function fields(value: string, count: number, label: string): string[] {
+  const result = value.split('.');
+  if (result.length !== count) throw new Error(`Invalid ${label}.`);
+  return result;
 }
-function encodeAction(action: NotationAction, sequence: Sequence, linkIndex: (id: LinkId) => number): Packed {
-  const code = ACTION_TO_CODE[action.type];
+
+function sectionMap(code: string): Sections {
+  const parts = code.split(';');
+  if (parts[0] !== 'P3' || parts.length !== SECTION_NAMES.length + 1) {
+    throw new Error('Invalid P3 document framing.');
+  }
+  const result = {} as Sections;
+  SECTION_NAMES.forEach((name, index) => {
+    const part = parts[index + 1]!;
+    const separator = part.indexOf(':');
+    if (separator !== 1 || part[0] !== name) throw new Error(`Missing or misplaced ${name} section.`);
+    result[name] = part.slice(separator + 1);
+  });
+  return result;
+}
+
+function encodeTarget(
+  target: Extract<NotationAction, { type: 'LIFT' | 'LEAVE' | 'BOUNCE' | 'TAP' }>['target'],
+  sequence: Sequence,
+): string {
+  if (target.kind === 'position') return `p${indexOf(sequence.positions, target.positionId)}`;
+  if (target.kind === 'circle-position') {
+    const direction = target.direction === 'left' ? 'L' : target.direction === 'right' ? 'R' : '-';
+    const distance = target.distance === undefined ? '-' : numberText(target.distance);
+    return `c${target.position}_${direction}_${distance}`;
+  }
+  if (target.kind === 'pass-source') return `s${indexOf(sequence.performers, target.performerId)}`;
+  return `r${indexOf(sequence.performers, target.performerId)}_${target.hand === 'left' ? 'L' : 'R'}`;
+}
+
+function encodeActionParts(
+  action: NotationAction,
+  sequence: Sequence,
+  linkIndex: (id: LinkId) => number,
+): string[] {
+  const code = ACTION_CODES[action.type];
   switch (action.type) {
-    case 'HOLD': case 'EMPTY': return [code];
-    case 'LIFT': case 'LEAVE': return [code, encodeTarget(action.target, sequence), action.linkId ? linkIndex(action.linkId) : -1];
-    case 'BOUNCE': case 'TAP': return [code, encodeTarget(action.target, sequence)];
-    case 'ZIP': return [code, action.role === 'source' ? 'S' : 'R', linkIndex(action.linkId)];
-    case 'SPECIAL': return [code, action.text, action.linkId ? linkIndex(action.linkId) : -1];
+    case 'HOLD':
+    case 'EMPTY':
+      return [code];
+    case 'LIFT':
+    case 'LEAVE':
+      return [code, encodeTarget(action.target, sequence), action.linkId === undefined ? '-' : `l${linkIndex(action.linkId)}`];
+    case 'BOUNCE':
+    case 'TAP':
+      return [code, encodeTarget(action.target, sequence)];
+    case 'ZIP':
+      return [code, action.role === 'source' ? 'S' : 'R', `l${linkIndex(action.linkId)}`];
+    case 'SPECIAL':
+      return [code, encodeText(action.text), action.linkId === undefined ? '-' : `l${linkIndex(action.linkId)}`];
   }
 }
-function isPacked(value: unknown): value is Packed {
-  return Array.isArray(value);
-}
 
-function encodePacked(value: unknown): string {
-  if (Array.isArray(value)) return `(${value.map(encodePacked).join(',')})`;
-  if (typeof value === 'string') {
-    if (/^[A-Za-z]$/.test(value)) return value;
-    return `~${encodeURIComponent(value).replace(/[()~]/g, (character) => ({ '(': '%28', ')': '%29', '~': '%7E' })[character]!)}`;
+function encodeLocation(location: ObjectLocation, sequence: Sequence): string[] {
+  if (location.kind === 'position') return ['P', String(indexOf(sequence.positions, location.positionId))];
+  if (location.kind === 'hand-held') {
+    return ['H', String(indexOf(sequence.performers, location.performerId)), location.hand === 'left' ? 'L' : 'R'];
   }
-  if (typeof value === 'number' && Number.isFinite(value)) return String(value);
-  throw new Error('Unsupported packed value');
+  return [
+    'B',
+    String(indexOf(sequence.positions, location.positionId)),
+    String(indexOf(sequence.performers, location.performerId)),
+    location.hand === 'left' ? 'L' : 'R',
+  ];
 }
 
-
-function assertPackedSequence(raw: unknown): asserts raw is Packed {
-  const expectTuple = (value: unknown, length: number, label: string): Packed => {
-    if (!isPacked(value) || value.length !== length) throw new Error(`Invalid ${label}`);
-    return value;
-  };
-  const expectInt = (value: unknown, label: string, min = 0): number => {
-    if (typeof value !== 'number' || !Number.isSafeInteger(value) || value < min) throw new Error(`Invalid ${label}`);
-    return value;
-  };
-  const expectText = (value: unknown, label: string): string => {
-    if (typeof value !== 'string') throw new Error(`Invalid ${label}`);
-    return value;
-  };
-  const expectIndex = (value: unknown, length: number, label: string): number => {
-    const index = expectInt(value, label);
-    if (index >= length) throw new Error(`Unknown ${label}`);
-    return index;
-  };
-  const tuple = expectTuple(raw, 12, 'sequence tuple');
-  const [kind, bpm, signatureValue, performerValue, positionValue, ballCount, placementValue, beatValue, notationValue, individualLayout, layoutValue, seatValue] = tuple;
-  if (!['s', 'c', 'i'].includes(String(kind))) throw new Error('Invalid sequence type');
-  if (typeof bpm !== 'number' || !Number.isFinite(bpm)) throw new Error('Invalid BPM');
-  const signature = expectTuple(signatureValue, 3, 'time signature');
-  if (typeof signature[0] !== 'number' || !Number.isFinite(signature[0])) throw new Error('Invalid time signature numerator');
-  const denominator = expectInt(signature[1], 'time signature denominator', 1);
-  if (![1, 2, 4, 8, 16, 32, 64].includes(denominator) || !isPacked(signature[2])) throw new Error('Invalid time signature');
-  signature[2].forEach((group) => {
-    if (typeof group !== 'number' || !Number.isFinite(group)) throw new Error('Invalid beat grouping');
-  });
-
-  if (!isPacked(performerValue)) throw new Error('Invalid performers');
-  const performers = performerValue;
-  performers.forEach((item) => {
-    const performer = expectTuple(item, 3, 'performer');
-    expectText(performer[0], 'performer name');
-    if (performer[1] !== 0 && performer[1] !== 1) throw new Error('Invalid performer identifier flag');
-    expectText(performer[2], 'performer identifier');
-    if (performer[1] === 0 && performer[2] !== '') throw new Error('Unexpected performer identifier');
-  });
-
-  if (!isPacked(positionValue)) throw new Error('Invalid positions');
-  const positions = positionValue;
-  positions.forEach((item) => {
-    if (!isPacked(item)) throw new Error('Invalid position');
-    if (item[0] === 'T') {
-      const position = expectTuple(item, 4, 'table position');
-      expectText(position[1], 'position name');
-      if (position[2] === 'S') {
-        if (position[3] !== -1) throw new Error('Invalid shared position owner');
-      } else if (position[2] === 'P') expectIndex(position[3], performers.length, 'position owner');
-      else throw new Error('Invalid position owner');
-    } else if (item[0] === 'B') {
-      const position = expectTuple(item, 4, 'hand back position');
-      if (!['L', 'R'].includes(expectText(position[1], 'hand back name')) || !['L', 'R'].includes(expectText(position[3], 'hand back hand'))) throw new Error('Invalid hand back position');
-      expectIndex(position[2], performers.length, 'hand back performer');
-    } else throw new Error('Unknown position kind');
-  });
-
-  const ballTotal = expectInt(ballCount, 'ball count');
-  if (!isPacked(placementValue) || !isPacked(beatValue) || !isPacked(notationValue) || !isPacked(seatValue)) throw new Error('Invalid sequence sections');
-  placementValue.forEach((item) => {
-    const placement = expectTuple(item, 2, 'initial placement');
-    expectIndex(placement[0], ballTotal, 'placement ball');
-    if (!isPacked(placement[1]) || typeof placement[1][0] !== 'string') throw new Error('Invalid placement location');
-    const location = placement[1];
-    if (location[0] === 'P') {
-      expectTuple(location, 2, 'position placement');
-      expectIndex(location[1], positions.length, 'placement position');
-    } else if (location[0] === 'H') {
-      expectTuple(location, 3, 'hand held placement');
-      expectIndex(location[1], performers.length, 'held performer');
-      if (!['L', 'R'].includes(expectText(location[2], 'held hand'))) throw new Error('Invalid held hand');
-    } else if (location[0] === 'B') {
-      expectTuple(location, 4, 'hand back placement');
-      expectIndex(location[1], positions.length, 'hand back position');
-      expectIndex(location[2], performers.length, 'hand back performer');
-      const hand = expectText(location[3], 'balanced hand');
-      if (!['L', 'R'].includes(hand)) throw new Error('Invalid balanced hand');
-    } else throw new Error('Unknown placement location');
-  });
-
-  beatValue.forEach((item) => {
-    if (!isPacked(item)) throw new Error('Invalid beat');
-    item.forEach((sub) => {
-      const subdivision = expectTuple(sub, 3, 'subdivision');
-      parseFraction(expectText(subdivision[0], 'subdivision start'));
-      parseFraction(expectText(subdivision[1], 'subdivision duration'));
-      if (typeof subdivision[2] !== 'number' || !Number.isFinite(subdivision[2])) throw new Error('Invalid subdivision depth');
-    });
-  });
-
-  const linkIndexes = new Set<number>();
-  notationValue.forEach((item) => {
-    const entry = expectTuple(item, 5, 'notation entry');
-    expectIndex(entry[0], performers.length, 'notation performer');
-    if (!['L', 'R'].includes(expectText(entry[1], 'notation hand'))) throw new Error('Invalid notation hand');
-    expectIndex(entry[2], beatValue.length, 'notation beat');
-    parseFraction(expectText(entry[3], 'notation offset'));
-    if (!isPacked(entry[4]) || typeof entry[4][0] !== 'string') throw new Error('Invalid notation action');
-    const action = entry[4];
-    const actionType = action[0];
-    if (actionType === 'H' || actionType === 'E') expectTuple(action, 1, 'simple action');
-    else if (actionType === 'L' || actionType === 'V') {
-      expectTuple(action, 3, 'transfer action');
-      const target = action[1];
-      if (!isPacked(target) || typeof target[0] !== 'string') throw new Error('Invalid transfer target');
-      if (target[0] === 'P') {
-        expectTuple(target, 2, 'position target');
-        expectIndex(target[1], positions.length, 'target position');
-      } else if (target[0] === 'C') {
-        const circle = expectTuple(target, 5, 'circle target');
-        if (!['A', 'B', 'C'].includes(expectText(circle[1], 'circle position'))) throw new Error('Invalid circle position');
-        if (!['', 'L', 'R'].includes(expectText(circle[2], 'circle direction'))) throw new Error('Invalid circle direction');
-        if (circle[3] !== 0 && circle[3] !== 1) throw new Error('Invalid circle distance flag');
-        if (typeof circle[4] !== 'number' || !Number.isFinite(circle[4])) throw new Error('Invalid circle distance');
-        if (circle[3] === 0 && circle[4] !== 0) throw new Error('Unexpected circle distance without presence flag');
-      } else if (target[0] === 'S' && actionType === 'L') {
-        expectTuple(target, 2, 'pass source target');
-        expectIndex(target[1], performers.length, 'pass source');
-      } else if (target[0] === 'R' && actionType === 'V') {
-        const recipient = expectTuple(target, 3, 'pass recipient target');
-        expectIndex(recipient[1], performers.length, 'pass recipient');
-        if (!['L', 'R'].includes(expectText(recipient[2], 'pass recipient hand'))) throw new Error('Invalid pass recipient hand');
-      } else throw new Error('Target is not valid for this action');
-      if (action[2] !== -1) linkIndexes.add(expectInt(action[2], 'link index'));
-    } else if (actionType === 'B' || actionType === 'T') {
-      expectTuple(action, 2, 'tap action');
-      const target = action[1];
-      if (!isPacked(target) || typeof target[0] !== 'string') throw new Error('Invalid tap target');
-      if (target[0] === 'P') {
-        expectTuple(target, 2, 'position target');
-        expectIndex(target[1], positions.length, 'target position');
-      } else if (target[0] === 'C') {
-        const circle = expectTuple(target, 5, 'circle target');
-        if (!['A', 'B', 'C'].includes(expectText(circle[1], 'circle position'))) throw new Error('Invalid circle position');
-        if (!['', 'L', 'R'].includes(expectText(circle[2], 'circle direction'))) throw new Error('Invalid circle direction');
-        if (circle[3] !== 0 && circle[3] !== 1) throw new Error('Invalid circle distance flag');
-        if (typeof circle[4] !== 'number' || !Number.isFinite(circle[4])) throw new Error('Invalid circle distance');
-        if (circle[3] === 0 && circle[4] !== 0) throw new Error('Unexpected circle distance without presence flag');
-      } else throw new Error('Invalid tap target kind');
-    } else if (actionType === 'Z') {
-      expectTuple(action, 3, 'ZIP action');
-      if (!['S', 'R'].includes(expectText(action[1], 'ZIP role'))) throw new Error('Invalid ZIP role');
-      linkIndexes.add(expectInt(action[2], 'ZIP link'));
-    } else if (actionType === 'S') {
-      const special = expectTuple(action, 3, 'SPECIAL action');
-      expectText(special[1], 'SPECIAL text');
-      if (special[2] !== -1) linkIndexes.add(expectInt(special[2], 'SPECIAL link'));
-    } else throw new Error('Unknown action code');
-  });
-  const sortedLinks = [...linkIndexes].sort((a, b) => a - b);
-  if (sortedLinks.some((index, position) => index !== position)) throw new Error('Non-contiguous link indexes');
-
-  if (individualLayout !== '' && individualLayout !== 'p' && individualLayout !== 's') throw new Error('Invalid individual passing layout');
-  if (!isPacked(layoutValue) || typeof layoutValue[0] !== 'string') throw new Error('Invalid table layout');
-  if (layoutValue[0] === 'S') expectTuple(layoutValue, 1, 'solo table layout');
-  else if (layoutValue[0] === 'P') {
-    const layout = expectTuple(layoutValue, 2, 'polygon table layout');
-    if (typeof layout[1] !== 'number' || !Number.isFinite(layout[1])) throw new Error('Invalid polygon side count');
-  } else if (layoutValue[0] === 'R') {
-    const layout = expectTuple(layoutValue, 3, 'rectangle table layout');
-    if (typeof layout[1] !== 'number' || !Number.isFinite(layout[1]) || typeof layout[2] !== 'number' || !Number.isFinite(layout[2])) throw new Error('Invalid rectangle seat counts');
-  } else throw new Error('Unknown table layout');
-
-  seatValue.forEach((item) => {
-    if (!isPacked(item) || typeof item[1] !== 'string') throw new Error('Invalid seat');
-    expectIndex(item[0], performers.length, 'seat performer');
-    if (item[1] === 'P') {
-      const seat = expectTuple(item, 3, 'polygon seat');
-      if (typeof seat[2] !== 'number' || !Number.isFinite(seat[2])) throw new Error('Invalid polygon edge index');
-    } else if (item[1] === 'R') {
-      const seat = expectTuple(item, 4, 'rectangle seat');
-      if (!['long-a', 'long-b', 'short-a', 'short-b'].includes(expectText(seat[2], 'rectangle side'))) throw new Error('Invalid rectangle side');
-      if (typeof seat[3] !== 'number' || !Number.isFinite(seat[3])) throw new Error('Invalid rectangle seat index');
-    } else throw new Error('Unknown seat kind');
-  });
+function linkNumber(value: string, optional: boolean): number | undefined {
+  if (value === '-' && optional) return undefined;
+  const match = /^l(0|[1-9]\d*)$/.exec(value);
+  if (!match) throw new Error('Invalid link reference.');
+  return parseInteger(match[1]!, 'link reference');
 }
 
-function decodePacked(source: string): unknown {
-  let cursor = 0;
-  const readValue = (): unknown => {
-    if (source[cursor] === '(') {
-      cursor += 1;
-      const values: unknown[] = [];
-      if (source[cursor] === ')') {
-        cursor += 1;
-        return values;
-      }
-      while (cursor < source.length) {
-        values.push(readValue());
-        if (source[cursor] === ',') {
-          cursor += 1;
-          continue;
-        }
-        if (source[cursor] === ')') {
-          cursor += 1;
-          return values;
-        }
-        throw new Error('Invalid tuple separator');
-      }
-      throw new Error('Unclosed tuple');
-    }
-    if (source[cursor] === '~') {
-      cursor += 1;
-      const start = cursor;
-      while (cursor < source.length && source[cursor] !== ',' && source[cursor] !== ')') cursor += 1;
-      return decodeURIComponent(source.slice(start, cursor));
-    }
-    const start = cursor;
-    while (cursor < source.length && source[cursor] !== ',' && source[cursor] !== ')') cursor += 1;
-    const token = source.slice(start, cursor);
-    if (/^[A-Za-z]$/.test(token)) return token;
-    if (!/^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?$/.test(token)) {
-      throw new Error('Invalid numeric value');
-    }
-    const number = Number(token);
-    if (!Number.isFinite(number)) throw new Error('Invalid numeric value');
-    return number;
-  };
+function targetFromCode(value: string, positions: PositionDefinition[], performers: Performer[]) {
+  if (/^p(0|[1-9]\d*)$/.test(value)) {
+    const index = parseInteger(value.slice(1), 'position reference');
+    const position = positions[index];
+    if (!position) throw new Error('Unknown position reference.');
+    return { kind: 'position' as const, positionId: position.id };
+  }
+  const circle = /^c([ABC])_([LR-])_(-|(?:-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?))$/.exec(value);
+  if (circle) {
+    return {
+      kind: 'circle-position' as const,
+      position: circle[1] as 'A' | 'B' | 'C',
+      ...(circle[2] === '-' ? {} : { direction: circle[2] === 'L' ? 'left' as const : 'right' as const }),
+      ...(circle[3] === '-' ? {} : { distance: parseNumber(circle[3], 'circle distance') }),
+    };
+  }
+  const source = /^s(0|[1-9]\d*)$/.exec(value);
+  if (source) {
+    const performer = performers[parseInteger(source[1]!, 'pass source')];
+    if (!performer) throw new Error('Unknown pass source.');
+    return { kind: 'pass-source' as const, performerId: performer.id };
+  }
+  const recipient = /^r(0|[1-9]\d*)_([LR])$/.exec(value);
+  if (recipient) {
+    const performer = performers[parseInteger(recipient[1]!, 'pass recipient')];
+    if (!performer) throw new Error('Unknown pass recipient.');
+    return { kind: 'pass-recipient-hand' as const, performerId: performer.id, hand: recipient[2] === 'L' ? 'left' as const : 'right' as const };
+  }
+  throw new Error('Unknown action target.');
+}
 
-  const value = readValue();
-  if (cursor !== source.length) throw new Error('Trailing packed data');
-  return value;
-}
-function decodeTarget(value: unknown, positions: PositionDefinition[], performers: Performer[]) {
-  if (!isPacked(value)) throw new Error('Invalid action target');
-  if (value[0] === 'P') return { kind: 'position' as const, positionId: positions[Number(value[1])]!.id };
-  if (value[0] === 'C') return {
-    kind: 'circle-position' as const, position: value[1] as 'A' | 'B' | 'C',
-    ...(value[2] === 'L' || value[2] === 'R' ? { direction: value[2] === 'L' ? 'left' as const : 'right' as const } : {}),
-    ...(value[3] === 1 ? { distance: Number(value[4]) } : {}),
-  };
-  if (value[0] === 'S') return { kind: 'pass-source' as const, performerId: performers[Number(value[1])]!.id };
-  if (value[0] === 'R') return { kind: 'pass-recipient-hand' as const, performerId: performers[Number(value[1])]!.id, hand: value[2] === 'L' ? 'left' as const : 'right' as const };
-  throw new Error('Unknown target kind');
-}
-function decodeAction(value: unknown, positions: PositionDefinition[], performers: Performer[], links: LinkId[]): NotationAction {
-  if (!isPacked(value) || typeof value[0] !== 'string') throw new Error('Invalid action');
-  const type = CODE_TO_ACTION[value[0]];
-  if (!type) throw new Error('Unknown action code');
-  const link = (index: unknown): LinkId | undefined => {
-    if (index === -1) return undefined;
-    if (typeof index !== 'number' || !Number.isSafeInteger(index) || index < 0 || !links[index]) {
-      throw new Error('Invalid link reference');
-    }
-    return links[index];
+function decodeAction(
+  parts: string[],
+  positions: PositionDefinition[],
+  performers: Performer[],
+  links: LinkId[],
+): NotationAction {
+  const type = parts[0];
+  const getLink = (value: string, optional: boolean): LinkId | undefined => {
+    const index = linkNumber(value, optional);
+    if (index === undefined) return undefined;
+    const link = links[index];
+    if (!link) throw new Error('Unknown link reference.');
+    return link;
   };
   switch (type) {
-    case 'HOLD': return { type };
-    case 'EMPTY': return { type };
-    case 'LIFT': return { type, target: decodeTarget(value[1], positions, performers) as Extract<NotationAction, { type: 'LIFT' }>['target'], ...(link(value[2]) ? { linkId: link(value[2]) } : {}) };
-    case 'LEAVE': return { type, target: decodeTarget(value[1], positions, performers) as Extract<NotationAction, { type: 'LEAVE' }>['target'], ...(link(value[2]) ? { linkId: link(value[2]) } : {}) };
-    case 'BOUNCE': return { type, target: decodeTarget(value[1], positions, performers) as Extract<NotationAction, { type: 'BOUNCE' }>['target'] };
-    case 'TAP': return { type, target: decodeTarget(value[1], positions, performers) as Extract<NotationAction, { type: 'TAP' }>['target'] };
-    case 'ZIP': {
-      const linkId = link(value[2]);
-      if (!linkId || (value[1] !== 'S' && value[1] !== 'R')) throw new Error('Invalid ZIP action');
-      return { type, role: value[1] === 'S' ? 'source' : 'receiver', linkId };
+    case 'H':
+      if (parts.length !== 1) throw new Error('Invalid HOLD action.');
+      return { type: 'HOLD' };
+    case 'E':
+      if (parts.length !== 1) throw new Error('Invalid EMPTY action.');
+      return { type: 'EMPTY' };
+    case 'L': {
+      if (parts.length !== 3) throw new Error('Invalid LIFT action.');
+      const target = targetFromCode(parts[1]!, positions, performers);
+      if (target.kind === 'pass-recipient-hand') throw new Error('Invalid LIFT target.');
+      return { type: 'LIFT', target, ...(getLink(parts[2]!, true) ? { linkId: getLink(parts[2]!, true) } : {}) };
     }
-    case 'SPECIAL': return { type, text: String(value[1]), ...(link(value[2]) ? { linkId: link(value[2]) } : {}) };
+    case 'V': {
+      if (parts.length !== 3) throw new Error('Invalid LEAVE action.');
+      const target = targetFromCode(parts[1]!, positions, performers);
+      if (target.kind === 'pass-source') throw new Error('Invalid LEAVE target.');
+      return { type: 'LEAVE', target, ...(getLink(parts[2]!, true) ? { linkId: getLink(parts[2]!, true) } : {}) };
+    }
+    case 'B':
+    case 'T': {
+      if (parts.length !== 2) throw new Error('Invalid tap action.');
+      const target = targetFromCode(parts[1]!, positions, performers);
+      if (target.kind !== 'position' && target.kind !== 'circle-position') throw new Error('Invalid tap target.');
+      return type === 'B' ? { type: 'BOUNCE', target } : { type: 'TAP', target };
+    }
+    case 'Z': {
+      if (parts.length !== 3 || (parts[1] !== 'S' && parts[1] !== 'R')) throw new Error('Invalid ZIP action.');
+      const linkId = getLink(parts[2]!, false);
+      if (!linkId) throw new Error('Invalid ZIP link.');
+      return { type: 'ZIP', role: parts[1] === 'S' ? 'source' : 'receiver', linkId };
+    }
+    case 'S': {
+      if (parts.length !== 3) throw new Error('Invalid SPECIAL action.');
+      const linkId = getLink(parts[2]!, true);
+      return { type: 'SPECIAL', text: decodeText(parts[1]!), ...(linkId ? { linkId } : {}) };
+    }
+    default:
+      throw new Error('Unknown action code.');
   }
+}
+
+function parseStream(value: string): { performer: number; hand: 'left' | 'right'; events: string[] } {
+  const first = value.indexOf(':');
+  const second = value.indexOf(':', first + 1);
+  if (first < 1 || second < 0) throw new Error('Invalid action stream.');
+  const performer = parseInteger(value.slice(0, first), 'stream performer');
+  const handCode = value.slice(first + 1, second);
+  if (handCode !== 'L' && handCode !== 'R') throw new Error('Invalid stream hand.');
+  const eventText = value.slice(second + 1);
+  return { performer, hand: handCode === 'L' ? 'left' : 'right', events: eventText === '-' ? [] : eventText.split('+') };
 }
 
 export const sequenceCodec: SequenceCodec = {
   encode(sequence) {
-    const performer = (id: string) => indexOf(sequence.performers, id);
-    const ball = (id: string) => indexOf(sequence.balls, id);
-    const beat = (id: string) => indexOf(sequence.beats, id);
-    const links = [...new Set(sequence.notation.flatMap((entry) => 'linkId' in entry.action && entry.action.linkId ? [entry.action.linkId] : []))];
+    const performerIndex = (id: string) => indexOf(sequence.performers, id);
+    const ballIndex = (id: string) => indexOf(sequence.balls, id);
+    const beatIndex = (id: string) => indexOf(sequence.beats, id);
+    const linkIds = [...new Set(sequence.notation.flatMap(({ action }) =>
+      'linkId' in action && action.linkId !== undefined ? [action.linkId] : [],
+    ))];
     const linkIndex = (id: LinkId) => {
-      const index = links.indexOf(id);
-      if (index < 0) throw new Error('Unknown link');
+      const index = linkIds.indexOf(id);
+      if (index < 0) throw new Error('Unknown link reference.');
       return index;
     };
-    const performers: Packed = sequence.performers.map((item) => [item.name, item.identifier === undefined ? 0 : 1, item.identifier ?? '']);
-    const positions: Packed = sequence.positions.map((item) => item.kind === 'table'
-      ? ['T', item.name, item.owner.kind === 'shared' ? 'S' : 'P', item.owner.kind === 'shared' ? -1 : performer(item.owner.performerId)]
-      : ['B', item.name, performer(item.performerId), item.hand === 'left' ? 'L' : 'R']);
-    const beats: Packed = sequence.beats.map((item) => item.subdivisions.map((sub) => [fraction(sub.start), fraction(sub.duration), sub.depth]));
-    const placements: Packed = sequence.initialState.placements.map((item) => [ball(item.ballId), encodeLocation(item.location, sequence)]);
-    const notation: Packed = sequence.notation.map((entry) => [
-      performer(entry.performerId), entry.hand === 'left' ? 'L' : 'R', beat(entry.time.beatId),
-      fraction(entry.time.offset), encodeAction(entry.action, sequence, linkIndex),
-    ]);
-    const seats: Packed = sequence.seatAssignments.map((item) => {
-      const seat = item.seat;
-      return seat.kind === 'polygon-edge'
-        ? [performer(item.performerId), 'P', seat.edgeIndex]
-        : [performer(item.performerId), 'R', seat.side, seat.seatIndex];
-    });
-    const layout = sequence.tableLayout.type === 'solo' ? ['S']
-      : sequence.tableLayout.type === 'polygon' ? ['P', sequence.tableLayout.sideCount]
-        : ['R', sequence.tableLayout.longSideSeatCount, sequence.tableLayout.shortSideSeatCount];
-    const packed: Packed = [
-      sequence.sequenceType === 'solo' ? 's' : sequence.sequenceType === 'circle-passing' ? 'c' : 'i',
-      sequence.bpm,
-      [sequence.timeSignature.numerator, sequence.timeSignature.denominator, sequence.timeSignature.beatGrouping],
-      performers, positions, sequence.balls.length, placements, beats, notation,
-      sequence.individualPassingLayout === 'per-performer-positions' ? 'p' : sequence.individualPassingLayout === 'shared-positions' ? 's' : '',
-      layout, seats,
-    ];
-    // Readable action initials remain visible in the action stream. Tuple keys and UUIDs are omitted.
-    return PREFIX + encodePacked(packed);
+
+    const sequenceType = sequence.sequenceType === 'solo' ? 's'
+      : sequence.sequenceType === 'circle-passing' ? 'c' : 'i';
+    const timeSignature = [
+      numberText(sequence.timeSignature.numerator),
+      numberText(sequence.timeSignature.denominator),
+      sequence.timeSignature.beatGrouping.length
+        ? sequence.timeSignature.beatGrouping.map(numberText).join('+')
+        : '-',
+    ].join('.');
+    const performers = sequence.performers.map((performer) =>
+      `${encodeText(performer.name)}.${performer.identifier === undefined ? '-' : encodeText(performer.identifier)}`,
+    ).join(',');
+    const positions = sequence.positions.map((position) => position.kind === 'table'
+      ? `T.${encodeText(position.name)}.${position.owner.kind === 'shared' ? 's' : `p${performerIndex(position.owner.performerId)}`}`
+      : `B.${position.name}.${performerIndex(position.performerId)}.${position.hand === 'left' ? 'L' : 'R'}`,
+    ).join(',');
+    const placements = sequence.initialState.placements.map((placement) => [
+      String(ballIndex(placement.ballId)),
+      ...encodeLocation(placement.location, sequence),
+    ].join('.')).join(',');
+    const subdivisions = sequence.beats.flatMap((beat, beatIndexValue) =>
+      beat.subdivisions.map((subdivision) => [
+        String(beatIndexValue),
+        encodeRational(subdivision.start),
+        encodeRational(subdivision.duration),
+        numberText(subdivision.depth),
+      ].join('.')),
+    ).join(',');
+    const streams = sequence.performers.flatMap((performer, performerPosition) =>
+      (['left', 'right'] as const).map((hand) => {
+        const handCode = hand === 'left' ? 'L' : 'R';
+        const events = sequence.notation.flatMap((entry, ordinal) =>
+          entry.performerId === performer.id && entry.hand === hand
+            ? [[
+                String(ordinal),
+                String(beatIndex(entry.time.beatId)),
+                encodeRational(entry.time.offset),
+                ...encodeActionParts(entry.action, sequence, linkIndex),
+              ].join('.')]
+            : [],
+        );
+        return `${performerPosition}:${handCode}:${events.length ? events.join('+') : '-'}`;
+      }),
+    ).join(',');
+    const individualLayout = sequence.individualPassingLayout === undefined ? 'n'
+      : sequence.individualPassingLayout === 'shared-positions' ? 's' : 'p';
+    const tableLayout = sequence.tableLayout.type === 'solo' ? 's'
+      : sequence.tableLayout.type === 'polygon' ? `p${numberText(sequence.tableLayout.sideCount)}`
+        : `r${numberText(sequence.tableLayout.longSideSeatCount)}.${numberText(sequence.tableLayout.shortSideSeatCount)}`;
+    const seats = sequence.seatAssignments.map((assignment) => assignment.seat.kind === 'polygon-edge'
+      ? `${performerIndex(assignment.performerId)}.P.${numberText(assignment.seat.edgeIndex)}`
+      : `${performerIndex(assignment.performerId)}.R.${assignment.seat.side}.${numberText(assignment.seat.seatIndex)}`,
+    ).join(',');
+
+    return [
+      'P3',
+      `S:${sequenceType}`,
+      `Q:${numberText(sequence.bpm)}`,
+      `T:${timeSignature}`,
+      `B:${sequence.beats.length}`,
+      `P:${performers}`,
+      `X:${positions}`,
+      `O:${sequence.balls.length}`,
+      `I:${placements}`,
+      `D:${subdivisions}`,
+      `A:${streams}`,
+      `J:${individualLayout}`,
+      `M:${tableLayout}`,
+      `C:${seats}`,
+    ].join(';');
   },
+
   decode(code): SequenceDecodeResult {
     const trimmed = code.trim();
-    if (!trimmed.startsWith('P')) return { ok: false, code: 'malformed', message: 'This is not a POINTS sequence code.' };
-    if (!trimmed.startsWith(PREFIX)) return { ok: false, code: 'unsupported-version', message: 'This sequence code uses an unsupported format version.' };
+    if (!trimmed.startsWith('P')) {
+      return { ok: false, code: 'malformed', message: 'This is not a POINTS sequence code.' };
+    }
+    if (!trimmed.startsWith(PREFIX)) {
+      return { ok: false, code: 'unsupported-version', message: 'This sequence code uses a superseded or unsupported format.' };
+    }
+
     try {
-      const raw: unknown = decodePacked(trimmed.slice(PREFIX.length));
-      assertPackedSequence(raw);
-      const [kind, bpm, signature, rawPerformers, rawPositions, ballCount, rawPlacements, rawBeats, rawNotation, individualLayout, rawLayout, rawSeats] = raw;
-      if (!isPacked(rawPerformers) || !isPacked(rawPositions) || !isPacked(rawPlacements) || !isPacked(rawBeats) || !isPacked(rawNotation) || !isPacked(rawLayout) || !isPacked(rawSeats) || !isPacked(signature)) throw new Error('Invalid sections');
-      const performers: Performer[] = rawPerformers.map((item, index) => {
-        if (!isPacked(item)) throw new Error('Invalid performer');
-        return { id: asPerformerId(`p${index}`), name: String(item[0]), ...(item[1] === 1 ? { identifier: String(item[2]) } : {}) };
-      });
-      const positions: PositionDefinition[] = rawPositions.map((item, index) => {
-        if (!isPacked(item)) throw new Error('Invalid position');
-        if (item[0] === 'T') return {
-          id: asPositionId(`x${index}`), kind: 'table', name: String(item[1]),
-          owner: item[2] === 'S' ? { kind: 'shared' } : { kind: 'performer', performerId: performers[Number(item[3])]!.id },
-        };
-        return { id: asPositionId(`x${index}`), kind: 'hand-back', name: item[1] as 'L' | 'R', performerId: performers[Number(item[2])]!.id, hand: item[3] === 'L' ? 'left' : 'right' };
-      });
-      const balls: Ball[] = Array.from({ length: Number(ballCount) }, (_, index) => ({ id: asBallId(`b${index}`) }));
-      const beats: Beat[] = rawBeats.map((item, index) => {
-        if (!isPacked(item)) throw new Error('Invalid beat');
-        return { id: asBeatId(`t${index}`), subdivisions: item.map((sub, subIndex) => {
-          if (!isPacked(sub)) throw new Error('Invalid subdivision');
-          return { id: asSubdivisionId(`t${index}s${subIndex}`), start: parseFraction(String(sub[0])), duration: parseFraction(String(sub[1])), depth: Number(sub[2]) };
-        }) };
-      });
-      const links = [...new Set(rawNotation.flatMap((entry) => isPacked(entry) && isPacked(entry[4]) && typeof entry[4][2] === 'number' && entry[4][2] >= 0 ? [Number(entry[4][2])] : isPacked(entry) && isPacked(entry[4]) && entry[4][0] === 'Z' ? [Number(entry[4][2])] : []))].sort((a, b) => a - b).map((index) => asLinkId(`l${index}`));
-      const notation: NotationEntry[] = rawNotation.map((entry, index) => {
-        if (!isPacked(entry) || !isPacked(entry[4])) throw new Error('Invalid notation entry');
-        const actionRaw = entry[4];
-        const action = decodeAction(actionRaw, positions, performers, links);
-        return {
-          id: asActionEntryId(`a${index}`), performerId: performers[Number(entry[0])]!.id,
-          hand: entry[1] === 'L' ? 'left' : 'right',
-          time: { beatId: beats[Number(entry[2])]!.id, offset: parseFraction(String(entry[3])) },
-          action,
-        };
-      });
-      const placements = rawPlacements.map((item) => {
-        if (!isPacked(item) || !isPacked(item[1])) throw new Error('Invalid placement');
-        const loc = item[1];
-        let location: ObjectLocation;
-        if (loc[0] === 'P') location = { kind: 'position', positionId: positions[Number(loc[1])]!.id };
-        else if (loc[0] === 'H') location = { kind: 'hand-held', performerId: performers[Number(loc[1])]!.id, hand: loc[2] === 'L' ? 'left' : 'right' };
-        else if (loc[0] === 'B') location = { kind: 'hand-back', positionId: positions[Number(loc[1])]!.id, performerId: performers[Number(loc[2])]!.id, hand: loc[3] === 'L' ? 'left' : 'right' };
-        else throw new Error('Unknown placement location');
-        return { ballId: balls[Number(item[0])]!.id, location };
-      });
+      const section = sectionMap(trimmed);
+      const sequenceType = section.S === 's' ? 'solo'
+        : section.S === 'c' ? 'circle-passing'
+          : section.S === 'i' ? 'individual-passing' : null;
+      if (!sequenceType) throw new Error('Invalid sequence type.');
+
+      const bpm = parseNumber(section.Q, 'BPM');
+      const [numeratorText, denominatorText, groupingText] = fields(section.T, 3, 'time signature');
       const timeSignature = {
-        numerator: Number(signature[0]), denominator: Number(signature[1]) as 1 | 2 | 4 | 8 | 16 | 32 | 64,
-        beatGrouping: (signature[2] as number[]).map(Number),
+        numerator: parseNumber(numeratorText!, 'time signature numerator'),
+        denominator: parseNumber(denominatorText!, 'time signature denominator') as Sequence['timeSignature']['denominator'],
+        beatGrouping: groupingText === '-' ? [] : groupingText!.split('+').map((value) => parseNumber(value, 'beat grouping')),
       };
-      const tableLayout: TableLayout = rawLayout[0] === 'S' ? { type: 'solo' }
-        : rawLayout[0] === 'P' ? { type: 'polygon', sideCount: Number(rawLayout[1]) }
-          : { type: 'rectangle', longSideSeatCount: Number(rawLayout[1]), shortSideSeatCount: Number(rawLayout[2]) };
-      const seatAssignments: SeatAssignment[] = rawSeats.map((item) => {
-        if (!isPacked(item)) throw new Error('Invalid seat');
-        return { performerId: performers[Number(item[0])]!.id, seat: item[1] === 'P'
-          ? { kind: 'polygon-edge', edgeIndex: Number(item[2]) }
-          : { kind: 'rectangle-side', side: item[2] as 'long-a' | 'long-b' | 'short-a' | 'short-b', seatIndex: Number(item[3]) } };
+      const beatCount = parseInteger(section.B, 'beat count');
+      const performers: Performer[] = records(section.P).map((record, index) => {
+        const [name, identifier] = fields(record, 2, 'performer');
+        return {
+          id: asPerformerId(`p${index}`),
+          name: decodeText(name!),
+          ...(identifier === '-' ? {} : { identifier: decodeText(identifier!) }),
+        };
       });
-      const sequence: Sequence = {
-        id: asSequenceId('sequence'), sequenceType: kind === 's' ? 'solo' : kind === 'c' ? 'circle-passing' : 'individual-passing',
-        bpm: Number(bpm), timeSignature, performers, positions, balls, beats, notation,
-        initialState: { placements }, tableLayout, seatAssignments,
-        ...(individualLayout === 'p' ? { individualPassingLayout: 'per-performer-positions' as const } : individualLayout === 's' ? { individualPassingLayout: 'shared-positions' as const } : {}),
+      const positions: PositionDefinition[] = records(section.X).map((record, index) => {
+        const parts = record.split('.');
+        if (parts[0] === 'T' && parts.length === 3) {
+          const owner = parts[2]!;
+          return {
+            id: asPositionId(`x${index}`),
+            kind: 'table' as const,
+            name: decodeText(parts[1]!),
+            owner: owner === 's'
+              ? { kind: 'shared' as const }
+              : /^p(0|[1-9]\d*)$/.test(owner)
+                ? { kind: 'performer' as const, performerId: performers[parseInteger(owner.slice(1), 'position owner')]!.id }
+                : (() => { throw new Error('Invalid position owner.'); })(),
+          };
+        }
+        if (parts[0] === 'B' && parts.length === 4) {
+          const performer = performers[parseInteger(parts[2]!, 'hand back performer')];
+          if (!performer || (parts[3] !== 'L' && parts[3] !== 'R') || (parts[1] !== 'L' && parts[1] !== 'R')) {
+            throw new Error('Invalid hand back position.');
+          }
+          return {
+            id: asPositionId(`x${index}`), kind: 'hand-back' as const,
+            name: parts[1] as 'L' | 'R', performerId: performer.id,
+            hand: parts[3] === 'L' ? 'left' as const : 'right' as const,
+          };
+        }
+        throw new Error('Invalid position definition.');
+      });
+      const ballCount = parseInteger(section.O, 'object count');
+      const balls: Ball[] = Array.from({ length: ballCount }, (_, index) => ({ id: asBallId(`o${index}`) }));
+      const placements = records(section.I).map((record) => {
+        const parts = record.split('.');
+        const ball = balls[parseInteger(parts[0]!, 'placement object')];
+        if (!ball) throw new Error('Unknown placement object.');
+        let location: ObjectLocation;
+        if (parts[1] === 'P' && parts.length === 3) {
+          const position = positions[parseInteger(parts[2]!, 'placement position')];
+          if (!position) throw new Error('Unknown placement position.');
+          location = { kind: 'position', positionId: position.id };
+        } else if (parts[1] === 'H' && parts.length === 4) {
+          const performer = performers[parseInteger(parts[2]!, 'held performer')];
+          if (!performer || (parts[3] !== 'L' && parts[3] !== 'R')) throw new Error('Invalid held placement.');
+          location = { kind: 'hand-held', performerId: performer.id, hand: parts[3] === 'L' ? 'left' : 'right' };
+        } else if (parts[1] === 'B' && parts.length === 5) {
+          const position = positions[parseInteger(parts[2]!, 'balanced position')];
+          const performer = performers[parseInteger(parts[3]!, 'balanced performer')];
+          if (!position || !performer || (parts[4] !== 'L' && parts[4] !== 'R')) throw new Error('Invalid hand back placement.');
+          location = {
+            kind: 'hand-back', positionId: position.id, performerId: performer.id,
+            hand: parts[4] === 'L' ? 'left' : 'right',
+          };
+        } else throw new Error('Invalid object placement.');
+        return { ballId: ball.id, location };
+      });
+      const beats: Beat[] = Array.from({ length: beatCount }, (_, index) => ({
+        id: asBeatId(`b${index}`), subdivisions: [],
+      }));
+      records(section.D).forEach((record) => {
+        const [beatText, startText, durationText, depthText] = fields(record, 4, 'subdivision');
+        const beat = beats[parseInteger(beatText!, 'subdivision beat')];
+        if (!beat) throw new Error('Unknown subdivision beat.');
+        const mutableBeat = beat as { id: Beat['id']; subdivisions: Beat['subdivisions'][number][] };
+        mutableBeat.subdivisions.push({
+          id: asSubdivisionId(`b${beatText}s${mutableBeat.subdivisions.length}`),
+          start: decodeRational(startText!),
+          duration: decodeRational(durationText!),
+          depth: parseNumber(depthText!, 'subdivision depth'),
+        });
+      });
+
+      const streamRecords = records(section.A).map(parseStream);
+      if (streamRecords.length !== performers.length * 2) throw new Error('Action stream count does not match performers.');
+      const rawEvents: { ordinal: number; performer: number; hand: 'left' | 'right'; parts: string[] }[] = [];
+      streamRecords.forEach((stream, streamIndex) => {
+        const expectedPerformer = Math.floor(streamIndex / 2);
+        const expectedHand = streamIndex % 2 === 0 ? 'left' : 'right';
+        if (stream.performer !== expectedPerformer || stream.hand !== expectedHand) {
+          throw new Error('Action streams are not in canonical order.');
+        }
+        stream.events.forEach((event) => {
+          const eventParts = event.split('.');
+          if (eventParts.length < 4) throw new Error('Invalid action event.');
+          rawEvents.push({
+            ordinal: parseInteger(eventParts[0]!, 'event order'),
+            performer: stream.performer,
+            hand: stream.hand,
+            parts: eventParts.slice(1),
+          });
+        });
+      });
+      rawEvents.sort((left, right) => left.ordinal - right.ordinal);
+      if (rawEvents.some((event, index) => event.ordinal !== index)) throw new Error('Action event order is incomplete.');
+
+      const linkIndexes = new Set<number>();
+      rawEvents.forEach((event) => {
+        const actionType = event.parts[2];
+        if (actionType === 'L' || actionType === 'V' || actionType === 'Z' || actionType === 'S') {
+          const linkPart = actionType === 'Z' ? event.parts[4] : event.parts[4];
+          if (linkPart !== '-') {
+            const index = linkNumber(linkPart!, actionType !== 'Z');
+            if (index !== undefined) linkIndexes.add(index);
+          }
+        }
+      });
+      const sortedLinks = [...linkIndexes].sort((left, right) => left - right);
+      if (sortedLinks.some((value, index) => value !== index)) throw new Error('Link references are not contiguous.');
+      const links = sortedLinks.map((index) => asLinkId(`l${index}`));
+
+      const notation: NotationEntry[] = rawEvents.map((event, index) => {
+        const [beatText, offsetText, ...actionParts] = event.parts;
+        const beat = beats[parseInteger(beatText!, 'action beat')];
+        if (!beat) throw new Error('Unknown action beat.');
+        return {
+          id: asActionEntryId(`a${index}`),
+          performerId: performers[event.performer]!.id,
+          hand: event.hand,
+          time: { beatId: beat.id, offset: decodeRational(offsetText!) },
+          action: decodeAction(actionParts, positions, performers, links),
+        };
+      });
+
+      const individualPassingLayout = section.J === 'n' ? undefined
+        : section.J === 's' ? 'shared-positions'
+          : section.J === 'p' ? 'per-performer-positions' : null;
+      if (individualPassingLayout === null) throw new Error('Invalid individual passing layout.');
+      let tableLayout: TableLayout;
+      if (section.M === 's') tableLayout = { type: 'solo' };
+      else if (/^p-?(?:0|[1-9]\d*)(?:\.\d+)?$/.test(section.M)) {
+        tableLayout = { type: 'polygon', sideCount: parseNumber(section.M.slice(1), 'polygon side count') };
+      } else if (/^r-?(?:0|[1-9]\d*)(?:\.\d+)?\.-?(?:0|[1-9]\d*)(?:\.\d+)?$/.test(section.M)) {
+        const [longSideSeatCount, shortSideSeatCount] = section.M.slice(1).split('.').map((value) => parseNumber(value!, 'rectangle seat count'));
+        tableLayout = { type: 'rectangle', longSideSeatCount: longSideSeatCount!, shortSideSeatCount: shortSideSeatCount! };
+      } else throw new Error('Invalid table layout.');
+
+      const seatAssignments: SeatAssignment[] = records(section.C).map((record) => {
+        const parts = record.split('.');
+        const performer = performers[parseInteger(parts[0]!, 'seat performer')];
+        if (!performer) throw new Error('Unknown seat performer.');
+        if (parts[1] === 'P' && parts.length === 3) {
+          return { performerId: performer.id, seat: { kind: 'polygon-edge', edgeIndex: parseNumber(parts[2]!, 'polygon edge') } };
+        }
+        if (parts[1] === 'R' && parts.length === 4) {
+          if (!['long-a', 'long-b', 'short-a', 'short-b'].includes(parts[2]!)) throw new Error('Invalid rectangle side.');
+          return {
+            performerId: performer.id,
+            seat: { kind: 'rectangle-side', side: parts[2] as 'long-a' | 'long-b' | 'short-a' | 'short-b', seatIndex: parseNumber(parts[3]!, 'rectangle seat') },
+          };
+        }
+        throw new Error('Invalid seat assignment.');
+      });
+
+      return {
+        ok: true,
+        sequence: {
+          id: asSequenceId('sequence'),
+          sequenceType,
+          timeSignature,
+          bpm,
+          beats,
+          performers,
+          positions,
+          balls,
+          initialState: { placements },
+          notation,
+          ...(individualPassingLayout === undefined ? {} : { individualPassingLayout }),
+          tableLayout,
+          seatAssignments,
+        },
       };
-      if (!Number.isFinite(sequence.bpm) || typeof ballCount !== 'number' || !Number.isSafeInteger(ballCount) || ballCount < 0) throw new Error('Invalid sequence values');
-      return { ok: true, sequence };
     } catch {
       return { ok: false, code: 'malformed', message: 'The sequence code is damaged or incomplete.' };
     }
@@ -452,5 +568,5 @@ export const sequenceCodec: SequenceCodec = {
 };
 
 export function isSequenceCode(value: string): boolean {
-  return value.trim().startsWith(PREFIX);
+  return value.trim().startsWith('P3;');
 }
