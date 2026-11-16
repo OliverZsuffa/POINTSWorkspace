@@ -182,7 +182,7 @@ function isAccepted(
   return true;
 }
 
-function candidateKey(sequence: Sequence, canonicalizeRotation = false): string {
+export function candidateKey(sequence: Sequence, canonicalizeRotation = false): string {
   const beatIndex = new Map(sequence.beats.map((beat, index) => [beat.id, index]));
   const performerIndex = new Map(sequence.performers.map((performer, index) => [performer.id, index]));
   const positionIndex = new Map(sequence.positions.map((position, index) => [position.id, index]));

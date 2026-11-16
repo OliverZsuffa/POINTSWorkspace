@@ -2,7 +2,7 @@
 
 ## Status
 
-Work is active on branch `feature/05-sequence-generator`. The discrete half beat migration is implemented across the model, editor, simulator, renderer and P5 codec. The deterministic search engine, immutable base completion, action and transfer constraints, structural fragment matching, loop checks, advanced constraint controls and notation result panel are implemented. Variation generation is explicitly excluded. Resumable pagination, cyclic rotation deduplication, broader search space optimisation and full verification remain outstanding.
+Work is active on branch `feature/05-sequence-generator`. The discrete half beat migration is implemented across the model, editor, simulator, renderer and P5 codec. The deterministic search engine, immutable base completion, action and transfer constraints, structural fragment matching, loop checks, advanced constraint controls and notation result panel are implemented. Variation generation is explicitly excluded. Resumable pagination and broader search space optimisation remain outstanding. Looping candidate deduplication now canonicalizes cyclic beat rotations while retaining the initial state as part of semantic identity.
 
 ## Goal
 
@@ -61,7 +61,7 @@ Support progressive results and cancellation. The current UI can stop a search w
 | src/features/data/codec.ts | Persist beat duration kind in the current sequence code format |
 | src/features/generator/engine.ts | Deterministic candidate enumeration and validation |
 | src/features/generator/constraints.ts | Immutable base checks, structural fragments, action counts and loop closure |
-| src/features/generator/engine.ts | Current semantic duplicate filtering. Full cyclic rotation canonicalization remains outstanding |
+| src/features/generator/engine.ts | Semantic duplicate filtering, including cyclic rotations for required loops |
 | src/App.tsx | Initial generator controls, progressive results and notation preview |
 | Generator and timeline tests | Search, immutable base, timing and UI tests |
 
@@ -76,8 +76,8 @@ Support progressive results and cancellation. The current UI can stop a search w
 7. [x] Implement action and structural constraints.
 8. [x] Implement required and forbidden fragment matching.
 9. [x] Use the shared validator to reject invalid candidates.
-10. [x] Implement deterministic enumeration and initial semantic duplicate filtering.
-11. Implement progressive results, cancellation and continuation.
+10. [x] Implement deterministic enumeration and semantic duplicate filtering, including cyclic rotation canonicalization for required loops.
+11. [ ] Implement progressive results, cancellation and exact resumable continuation with pagination.
 12. [x] Build the initial constraint interface and notation preview gallery.
 13. [x] Integrate result selection into the editor.
 14. Benchmark representative search spaces and keep the interface responsive.

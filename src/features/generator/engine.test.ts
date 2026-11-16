@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { GeneratorRequest } from '../../domain/model';
 import { representativeSoloSequence } from '../../fixtures/sequences';
-import { sequenceGenerator } from './engine';
+import { candidateKey, sequenceGenerator } from './engine';
 
 function request(mode: GeneratorRequest['mode']): GeneratorRequest {
   const sequence = representativeSoloSequence;
