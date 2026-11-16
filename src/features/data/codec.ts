@@ -200,7 +200,7 @@ export const sequenceCodec: SequenceCodec = {
         initialState: { placements }, tableLayout, seatAssignments,
         ...(individualLayout === 'p' ? { individualPassingLayout: 'per-performer-positions' as const } : individualLayout === 's' ? { individualPassingLayout: 'shared-positions' as const } : {}),
       };
-      if (!Number.isFinite(sequence.bpm) || sequence.bpm <= 0 || !beats.length || !performers.length || !positions.length || !Number.isSafeInteger(ballCount) && typeof ballCount !== 'number') throw new Error('Invalid sequence values');
+      if (!Number.isFinite(sequence.bpm) || sequence.bpm <= 0 || !beats.length || !performers.length || !positions.length || typeof ballCount !== 'number' || !Number.isSafeInteger(ballCount) || ballCount < 0) throw new Error('Invalid sequence values');
       return { ok: true, sequence };
     } catch {
       return { ok: false, code: 'malformed', message: 'The sequence code is damaged or incomplete.' };
