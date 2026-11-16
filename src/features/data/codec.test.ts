@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { sequenceCodec } from './codec';
 import { rational } from '../../domain/time/rational';
-import { asActionEntryId } from '../../domain/ids';
 import type { Sequence } from '../../domain/model';
 import {
   invalidInitialStateSequence,
