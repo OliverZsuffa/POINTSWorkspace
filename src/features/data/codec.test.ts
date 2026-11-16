@@ -45,14 +45,14 @@ describe('readable sequence code', () => {
   it('keeps action initials visible in the code', () => {
     const sequence = { ...representativeSoloSequence, notation: [...representativeSoloSequence.notation, ...representativeNotationExamples] };
     const code = sequenceCodec.encode(sequence);
-    expect(code).toContain('~L');
-    expect(code).toContain('~H');
-    expect(code).toContain('~V');
-    expect(code).toContain('~T');
-    expect(code).toContain('~B');
-    expect(code).toContain('~E');
-    expect(code).toContain('~Z');
-    expect(code).toContain('~S');
+    expect(code).toContain('(L');
+    expect(code).toContain('(H');
+    expect(code).toContain('(V');
+    expect(code).toContain('(T');
+    expect(code).toContain('(B');
+    expect(code).toContain('(E');
+    expect(code).toContain('(Z');
+    expect(code).toContain('(S');
     const decoded = sequenceCodec.decode(code);
     expect(decoded.ok).toBe(true);
     if (decoded.ok) expect(sequenceCodec.encode(decoded.sequence)).toBe(code);
