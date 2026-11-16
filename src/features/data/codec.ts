@@ -255,6 +255,8 @@ function readSeatSide(value: string): 'long-a' | 'long-b' | 'short-a' | 'short-b
 
 export const sequenceCodec: SequenceCodec = {
   encode(sequence) {
+    const counts = [sequence.timeSignature.beatGrouping.length, sequence.beats.length, sequence.performers.length, sequence.positions.length, sequence.balls.length, sequence.initialState.placements.length, sequence.seatAssignments.length, sequence.notation.length];
+    if (counts.some((count) => count > MAX_ITEMS)) throw new Error('Sequence exceeds codec item limits.');
     sequence.notation.forEach((entry) => {
       idx(sequence.performers, entry.performerId);
       idx(sequence.beats, entry.time.beatId);
@@ -327,6 +329,7 @@ export const sequenceCodec: SequenceCodec = {
         }
       });
     });
+    if (out.length > MAX_CODE_LENGTH) throw new Error('Sequence code exceeds the maximum supported length.');
     return out;
   },
 
