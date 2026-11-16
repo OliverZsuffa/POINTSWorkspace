@@ -86,7 +86,6 @@ function decodeAction(value: unknown, positions: PositionDefinition[], performer
 export const sequenceCodec: SequenceCodec = {
   encode(sequence) {
     const performer = (id: string) => indexOf(sequence.performers, id);
-    const position = (id: string) => indexOf(sequence.positions, id);
     const ball = (id: string) => indexOf(sequence.balls, id);
     const beat = (id: string) => indexOf(sequence.beats, id);
     const links = [...new Set(sequence.notation.flatMap((entry) => 'linkId' in entry.action && entry.action.linkId ? [entry.action.linkId] : []))];
@@ -123,7 +122,6 @@ export const sequenceCodec: SequenceCodec = {
       layout, seats,
     ];
     // Readable action initials remain visible in the action stream. Tuple keys and UUIDs are omitted.
-    void links;
     return PREFIX + JSON.stringify(packed);
   },
   decode(code): SequenceDecodeResult {
