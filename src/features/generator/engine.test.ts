@@ -87,7 +87,7 @@ describe('sequence generator', () => {
       timeSignature: sequence.timeSignature,
       initialState: sequence.initialState,
       maxResults: 1,
-      maxSearchNodes: 5000,
+      maxSearchNodes: 100_000,
       constraints: {
         looping: 'either',
         actionRequirements: [{ actionType: 'EMPTY', occurrence: 'at-least-once' }],
