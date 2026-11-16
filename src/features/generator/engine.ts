@@ -207,11 +207,15 @@ export function isAbstractStateValid(sequence: Sequence): boolean {
     held.set(String(performer.id) + ':right', false);
   }
   let tableObjects = 0;
+  let backObjects = 0;
+  const positionById = new Map(sequence.positions.map((position) => [String(position.id), position]));
   for (const placement of sequence.initialState.placements) {
     if (placement.location.kind === 'hand-held') {
       held.set(String(placement.location.performerId) + ':' + placement.location.hand, true);
     } else if (placement.location.kind === 'position') {
       tableObjects += 1;
+    } else if (placement.location.kind === 'hand-back') {
+      backObjects += 1;
     }
   }
   const handKey = (entry: NotationEntry) => String(entry.performerId) + ':' + entry.hand;
@@ -276,16 +280,27 @@ export function isAbstractStateValid(sequence: Sequence): boolean {
         case 'SPECIAL':
           if (isHeld) return false;
           break;
-        case 'LIFT':
-          if (entry.action.target.kind === 'pass-source' || isHeld || tableObjects + tableDelta <= 0) return false;
+        case 'LIFT': {
+          if (entry.action.target.kind === 'pass-source' || isHeld) return false;
+          const target = entry.action.target.kind === 'position' ? positionById.get(String(entry.action.target.positionId)) : undefined;
+          if (target?.kind === 'hand-back') {
+            if (backObjects <= 0) return false;
+            backObjects -= 1;
+          } else {
+            if (tableObjects + tableDelta <= 0) return false;
+            tableDelta -= 1;
+          }
           nextHeld.set(handKey(entry), true);
-          tableDelta -= 1;
           break;
-        case 'LEAVE':
+        }
+        case 'LEAVE': {
           if (entry.action.target.kind === 'pass-recipient-hand' || !isHeld) return false;
+          const target = entry.action.target.kind === 'position' ? positionById.get(String(entry.action.target.positionId)) : undefined;
+          if (target?.kind === 'hand-back') backObjects += 1;
+          else tableDelta += 1;
           nextHeld.set(handKey(entry), false);
-          tableDelta += 1;
           break;
+        }
         case 'ZIP':
           return false;
       }
