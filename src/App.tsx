@@ -1171,7 +1171,9 @@ export default function App() {
     const target = index + direction;
     if (index < 0 || target < 0 || target >= sequence.beats.length) return;
     const beats = [...sequence.beats];
-    ;[beats[index], beats[target]] = [beats[target]!, beats[index]!];
+    const currentBeat = beats[index]!;
+    beats[index] = beats[target]!;
+    beats[target] = currentBeat;
     commit({ ...sequence, beats });
     setShowActionMenu(false);
   };
