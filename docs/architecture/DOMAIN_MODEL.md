@@ -13,7 +13,7 @@ A sequence contains:
 - A sequence type: solo, circle passing or individual passing.
 - A conventional time signature and its explicit main beat grouping.
 - BPM measured in quarter notes per minute.
-- An ordered list of main musical beats.
+- An ordered list of discrete beats. Each beat is regular or half duration.
 - Performers and their identifiers.
 - Table and hand back positions.
 - Balls with stable identities.
@@ -28,11 +28,11 @@ BPM always means quarter notes per minute. A quarter note therefore lasts 60 div
 
 ## Timeline representation
 
-Each main beat has a stable ID. Subdivisions are intervals within a main beat, expressed as exact rational offsets and durations relative to that beat.
+Every beat has a stable ID and is a separate sequence item with exactly one notation column. Its duration kind is either regular or half. A half beat is not a subdivision inside another beat. It has the same notation and validation semantics as a regular beat, but the renderer plays it in half the time.
 
-A notation entry identifies its performer, hand, action and timeline position. Timeline positions use exact rational offsets from the beginning of a main beat. This avoids using screen column numbers as time and supports repeated half subdivisions without floating point drift.
+A notation entry identifies its performer, hand, action and beat. The exact rational offset field is retained in the data structure for canonical notation timing, but valid actions must occur at offset zero, at the beginning of their discrete beat.
 
-The editor may rearrange the visual presentation of the timeline, but it must preserve these musical positions. For state simulation, all actions assigned to one main beat are evaluated together against the state entering that beat. Subdivision offsets remain part of the notation timeline, but they do not establish an action order within the same main beat.
+The editor may rearrange the visual presentation of the timeline, but it must preserve beat order and duration kind. For state simulation, all actions assigned to one beat are evaluated together against the state entering that beat. A half beat is evaluated as its own beat, not simultaneously with its neighbouring beats.
 
 ## Performers and positions
 
@@ -67,7 +67,7 @@ Notation entries use a discriminated action union:
 
 LIFT and LEAVE can target a table position, a hand back position, a circle passing relative position or the relevant individual passing hand reference. LIFT from a hand back moves the balanced object into the acting hand. LEAVE to a hand back moves the held object onto that hand back if it is free. TAP and BOUNCE target a defined position. ZIP entries carry a shared link ID and a source or receiver role. Linked SPECIAL entries may share a link ID and must use the same text. A standalone SPECIAL has no link ID.
 
-The domain model records notation. The validation and simulation package determines whether the actions are legal in the current state. It provides a state snapshot immediately before and immediately after each main beat.
+The domain model records notation. The validation and simulation package determines whether the actions are legal in the current state. It provides a state snapshot immediately before and immediately after each discrete beat.
 
 All actions assigned to the same main beat are simultaneous. A hand has one finger held object and one separate back balanced object. TAP and EMPTY require the fingers to be free. BOUNCE is the position tap performed while holding an object with the fingers. The held object remains in the hand. A balanced object on the back does not prevent TAP or BOUNCE. SPECIAL also requires free fingers, while allowing a balanced object on the back.
 
@@ -85,7 +85,7 @@ The shared contracts define the interfaces consumed by downstream packages:
 
 The generator request includes the allowed sequence types, beat count, performer and object counts, available positions, time signature, initial state and constraints. Exact count action requirements require an explicit count at the type level.
 
-The user facing sequence representation is a compact, self contained P3 code. Users copy and paste this code and never need to inspect JSON or another structured data format. P3 uses explicit sections, readable action initials, local references and performer hand streams. Every sequence setting is encoded, including values equal to normal POINTS defaults. Internal IDs are replaced by compact local references and regenerated during decoding. The canonical model remains the internal source of truth. The normative P3 specification is in `docs/implementation/08C-self-contained-human-readable-codes.md` and must be sufficient for independent decoder implementations. The codec preserves every semantic sequence property and distinguishes malformed input from unsupported versions. A structurally complete sequence with invalid notation remains importable so the shared validator can report its issues. P3 replaces all earlier formats completely unless Oliver explicitly requests backward compatibility.
+The user facing sequence representation is a compact, self contained P5 code. Users copy and paste this code and never need to inspect JSON or another structured data format. P3 uses explicit sections, readable action initials, local references and performer hand streams. Every sequence setting is encoded, including values equal to normal POINTS defaults. Internal IDs are replaced by compact local references and regenerated during decoding. The canonical model remains the internal source of truth. The normative P5 specification is in `docs/implementation/08C-self-contained-human-readable-codes.md` and must be sufficient for independent decoder implementations. The codec preserves every semantic sequence property and distinguishes malformed input from unsupported versions. A structurally complete sequence with invalid notation remains importable so the shared validator can report its issues. P5 replaces P4 and all earlier formats completely unless Oliver explicitly requests backward compatibility.
 
 ## Deliberately unresolved
 

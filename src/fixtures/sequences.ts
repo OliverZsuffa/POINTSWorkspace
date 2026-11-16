@@ -6,7 +6,6 @@ import {
   asPerformerId,
   asPositionId,
   asSequenceId,
-  asSubdivisionId,
 } from '../domain/ids';
 import type { NotationEntry, Sequence, SequenceFragment } from '../domain/model';
 import { rational } from '../domain/time/rational';
@@ -24,26 +23,10 @@ export const representativeSoloSequence: Sequence = {
   timeSignature: DEFAULT_TIME_SIGNATURE,
   bpm: 120,
   beats: [
-    { id: asBeatId('beat-1'), subdivisions: [] },
-    {
-      id: asBeatId('beat-2'),
-      subdivisions: [
-        {
-          id: asSubdivisionId('beat-2-first-half'),
-          start: rational(0),
-          duration: rational(1, 2),
-          depth: 1,
-        },
-        {
-          id: asSubdivisionId('beat-2-second-half'),
-          start: rational(1, 2),
-          duration: rational(1, 2),
-          depth: 1,
-        },
-      ],
-    },
-    { id: asBeatId('beat-3'), subdivisions: [] },
-    { id: asBeatId('beat-4'), subdivisions: [] },
+    { id: asBeatId('beat-1') },
+    { id: asBeatId('beat-2'), durationKind: 'half' },
+    { id: asBeatId('beat-3') },
+    { id: asBeatId('beat-4') },
   ],
   performers: [{ id: performerId, name: 'Juggler 1' }],
   positions: [
@@ -137,7 +120,7 @@ export const representativeIndividualPassingSequence: Sequence = {
   sequenceType: 'individual-passing',
   timeSignature: DEFAULT_TIME_SIGNATURE,
   bpm: 120,
-  beats: [{ id: asBeatId('pass-beat-1'), subdivisions: [] }],
+  beats: [{ id: asBeatId('pass-beat-1') }],
   performers: [
     { id: asPerformerId('pass-performer-a'), name: 'Juggler 1', identifier: 'a' },
     { id: asPerformerId('pass-performer-b'), name: 'Juggler 2', identifier: 'b' },

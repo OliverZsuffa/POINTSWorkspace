@@ -17,7 +17,7 @@ describe('renderer playback state', () => {
       sequenceType: 'solo',
       timeSignature: DEFAULT_TIME_SIGNATURE,
       bpm: 120,
-      beats: [{ id: asBeatId('beat-1'), subdivisions: [] }],
+      beats: [{ id: asBeatId('beat-1') }],
       performers: [{ id: performerId, name: 'Juggler 1' }],
       positions: [
         { kind: 'table', id: positionA, name: 'A', owner: { kind: 'performer', performerId } },

@@ -33,7 +33,7 @@ function sequence(
     sequenceType: 'solo',
     timeSignature: DEFAULT_TIME_SIGNATURE,
     bpm: 120,
-    beats: [{ id: 'beat-1' as Sequence['beats'][number]['id'], subdivisions: [] }],
+    beats: [{ id: 'beat-1' as Sequence['beats'][number]['id'] }],
     performers,
     positions: [{
       id: asPositionId('A-a'),

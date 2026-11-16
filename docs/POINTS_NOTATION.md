@@ -29,7 +29,7 @@ How positions are assigned to performers in passing depends on the passing syste
 
 ## 3. Time and Hands
 
-A pattern is organised into beats. Each performer has a sequence for each hand. Every cell specifies that hand's action at that point in time.
+A pattern is organised into discrete beats. Each beat has one notation column. Each performer has a sequence for each hand. Every cell specifies that hand's action at that point in time. A beat can be regular or half duration. A half beat is a complete beat, not a subdivision, and uses exactly the same action symbols as a regular beat.
 
 All actions take effect at the beginning of their assigned beat. Actions assigned to the same beat happen simultaneously. There is no ordering between actions in the same beat.
 

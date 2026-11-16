@@ -51,7 +51,7 @@ function semanticShape(sequence: Sequence) {
       : { kind: item.kind, name: item.name, performer: performer(item.performerId), hand: item.hand }),
     ballCount: sequence.balls.length,
     placements: sequence.initialState.placements.map((item) => ({ ball: ball(item.ballId), location: location(item.location) })),
-    beats: sequence.beats.map((item) => item.subdivisions.map(({ start, duration, depth }) => ({ start, duration, depth }))),
+    beats: sequence.beats.map((item) => item.durationKind ?? 'regular'),
     notation: sequence.notation.map((item) => ({
       performer: performer(item.performerId), hand: item.hand, beat: beat(item.time.beatId),
       offset: item.time.offset, action: action(item.action),
@@ -62,12 +62,12 @@ function semanticShape(sequence: Sequence) {
   };
 }
 
-describe('P4 compact sequence code', () => {
+describe('P5 compact sequence code', () => {
   it.each([representativeSoloSequence, representativeIndividualPassingSequence, invalidInitialStateSequence])(
     'round trips every persisted semantic field',
     (sequence) => {
       const code = sequenceCodec.encode(sequence);
-      expect(code.startsWith('P4')).toBe(true);
+      expect(code.startsWith('P5')).toBe(true);
       expect(code).not.toMatch(/\\s/);
       expect(code.split('.')).toHaveLength(2);
       const decoded = sequenceCodec.decode(code);
@@ -89,7 +89,7 @@ describe('P4 compact sequence code', () => {
       performers: [{ ...performer, identifier: 'a' }],
       positions: base.positions,
       balls: [{ id: asBallId('ball-one') }, { id: asBallId('ball-two') }],
-      beats: base.beats.map((beat) => ({ ...beat, subdivisions: [] })),
+      beats: base.beats.map((beat) => ({ ...beat, durationKind: 'regular' })),
       initialState: { placements: [
         { ballId: asBallId('ball-one'), location: { kind: 'position', positionId: first.id } },
         { ballId: asBallId('ball-two'), location: { kind: 'position', positionId: last.id } },
@@ -131,9 +131,10 @@ describe('P4 compact sequence code', () => {
     }
   });
 
-  it('preserves exact rational offsets and subdivision values', () => {
+  it('preserves exact rational offsets and half beat duration', () => {
     const sequence: Sequence = {
       ...representativeSoloSequence,
+      beats: representativeSoloSequence.beats.map((beat, index) => index === 1 ? { ...beat, durationKind: 'half' as const } : beat),
       notation: [{ ...representativeSoloSequence.notation[0]!, time: { ...representativeSoloSequence.notation[0]!.time, offset: rational(1, 3) } }],
     };
     const decoded = sequenceCodec.decode(sequenceCodec.encode(sequence));
@@ -166,7 +167,7 @@ describe('P4 compact sequence code', () => {
   it('rejects malformed, truncated and trailing data', () => {
     const code = sequenceCodec.encode(representativeSoloSequence);
     expect(sequenceCodec.decode('not a code')).toMatchObject({ ok: false, code: 'malformed' });
-    expect(sequenceCodec.decode('P3;anything')).toMatchObject({ ok: false, code: 'unsupported-version' });
+    expect(sequenceCodec.decode('P4anything')).toMatchObject({ ok: false, code: 'unsupported-version' });
     expect(sequenceCodec.decode(code.slice(0, -1)).ok).toBe(false);
     expect(sequenceCodec.decode(code + 'A').ok).toBe(false);
     expect(sequenceCodec.decode(code.replace('.', '..')).ok).toBe(false);

@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
 import type { NotationEntry, ObjectLocation, Sequence, SimulationResult } from '../../domain/model';
-import { getMainBeatDurationSeconds } from '../../domain/time/time-signature';
+import { getBeatDurationSeconds } from '../../domain/time/time-signature';
 import { simulateSequence } from '../../domain/state';
 import { getLoopInitialState } from './playback';
 import {
@@ -187,7 +187,8 @@ export default function SequenceRenderer({ sequence, simulation, visualParticipa
       const now = Date.now();
       elapsed += now - previousTime;
       previousTime = now;
-      const duration = getMainBeatDurationSeconds(sequence.timeSignature, Math.min(playhead, sequence.beats.length - 1), tempo) * 1000;
+      const currentBeat = sequence.beats[Math.min(playhead, sequence.beats.length - 1)]!;
+      const duration = getBeatDurationSeconds(sequence.timeSignature, Math.min(playhead, sequence.beats.length - 1), tempo, currentBeat.durationKind) * 1000;
       if (elapsed >= duration) {
         elapsed = 0;
         setProgress(0);

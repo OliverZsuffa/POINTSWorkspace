@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type KeyboardEvent } from 'react';
+import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
 import {
   asActionEntryId,
   asBallId,
@@ -7,9 +7,12 @@ import {
   asPerformerId,
   asPositionId,
   asSequenceId,
-  asSubdivisionId,
 } from './domain/ids';
 import type {
+  ActionRequirement,
+  GeneratorRequest,
+  GeneratedCandidate,
+  SequenceFragment,
   Hand,
   NotationAction,
   NotationEntry,
@@ -23,8 +26,9 @@ import { compareRational, rational, type Rational } from './domain/time/rational
 import { DEFAULT_TIME_SIGNATURE } from './domain/time/time-signature';
 import { simulateSequence } from './domain/state';
 import { getBallRectangleEntries } from './features/editor/rectangles';
-import { getTimelineSlots, splitSubdivision, type TimelineSlot } from './features/editor/timeline';
+import { getTimelineSlots, type TimelineSlot } from './features/editor/timeline';
 import SequenceRenderer from './features/renderer/SequenceRenderer';
+import { sequenceGenerator } from './features/generator';
 import SequenceDataTools from './features/export/SequenceDataTools';
 import { restoreSequence, saveSequence } from './features/data/persistence';
 import { sequenceCodec } from './features/data/codec';
@@ -36,6 +40,7 @@ const id = (prefix: string) => prefix + '-' + (++nextId).toString(36);
 const hands: readonly Hand[] = ['left', 'right'];
 const actionNames = ['LIFT', 'HOLD', 'LEAVE', 'BOUNCE', 'TAP', 'EMPTY', 'ZIP', 'SPECIAL'] as const;
 type ActionName = (typeof actionNames)[number];
+type GeneratorActionMode = 'any' | 'required' | 'forbidden' | 'exact';
 type EditorCell = { performerId: string; hand: Hand; beatId: string; offset?: Rational; duration?: Rational };
 type ClipboardItem = { entry: NotationEntry; rowOffset: number; beatOffset: number };
 
@@ -62,7 +67,6 @@ function makeSequence(): Sequence {
     bpm: 120,
     beats: Array.from({ length: 4 }, (_, index) => ({
       id: asBeatId('beat-' + (index + 1)),
-      subdivisions: [],
     })),
     performers: [{ id: performerId, name: 'Juggler 1', identifier: 'a' }],
     positions: [...positions, ...backs],
@@ -355,6 +359,25 @@ export default function App() {
   const [passRecipientHand, setPassRecipientHand] = useState<Hand>('left');
   const [visualParticipantCount, setVisualParticipantCount] = useState(3);
   const [bpmInput, setBpmInput] = useState(String(sequence.bpm));
+  const [showGenerator, setShowGenerator] = useState(false);
+  const [generatorMode, setGeneratorMode] = useState<GeneratorRequest['mode']>('from-scratch');
+  const [generatorLooping, setGeneratorLooping] = useState<GeneratorRequest['constraints']['looping']>('either');
+  const [generatorActionModes, setGeneratorActionModes] = useState<Record<ActionName, GeneratorActionMode>>({ HOLD: 'any', LIFT: 'any', LEAVE: 'any', BOUNCE: 'any', TAP: 'any', EMPTY: 'any', ZIP: 'any', SPECIAL: 'any' });
+  const [generatorActionCounts, setGeneratorActionCounts] = useState<Record<ActionName, number>>({ HOLD: 1, LIFT: 1, LEAVE: 1, BOUNCE: 1, TAP: 1, EMPTY: 1, ZIP: 1, SPECIAL: 1 });
+  const [generatorPerformerScope, setGeneratorPerformerScope] = useState('all');
+  const [generatorRequiredPerformerAction, setGeneratorRequiredPerformerAction] = useState<ActionName>('LIFT');
+  const [generatorRequireEachPerformer, setGeneratorRequireEachPerformer] = useState(false);
+  const [generatorZipCount, setGeneratorZipCount] = useState('');
+  const [generatorPassCount, setGeneratorPassCount] = useState('');
+  const [generatorRequiredFragmentCode, setGeneratorRequiredFragmentCode] = useState('');
+  const [generatorForbiddenFragmentCode, setGeneratorForbiddenFragmentCode] = useState('');
+  const [generatorResults, setGeneratorResults] = useState<Sequence[]>([]);
+  const [generatorRunning, setGeneratorRunning] = useState(false);
+  const [generatorHasMore, setGeneratorHasMore] = useState(false);
+  const [generatorError, setGeneratorError] = useState('');
+  const generatorAbortRef = useRef<AbortController | null>(null);
+  const generatorIteratorRef = useRef<AsyncIterator<GeneratedCandidate> | null>(null);
+  const generatorPendingRef = useRef<GeneratedCandidate | null>(null);
 
   useEffect(() => { setBpmInput(String(sequence.bpm)); }, [sequence.bpm]);
 
@@ -883,11 +906,6 @@ export default function App() {
     setShowActionMenu(false);
   };
 
-  const selectInterval = (beatId: string, offset: Rational, duration: Rational) => {
-    const cells = editorPerformers.flatMap((performer) => hands.map((hand) => ({ performerId: performer.id, hand, beatId, offset, duration })));
-    if (cells[0]) { setSelected(cells[0]); setSelectedCells(cells); setPassRecipientId(''); setPassRecipientHand('left'); setShowActionMenu(false); }
-  };
-
   const selectBeat = (beatId: string) => {
     const cells = editorPerformers.flatMap((performer) => hands.flatMap((hand) =>
       timelineSlots.filter((slot) => slot.beatId === beatId).map((slot) => ({
@@ -897,13 +915,146 @@ export default function App() {
     if (cells[0]) { setSelected(cells[0]); setSelectedCells(cells); setPassRecipientId(''); setPassRecipientHand('left'); setShowActionMenu(false); }
   };
 
-  const subdivideInterval = (beatId: string, offset: Rational, duration: Rational) => {
-    const beat = sequence.beats.find((item) => item.id === beatId);
-    if (!beat) return;
-    const updated = splitSubdivision(beat, offset, duration, () => asSubdivisionId(id('subdivision')));
-    if (updated === beat) return;
-    commit({ ...sequence, beats: sequence.beats.map((item) => item.id === beatId ? updated : item) });
+  const toggleBeatDuration = (beatId: string) => {
+    commit({
+      ...sequence,
+      beats: sequence.beats.map((beat) => beat.id === beatId
+        ? { ...beat, durationKind: beat.durationKind === 'half' ? 'regular' : 'half' }
+        : beat),
+    });
     setShowActionMenu(false);
+  };
+
+  const loadGeneratorPage = async () => {
+    if (generatorRunning || !generatorIteratorRef.current) return;
+    const iterator = generatorIteratorRef.current;
+    setGeneratorRunning(true);
+    try {
+      let added = 0;
+      while (added < 20) {
+        let candidate = generatorPendingRef.current;
+        if (candidate) {
+          generatorPendingRef.current = null;
+        } else {
+          const next = await iterator.next();
+          if (next.done) {
+            generatorIteratorRef.current = null;
+            setGeneratorHasMore(false);
+            break;
+          }
+          candidate = next.value;
+        }
+        setGeneratorResults((results) => [...results, candidate.sequence]);
+        added += 1;
+      }
+      if (added === 20 && generatorIteratorRef.current === iterator) {
+        const lookahead = await iterator.next();
+        if (lookahead.done) {
+          generatorIteratorRef.current = null;
+          setGeneratorHasMore(false);
+        } else {
+          generatorPendingRef.current = lookahead.value;
+          setGeneratorHasMore(true);
+        }
+      }
+    } catch (error) {
+      setGeneratorError(error instanceof Error ? error.message : 'Generation failed.');
+      generatorIteratorRef.current = null;
+      generatorPendingRef.current = null;
+      setGeneratorHasMore(false);
+    } finally {
+      setGeneratorRunning(false);
+      if (generatorAbortRef.current?.signal.aborted) generatorAbortRef.current = null;
+    }
+  };
+
+  const runGenerator = async () => {
+    if (generatorRunning) return;
+    const decodeFragment = (code: string): SequenceFragment[] => {
+      if (!code.trim()) return [];
+      const decoded = sequenceCodec.decode(code.trim());
+      if (!decoded.ok) throw new Error(decoded.message);
+      const fragmentSequence = decoded.sequence;
+      return [{
+        sequenceType: fragmentSequence.sequenceType,
+        timeSignature: fragmentSequence.timeSignature,
+        beats: fragmentSequence.beats,
+        performers: fragmentSequence.performers,
+        positions: fragmentSequence.positions,
+        notation: fragmentSequence.notation,
+      }];
+    };
+    const optionalCount = (value: string, label: string): number | undefined => {
+      if (!value.trim()) return undefined;
+      const count = Number(value);
+      if (!Number.isSafeInteger(count) || count < 0) throw new Error(label + ' must be a nonnegative whole number.');
+      return count;
+    };
+
+    let requiredFragments: SequenceFragment[];
+    let forbiddenFragments: SequenceFragment[];
+    let zipTransferCount: number | undefined;
+    let passCount: number | undefined;
+    try {
+      requiredFragments = decodeFragment(generatorRequiredFragmentCode);
+      forbiddenFragments = decodeFragment(generatorForbiddenFragmentCode);
+      zipTransferCount = optionalCount(generatorZipCount, 'ZIP transfer count');
+      passCount = optionalCount(generatorPassCount, 'Passing transfer count');
+    } catch (error) {
+      setGeneratorError(error instanceof Error ? error.message : 'Invalid generator constraint.');
+      return;
+    }
+
+    const performerId = generatorPerformerScope === 'all' ? undefined : asPerformerId(generatorPerformerScope);
+    const actionRequirements: ActionRequirement[] = [];
+    for (const actionType of actionNames) {
+      const mode = generatorActionModes[actionType];
+      if (mode === 'any') continue;
+      const scope = performerId ? { performerId } : {};
+      if (mode === 'required') actionRequirements.push({ actionType, occurrence: 'at-least-once', ...scope });
+      else if (mode === 'forbidden') actionRequirements.push({ actionType, occurrence: 'forbidden', ...scope });
+      else actionRequirements.push({ actionType, occurrence: 'exact-count', count: generatorActionCounts[actionType], ...scope });
+    }
+
+    const request: GeneratorRequest = {
+      mode: generatorMode,
+      sequenceTypes: [sequence.sequenceType],
+      templateSequence: sequence,
+      ...(generatorMode === 'complete-base' ? { baseSequence: sequence } : {}),
+      beatCount: sequence.beats.length,
+      performerCount: sequence.performers.length,
+      objectCount: sequence.balls.length,
+      availablePositions: sequence.positions,
+      timeSignature: sequence.timeSignature,
+      initialState: sequence.initialState,
+      maxResults: 100_000,
+      maxSearchNodes: 100_000,
+      constraints: {
+        looping: generatorLooping,
+        actionRequirements,
+        zipTransferCount,
+        passCount,
+        requiredActionPerPerformer: generatorRequireEachPerformer ? generatorRequiredPerformerAction : undefined,
+        requiredFragments,
+        forbiddenFragments,
+      },
+    };
+    const controller = new AbortController();
+    generatorAbortRef.current = controller;
+    const generatorSearch = sequenceGenerator.generate(request, controller.signal);
+    generatorIteratorRef.current = generatorSearch[Symbol.asyncIterator]();
+    generatorPendingRef.current = null;
+    setGeneratorResults([]);
+    setGeneratorError('');
+    setGeneratorHasMore(true);
+    await loadGeneratorPage();
+  };
+
+  const stopGenerator = () => {
+    generatorAbortRef.current?.abort();
+    generatorIteratorRef.current = null;
+    generatorPendingRef.current = null;
+    setGeneratorHasMore(false);
   };
 
   const undo = () => {
@@ -969,7 +1120,7 @@ export default function App() {
   const insertBeatAfter = (beatId?: string) => {
     const index = beatId ? sequence.beats.findIndex((beat) => beat.id === beatId) : sequence.beats.length - 1;
     if (index < 0) return;
-    const beat = { id: asBeatId(id('new-beat')), subdivisions: [] };
+    const beat = { id: asBeatId(id('new-beat')), durationKind: 'regular' as const };
     const beats = [...sequence.beats];
     beats.splice(index + 1, 0, beat);
     commit({ ...sequence, beats });
@@ -1731,18 +1882,17 @@ export default function App() {
               const isBeatStart = compareRational(slot.offset, rational(0)) === 0;
               const isBeatEnd = timelineSlots[index + 1]?.beatId !== slot.beatId;
               return <div className={'beat-head' + (isBeatStart ? ' beat-start' : '') + (isBeatStart && beatIndex % sequence.timeSignature.beatGrouping.length === 0 ? ' bar-start' : '')} key={beat.id + ':' + slot.offset.numerator + '/' + slot.offset.denominator}>
-                <button type="button" className="beat-select" onClick={() => isBeatStart ? selectBeat(beat.id) : selectInterval(beat.id, slot.offset, slot.duration)} aria-label={isBeatStart ? 'Select beat ' + (beatIndex + 1) : 'Select beat ' + (beatIndex + 1) + ' subdivision ' + slot.label}>
-                  <span>{slot.label}</span><small>{isBeatStart ? Math.floor(beatIndex / sequence.timeSignature.beatGrouping.length) + 1 + '.' + (beatIndex % sequence.timeSignature.beatGrouping.length + 1) : ' '}</small>
+                <button type="button" className="beat-select" onClick={() => selectBeat(beat.id)} aria-label={'Select beat ' + (beatIndex + 1)}>
+                  <span>{slot.label}</span><small>{Math.floor(beatIndex / sequence.timeSignature.beatGrouping.length) + 1 + '.' + (beatIndex % sequence.timeSignature.beatGrouping.length + 1)}</small>
                 </button>
                 {isBeatStart && <button type="button" className="move-beat move-beat-left" onClick={() => moveBeat(beat.id, -1)} disabled={beatIndex === 0} aria-label={'Move beat ' + (beatIndex + 1) + ' left'}>‹</button>}
                 {isBeatStart && <button type="button" className="move-beat move-beat-right" onClick={() => moveBeat(beat.id, 1)} disabled={beatIndex === sequence.beats.length - 1} aria-label={'Move beat ' + (beatIndex + 1) + ' right'}>›</button>}
-                <button type="button" className="subdivide-interval" onClick={() => subdivideInterval(beat.id, slot.offset, slot.duration)} aria-label={'Subdivide beat ' + (beatIndex + 1) + ' interval ' + slot.label}>÷</button>
+                <button type="button" className="beat-duration-toggle" onClick={() => toggleBeatDuration(beat.id)} aria-label={(beat.durationKind === 'half' ? 'Make beat ' + (beatIndex + 1) + ' regular length' : 'Make beat ' + (beatIndex + 1) + ' half length')}>{beat.durationKind === 'half' ? '½' : '1×'}</button>
                 {isBeatEnd && <button type="button" className="insert-beat" onClick={() => insertBeatAfter(beat.id)} aria-label={'Insert beat after ' + (beatIndex + 1)}>+</button>}
               </div>;
             })}
             <button type="button" className="add-beat" onClick={addBeat} aria-label="Add beat">+</button>
           </div>
-          {(sequence.beats.some((beat) => beat.subdivisions.length > 0) || (sequence.timeSignature.numerator === 6 && sequence.timeSignature.denominator === 8)) && <p className="timeline-note">Subdivisions are shown in the notation grid, but the simulator currently evaluates all actions in a main beat simultaneously. The current binary subdivision model does not represent triplet subdivisions in 6/8.</p>}
           {editorPerformers.map((performer) => (
             <div className="performer-block" key={performer.id}>
               <div className="performer-heading">{sequence.sequenceType === 'circle-passing' ? 'Pattern' : performer.name}<span>{sequence.sequenceType === 'circle-passing' ? '' : performer.identifier ?? ''}</span></div>
@@ -1855,6 +2005,99 @@ export default function App() {
         </div>}
       </section>
 
+      <section className="generator-panel" aria-label="Sequence generator">
+        <div className="panel-heading">
+          <strong>Sequence generator</strong>
+          <button type="button" onClick={() => setShowGenerator((open) => !open)} aria-expanded={showGenerator}>{showGenerator ? 'Hide' : 'Show'}</button>
+        </div>
+        {showGenerator && <>
+          <div className="generator-controls">
+            <label>Mode
+              <select value={generatorMode} onChange={(event) => setGeneratorMode(event.target.value as GeneratorRequest['mode'])} disabled={generatorRunning}>
+                <option value="from-scratch">Generate from scratch</option>
+                <option value="complete-base">Complete current sequence</option>
+              </select>
+            </label>
+            <label>Looping
+              <select value={generatorLooping} onChange={(event) => setGeneratorLooping(event.target.value as GeneratorRequest['constraints']['looping'])} disabled={generatorRunning}>
+                <option value="either">Either</option>
+                <option value="must-loop">Must loop</option>
+                <option value="must-not-loop">Must not loop</option>
+              </select>
+            </label>
+            <label>Performer scope
+              <select value={generatorPerformerScope} onChange={(event) => setGeneratorPerformerScope(event.target.value)} disabled={generatorRunning}>
+                <option value="all">All performers</option>
+                {sequence.performers.map((performer) => <option key={performer.id} value={performer.id}>{performer.name}</option>)}
+              </select>
+            </label>
+            <button type="button" onClick={runGenerator} disabled={generatorRunning || !sequence.beats.length || !sequence.performers.length}>Generate</button>
+            {generatorRunning && <button type="button" onClick={stopGenerator}>Stop</button>}
+            <span>{generatorRunning ? 'Searching… ' + generatorResults.length + ' found' : generatorResults.length + ' results'}</span>
+          </div>
+          <details className="generator-advanced">
+            <summary>Constraints</summary>
+            <div className="generator-action-constraints">
+              {actionNames.map((actionType) => (
+                <label key={actionType}>
+                  <span>{actionType}</span>
+                  <select value={generatorActionModes[actionType]} onChange={(event) => setGeneratorActionModes((current) => ({ ...current, [actionType]: event.target.value as GeneratorActionMode }))} disabled={generatorRunning}>
+                    <option value="any">No constraint</option>
+                    <option value="required">Required</option>
+                    <option value="forbidden">Forbidden</option>
+                    <option value="exact">Exact count</option>
+                  </select>
+                  {generatorActionModes[actionType] === 'exact' && <input aria-label={actionType + ' exact count'} type="number" min="0" max="100" value={generatorActionCounts[actionType]} onChange={(event) => setGeneratorActionCounts((current) => ({ ...current, [actionType]: Math.max(0, Number(event.target.value)) }))} />}
+                </label>
+              ))}
+            </div>
+            <label className="generator-each-performer">
+              <input type="checkbox" checked={generatorRequireEachPerformer} onChange={(event) => setGeneratorRequireEachPerformer(event.target.checked)} disabled={generatorRunning} />
+              Require an action for every performer
+              <select value={generatorRequiredPerformerAction} onChange={(event) => setGeneratorRequiredPerformerAction(event.target.value as ActionName)} disabled={generatorRunning || !generatorRequireEachPerformer}>
+                {actionNames.map((action) => <option key={action} value={action}>{action}</option>)}
+              </select>
+            </label>
+            <div className="generator-transfer-counts">
+              <label>Exact ZIP transfers <input type="number" min="0" value={generatorZipCount} onChange={(event) => setGeneratorZipCount(event.target.value)} placeholder="Any" disabled={generatorRunning} /></label>
+              <label>Exact passes <input type="number" min="0" value={generatorPassCount} onChange={(event) => setGeneratorPassCount(event.target.value)} placeholder="Any" disabled={generatorRunning} /></label>
+            </div>
+            <label className="generator-fragment">Required fragment code
+              <textarea rows={2} value={generatorRequiredFragmentCode} onChange={(event) => setGeneratorRequiredFragmentCode(event.target.value)} disabled={generatorRunning} placeholder="Paste a P5 sequence code" />
+            </label>
+            <label className="generator-fragment">Forbidden fragment code
+              <textarea rows={2} value={generatorForbiddenFragmentCode} onChange={(event) => setGeneratorForbiddenFragmentCode(event.target.value)} disabled={generatorRunning} placeholder="Paste a P5 sequence code" />
+            </label>
+          </details>
+          {generatorError && <p role="alert">{generatorError}</p>}
+          {!generatorRunning && generatorResults.length === 0 && !generatorError && <p>No results yet. Choose a mode and start generation.</p>}
+          <div className="generator-results">
+            {generatorResults.map((result, resultIndex) => (
+              <article className="generator-result" key={resultIndex}>
+                <div className="panel-heading"><strong>Result {resultIndex + 1}</strong><span>{result.notation.length} actions</span></div>
+                <div className="generator-preview">
+                  {result.performers.map((performer) => (
+                    <div className="generator-preview-performer" key={performer.id}>
+                      <strong>{performer.name}</strong>
+                      {hands.map((hand) => (
+                        <div className="generator-preview-row" key={hand} style={{ gridTemplateColumns: `24px repeat(${result.beats.length}, 48px)` }}>
+                          <span>{hand === 'left' ? 'L' : 'R'}</span>
+                          {result.beats.map((beat) => {
+                            const entry = result.notation.find((item) => item.performerId === performer.id && item.hand === hand && item.time.beatId === beat.id);
+                            return <div className="generator-preview-cell" key={beat.id}>{entry ? <ActionSymbol action={entry.action} sequence={result} hand={hand} /> : null}</div>;
+                          })}
+                        </div>
+                      ))}
+                    </div>
+                  ))}
+                </div>
+                <button type="button" onClick={() => { commit(result); setShowGenerator(false); }}>Load into editor</button>
+              </article>
+            ))}
+          </div>
+          {generatorHasMore && <button type="button" onClick={() => void loadGeneratorPage()} disabled={generatorRunning}>Load more results</button>}
+        </>}
+      </section>
       <section className="bottom-panels">
         <div className="validation-panel" role="region" aria-label="Validation">
           <div className="panel-heading"><strong>Validation</strong><span className={simulation.validation.isValid ? 'valid-count' : 'error-count'}>{displayedIssues.length} {displayedIssues.length === 1 ? 'issue' : 'issues'}</span></div>

@@ -1,14 +1,14 @@
-# P4 Compact Sequence Code
+# P5 Compact Sequence Code
 
 ## Status
 
-Normative specification for the approved P4 implementation. P4 replaces P3 completely when released. P1, P2 and P3 are unsupported by the P4 decoder.
+Normative specification for the approved P5 implementation. P5 replaces P4 completely. P1, P2, P3 and P4 are unsupported by the P5 decoder.
 
 ## 1. Design
 
-P4 is a self contained, lossless, deterministic stream. It uses a continuous alphanumeric code with one structural period separating metadata from action streams. The tilde is reserved for escaped UTF8 bytes inside text values.
+P5 is a self contained, lossless, deterministic stream. It uses a continuous alphanumeric code with one structural period separating metadata from action streams. The tilde is reserved for escaped UTF8 bytes inside text values.
 
-P4 contains no JSON, Base64 payload, encryption, UUIDs, internal object keys, implicit defaults or lossy compression.
+P5 contains no JSON, Base64 payload, encryption, UUIDs, internal object keys, implicit defaults or lossy compression.
 
 ## 2. Character alphabet
 
@@ -18,7 +18,7 @@ Reserved characters:
 
 | Character | Meaning |
 |---|---|
-| `P4` | Version marker |
+| `P5` | Version marker |
 | `.` | Single boundary between metadata and action streams |
 | `t` | Length prefixed text marker |
 | `~` | Escaped UTF8 byte inside text |
@@ -78,7 +78,7 @@ Malformed UTF8, invalid escapes, truncated payloads and incorrect byte lengths a
 
 ## 5. Numeric values
 
-Persisted JavaScript numbers are represented as text containing the canonical ECMAScript decimal representation. This includes BPM, time signature values, grouping values, subdivision depth, circle distance, table dimensions and seat indices.
+Persisted JavaScript numbers are represented as text containing the canonical ECMAScript decimal representation. This includes BPM, time signature values, grouping values, circle distance, table dimensions and seat indices.
 
 The special numeric value negative zero is represented by the text `-0`. Nonfinite numbers are not encodable.
 
@@ -107,7 +107,7 @@ Numerator and denominator must be safe integers. Denominator must be positive. V
 
 ## 7. Header field order
 
-The header begins with `P4` and one sequence type character:
+The header begins with `P5` and one sequence type character:
 
 * `S`: solo
 * `C`: circle passing
@@ -172,15 +172,14 @@ Each placement begins with ball index, followed by one location:
 
 Placement order is preserved. Structurally complete but semantically invalid placements remain representable.
 
-### 7.4 Subdivisions
+### 7.4 Beat duration kind
 
-For each main beat in order, write its subdivision count, then each subdivision in array order:
+For every discrete beat in order, write exactly one character:
 
-1. Exact start rational.
-2. Exact duration rational.
-3. Depth as numeric text.
+- `R`: regular beat.
+- `H`: half beat.
 
-There is a count for every beat, including zero subdivision beats.
+There are no nested subdivision records or per beat counts. A half beat is a complete beat and retains the same notation and validation semantics as a regular beat.
 
 ### 7.5 Passing and table layout
 
@@ -266,7 +265,7 @@ SPECIAL is `S`, followed by text, then its optional link marker and index.
 
 A conforming encoder:
 
-* Preserves performer, position, ball, beat, subdivision, placement and seat array order.
+* Preserves performer, position, ball, beat, beat duration kind, placement and seat array order.
 * Assigns local indices from the corresponding array order.
 * Emits left then right stream for each performer.
 * Emits beat cells in ascending beat order.
@@ -282,11 +281,11 @@ Internal IDs are regenerated locally. All semantic relationships and ordering ar
 
 ## 10. Resource limits
 
-The decoder rejects codes longer than 1,000,000 characters. It rejects any collection count, beat count, performer count, position count, ball count, placement count, subdivision count, seat count or per beat event count greater than 100,000. Implementations should apply limits before allocating arrays.
+The decoder rejects codes longer than 1,000,000 characters. It rejects any collection count, beat count, performer count, position count, ball count, placement count, seat count or per beat event count greater than 100,000. Implementations should apply limits before allocating arrays.
 
 ## 11. Field coverage
 
-| Sequence field | P4 representation |
+| Sequence field | P5 representation |
 |---|---|
 | Sequence type | Header type character |
 | BPM | Numeric text |
@@ -297,7 +296,7 @@ The decoder rejects codes longer than 1,000,000 characters. It rejects any colle
 | Positions | Position records and owner references |
 | Balls | Ball count |
 | Initial state | Ordered placement records |
-| Subdivisions | Per beat count and exact values |
+| Beat duration kind | One `R` or `H` marker per beat |
 | Notation performer and hand | Stream order |
 | Notation beat | Beat cell index |
 | Notation offset | Exact rational |
@@ -312,6 +311,6 @@ The decoder rejects codes longer than 1,000,000 characters. It rejects any colle
 
 For every supported sequence, decoding its encoded code must reconstruct a semantically equivalent sequence. Encoding a decoded canonical code must reproduce the identical code.
 
-P4 decoding is independent of the React interface and notation validator. A structurally complete sequence that violates notation rules is still decoded. The existing validator remains responsible for reporting notation errors.
+P5 decoding is independent of the React interface and notation validator. A structurally complete sequence that violates notation rules is still decoded. The existing validator remains responsible for reporting notation errors.
 
-P3 codes are not accepted by the P4 decoder. Failed imports do not mutate the current editor sequence.
+P4 codes are not accepted by the P5 decoder. Failed imports do not mutate the current editor sequence.

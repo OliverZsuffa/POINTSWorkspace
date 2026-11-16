@@ -95,3 +95,14 @@ export function getMainBeatDurationSeconds(
 
   return rationalToNumber(beatDuration) * getQuarterNoteDurationSeconds(bpm);
 }
+
+/** Returns the playback duration of a discrete beat. Half beats retain full beat semantics and play in half the time. */
+export function getBeatDurationSeconds(
+  signature: TimeSignature,
+  beatIndex: number,
+  bpm: number,
+  durationKind: 'regular' | 'half' = 'regular',
+): number {
+  const regularDuration = getMainBeatDurationSeconds(signature, beatIndex, bpm);
+  return durationKind === 'half' ? regularDuration / 2 : regularDuration;
+}
