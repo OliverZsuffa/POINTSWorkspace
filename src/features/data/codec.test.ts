@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { sequenceCodec } from './codec';
 import { rational } from '../../domain/time/rational';
+import { createTimeSignature } from '../../domain/time/time-signature';
 import type { LeaveActionTarget, LiftActionTarget, Sequence, TableActionTarget } from '../../domain/model';
 import {
   invalidInitialStateSequence,
@@ -148,6 +149,19 @@ describe('readable sequence code', () => {
       expect(decoded.sequence.tableLayout).toEqual(sequence.tableLayout);
       expect(decoded.sequence.seatAssignments[0]?.seat).toEqual(sequence.seatAssignments[0]?.seat);
       expect(sequenceCodec.encode(decoded.sequence)).toBe(code);
+    }
+  });
+
+  it('preserves compound time signatures and beat grouping', () => {
+    const sequence = {
+      ...representativeSoloSequence,
+      timeSignature: createTimeSignature(6, 8, [3, 3]),
+    };
+    const decoded = sequenceCodec.decode(sequenceCodec.encode(sequence));
+    expect(decoded.ok).toBe(true);
+    if (decoded.ok) {
+      expect(decoded.sequence.timeSignature).toEqual({ numerator: 6, denominator: 8, beatGrouping: [3, 3] });
+      expect(semanticShape(decoded.sequence)).toEqual(semanticShape(sequence));
     }
   });
 
