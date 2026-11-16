@@ -26,6 +26,7 @@ import type {
 import { compareRational, rational, type Rational } from './domain/time/rational';
 import { DEFAULT_TIME_SIGNATURE } from './domain/time/time-signature';
 import { simulateSequence } from './domain/state';
+import { getActionSymbolGeometry } from './features/notation/action-symbol';
 import { getBallRectangleEntries } from './features/editor/rectangles';
 import { getTimelineSlots, type TimelineSlot } from './features/editor/timeline';
 import SequenceRenderer from './features/renderer/SequenceRenderer';
@@ -221,95 +222,27 @@ function circleSubscript(target: Extract<TableActionTarget, { kind: 'circle-posi
 }
 
 function ActionSymbol({ action, sequence, hand, abstractTargets = false }: { action: NotationAction; sequence: Sequence; hand: Hand; abstractTargets?: boolean }) {
-  if (action.type === 'EMPTY') return null;
-  if (action.type === 'SPECIAL') return <span className={'special-symbol' + (action.text === 'Clap' ? ' clap-symbol' : '')} aria-label={action.text === 'Clap' ? 'Clap' : undefined}>{action.text === 'Clap' ? <span className="clap-bar" /> : action.text || 'SPECIAL'}{action.linkId && action.text !== 'Clap' && <span className="special-link-indicator" aria-label="Linked SPECIAL">↔</span>}</span>;
-  let path = '';
-  let target = '';
-  let subscript = '';
-  let circledTarget = false;
-  switch (action.type) {
-    case 'HOLD': path = 'M7 9H41 M7 39H41'; break;
-    case 'LIFT':
-      path = 'M7 9H41 M7 9V39 M7 39H41';
-      if (action.target.kind === 'position') target = positionReference(sequence, action.target.positionId);
-      else if (action.target.kind === 'circle-position') { target = action.target.position; subscript = circleSubscript(action.target); }
-      else if ('performerId' in action.target) { const targetPerformerId = action.target.performerId; target = 'X'; subscript = sequence.performers.find((person) => person.id === targetPerformerId)?.identifier ?? '?'; }
-      break;
-    case 'LEAVE':
-      path = 'M7 9H41 M41 9V39 M7 39H41';
-      if (action.target.kind === 'position') target = positionReference(sequence, action.target.positionId);
-      else if (action.target.kind === 'circle-position') { target = action.target.position; subscript = circleSubscript(action.target); }
-      else if ('hand' in action.target) { const targetHand = action.target.hand; const targetPerformerId = action.target.performerId; target = targetHand === 'left' ? 'L' : 'R'; circledTarget = true; subscript = sequence.performers.find((person) => person.id === targetPerformerId)?.identifier ?? '?'; }
-      break;
-    case 'BOUNCE':
-      path = 'M7 9H41 M7 39H41';
-      if (action.target.kind === 'position') target = positionReference(sequence, action.target.positionId);
-      else { target = action.target.position; subscript = circleSubscript(action.target); }
-      break;
-    case 'TAP':
-      if (action.target.kind === 'position') target = positionReference(sequence, action.target.positionId);
-      else { target = action.target.position; subscript = circleSubscript(action.target); }
-      break;
-    case 'ZIP':
-      path = action.role === 'source'
-        ? hand === 'left' ? 'M7 9H41 M41 9V39' : 'M7 39H41 M41 9V39'
-        : hand === 'left' ? 'M7 9H41 M7 9V39' : 'M7 39H41 M7 9V39';
-      break;
-  }
-  if (abstractTargets && 'target' in action && (action.target.kind === 'position' || action.target.kind === 'circle-position')) {
-    target = '';
-    subscript = '';
-  }
+  const geometry = getActionSymbolGeometry(action, sequence, hand, abstractTargets);
+  if (!geometry) return null;
+  if (geometry.specialText) return <span className={'special-symbol' + (geometry.clap ? ' clap-symbol' : '')} aria-label={geometry.clap ? 'Clap' : undefined}>{geometry.clap ? <span className="clap-bar" /> : geometry.specialText}{'linkId' in action && action.linkId && !geometry.clap && <span className="special-link-indicator" aria-label="Linked SPECIAL">↔</span>}</span>;
   return (
-    <svg className="notation-symbol" viewBox="0 0 48 48" aria-hidden="true">
-      <path d={path} fill="none" stroke="#172033" strokeWidth="3.5" strokeLinecap="square" strokeLinejoin="miter" />
-      {circledTarget && <circle cx="20" cy="23" r="8" fill="none" stroke="#263238" strokeWidth="1.8" />}
-      {target && <text x={subscript ? 20 : 24} y={subscript ? 23 : 24} textAnchor="middle" dominantBaseline="middle" fontFamily="Arial,sans-serif" fontSize={target.length > 3 ? 18 : subscript ? 22 : 25} fill="#263238">{target}{subscript && <tspan fontSize="14" baselineShift="sub">{subscript}</tspan>}</text>}
+    <svg className="notation-symbol" viewBox="0 0 100 100" aria-hidden="true">
+      <path d={geometry.path} fill="none" stroke="#172033" strokeWidth="5.5" strokeLinecap="square" strokeLinejoin="miter" />
+      {geometry.circledTarget && <circle cx="36" cy="50" r="13" fill="none" stroke="#263238" strokeWidth="1.8" />}
+      {geometry.label && <text x={geometry.subscript ? 38 : 50} y="50" textAnchor="middle" dominantBaseline="middle" fontFamily="Arial,sans-serif" fontSize={geometry.label.length > 3 ? 38 : 46} fontWeight="700" fill="#172033">{geometry.label}{geometry.subscript && <tspan fontSize="28" baselineShift="sub">{geometry.subscript}</tspan>}</text>}
     </svg>
   );
 }
 
 function NotationMark({ action, sequence, hand }: { action: NotationAction; sequence: Sequence; hand: Hand }) {
-  if (action.type === 'EMPTY') return null;
-  if (action.type === 'SPECIAL') return <span className={'special-symbol' + (action.text === 'Clap' ? ' clap-symbol' : '')} aria-label={action.text === 'Clap' ? 'Clap' : undefined}>{action.text === 'Clap' ? <span className="clap-bar" /> : action.text || 'SPECIAL'}{action.linkId && <span className="special-link-indicator" aria-label="Linked SPECIAL">↔</span>}</span>;
-  let path = '';
-  let label = '';
-  let subscript = '';
-  let circledTarget = false;
-  switch (action.type) {
-    case 'TAP':
-      if (action.target.kind === 'position') label = positionReference(sequence, action.target.positionId);
-      else { label = action.target.position; subscript = circleSubscript(action.target); }
-      break;
-    case 'LIFT':
-      path = 'M0 0H100 M0 0V100 M0 100H100';
-      if (action.target.kind === 'position') label = positionReference(sequence, action.target.positionId);
-      else if (action.target.kind === 'circle-position') { label = action.target.position; subscript = circleSubscript(action.target); }
-      else if ('performerId' in action.target) { const targetPerformerId = action.target.performerId; label = 'X'; subscript = sequence.performers.find((person) => person.id === targetPerformerId)?.identifier ?? '?'; }
-      break;
-    case 'HOLD': path = 'M0 0H100 M0 100H100'; break;
-    case 'LEAVE':
-      path = 'M0 0H100 M100 0V100 M0 100H100';
-      if (action.target.kind === 'position') label = positionReference(sequence, action.target.positionId);
-      else if (action.target.kind === 'circle-position') { label = action.target.position; subscript = circleSubscript(action.target); }
-      else if ('hand' in action.target) { const targetHand = action.target.hand; const targetPerformerId = action.target.performerId; label = targetHand === 'left' ? 'L' : 'R'; circledTarget = true; subscript = sequence.performers.find((person) => person.id === targetPerformerId)?.identifier ?? '?'; }
-      break;
-    case 'BOUNCE':
-      path = 'M0 0H100 M0 100H100';
-      if (action.target.kind === 'position') label = positionReference(sequence, action.target.positionId);
-      else { label = action.target.position; subscript = circleSubscript(action.target); }
-      break;
-    case 'ZIP':
-      path = action.role === 'source'
-        ? hand === 'left' ? 'M0 0H100 M100 0V100' : 'M0 100H100 M100 0V100'
-        : hand === 'left' ? 'M0 0H100 M0 0V100' : 'M0 100H100 M0 0V100';
-      break;
-  }
+  const geometry = getActionSymbolGeometry(action, sequence, hand);
+  if (!geometry) return null;
+  if (geometry.specialText) return <span className={'special-symbol' + (geometry.clap ? ' clap-symbol' : '')} aria-label={geometry.clap ? 'Clap' : undefined}>{geometry.clap ? <span className="clap-bar" /> : geometry.specialText}{'linkId' in action && action.linkId && <span className="special-link-indicator" aria-label="Linked SPECIAL">↔</span>}</span>;
   return (
     <svg className="ball-segment" viewBox="0 0 100 100" aria-hidden="true">
-      <path d={path} fill="none" stroke="#172033" strokeWidth="5.5" strokeLinecap="square" strokeLinejoin="miter" />
-      {circledTarget && <circle cx="36" cy="50" r="13" fill="none" stroke="#263238" strokeWidth="1.8" />}
-      {label && <text x={subscript ? 38 : 50} y="50" textAnchor="middle" dominantBaseline="middle" fontFamily="Arial,sans-serif" fontSize={label.length > 3 ? 38 : 46} fontWeight="700" fill="#172033">{label}{subscript && <tspan fontSize="28" baselineShift="sub">{subscript}</tspan>}</text>}
+      <path d={geometry.path} fill="none" stroke="#172033" strokeWidth="5.5" strokeLinecap="square" strokeLinejoin="miter" />
+      {geometry.circledTarget && <circle cx="36" cy="50" r="13" fill="none" stroke="#263238" strokeWidth="1.8" />}
+      {geometry.label && <text x={geometry.subscript ? 38 : 50} y="50" textAnchor="middle" dominantBaseline="middle" fontFamily="Arial,sans-serif" fontSize={geometry.label.length > 3 ? 38 : 46} fontWeight="700" fill="#172033">{geometry.label}{geometry.subscript && <tspan fontSize="28" baselineShift="sub">{geometry.subscript}</tspan>}</text>}
     </svg>
   );
 }
