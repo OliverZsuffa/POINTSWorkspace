@@ -184,6 +184,22 @@ describe('readable sequence code', () => {
     if (decoded.ok) expect(semanticShape(decoded.sequence)).toEqual(semanticShape(sequence));
   });
 
+  it('round trips empty sequence collections without inventing entries', () => {
+    const sequence = {
+      ...representativeSoloSequence,
+      performers: [],
+      positions: [],
+      balls: [],
+      beats: [],
+      initialState: { placements: [] },
+      notation: [],
+      seatAssignments: [],
+    };
+    const decoded = sequenceCodec.decode(sequenceCodec.encode(sequence));
+    expect(decoded.ok).toBe(true);
+    if (decoded.ok) expect(semanticShape(decoded.sequence)).toEqual(semanticShape(sequence));
+  });
+
   it('preserves structurally complete but invalid timing values', () => {
     const sequence = {
       ...representativeSoloSequence,
