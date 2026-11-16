@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { sequenceCodec } from './codec';
+import { rational } from '../../domain/time/rational';
 import {
   invalidInitialStateSequence,
   representativeIndividualPassingSequence,
@@ -59,20 +60,68 @@ describe('readable sequence code', () => {
     expect(sequenceCodec.decode(code.replace('(Z,S,0', '(Z,S,99')).ok).toBe(false);
   });
 
-  it('round trips circle passing targets, including self targets', () => {
+  it('round trips circle targets, polygon seats and relative distance', () => {
+    const performer = representativeSoloSequence.performers[0]!;
     const sequence = {
       ...representativeSoloSequence,
       sequenceType: 'circle-passing' as const,
+      tableLayout: { type: 'polygon' as const, sideCount: 3 },
+      seatAssignments: [{ performerId: performer.id, seat: { kind: 'polygon-edge' as const, edgeIndex: 1 } }],
+      notation: [
+        {
+          ...representativeSoloSequence.notation[0]!,
+          action: { type: 'LIFT' as const, target: { kind: 'circle-position' as const, position: 'A' as const } },
+        },
+        {
+          ...representativeSoloSequence.notation[1]!,
+          action: {
+            type: 'LEAVE' as const,
+            target: { kind: 'circle-position' as const, position: 'C' as const, direction: 'right' as const, distance: 2 },
+          },
+        },
+      ],
+    };
+    const code = sequenceCodec.encode(sequence);
+    const decoded = sequenceCodec.decode(code);
+    expect(decoded.ok).toBe(true);
+    if (decoded.ok) {
+      expect(decoded.sequence.notation.map(({ action }) => action)).toEqual(sequence.notation.map(({ action }) => action));
+      expect(decoded.sequence.tableLayout).toEqual(sequence.tableLayout);
+      expect(decoded.sequence.seatAssignments[0]?.seat).toEqual(sequence.seatAssignments[0]?.seat);
+      expect(sequenceCodec.encode(decoded.sequence)).toBe(code);
+    }
+  });
+
+  it('round trips hand back placements and fractional action offsets', () => {
+    const handBackPosition = representativeSoloSequence.positions.find((position) => position.kind === 'hand-back');
+    if (!handBackPosition || handBackPosition.kind !== 'hand-back') throw new Error('Missing hand back fixture position');
+    const sequence = {
+      ...representativeSoloSequence,
+      initialState: {
+        placements: [{
+          ballId: representativeSoloSequence.balls[0]!.id,
+          location: {
+            kind: 'hand-back' as const,
+            positionId: handBackPosition.id,
+            performerId: handBackPosition.performerId,
+            hand: handBackPosition.hand,
+          },
+        }],
+      },
       notation: [{
         ...representativeSoloSequence.notation[0]!,
-        action: { type: 'LIFT' as const, target: { kind: 'circle-position' as const, position: 'A' as const } },
+        time: { ...representativeSoloSequence.notation[0]!.time, offset: rational(1, 2) },
       }],
     };
     const code = sequenceCodec.encode(sequence);
     const decoded = sequenceCodec.decode(code);
     expect(decoded.ok).toBe(true);
     if (decoded.ok) {
-      expect(decoded.sequence.notation[0]?.action).toEqual(sequence.notation[0]?.action);
+      expect(decoded.sequence.initialState.placements[0]?.location).toMatchObject({
+        kind: 'hand-back',
+        hand: 'left',
+      });
+      expect(decoded.sequence.notation[0]?.time.offset).toEqual(rational(1, 2));
       expect(sequenceCodec.encode(decoded.sequence)).toBe(code);
     }
   });
