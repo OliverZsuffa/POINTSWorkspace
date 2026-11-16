@@ -2,7 +2,7 @@
 
 ## Status
 
-Implementation and review corrections are complete in PR #20. The decoder now validates the full tuple structure and every reference before constructing a sequence. Full semantic round trip tests cover all sequence fields, including optional empty performer identifiers, compound meter and two participant polygon layouts. Final CI verification is running.
+Implementation and review corrections are complete in PR #20. The decoder now validates the full tuple structure and every reference before constructing a sequence. Full semantic round trip tests cover all sequence fields, including optional empty performer identifiers, compound meter and two participant polygon layouts. Final verification passed: formatting, lint, strict TypeScript, 160 unit tests, production build and all 16 Playwright browser checks.
 
 ## Goal
 
@@ -88,4 +88,4 @@ The current tuple layout stores the sequence settings explicitly. Performer iden
 
 ## Review checkpoint
 
-The P2 grammar and implementation are complete in PR #20. Final automated verification is running after the decoder audit. No backward compatibility is included.
+The P2 grammar and implementation are complete in PR #20. Final automated verification passed, including formatting, lint, strict TypeScript, 160 unit tests, production build and all 16 Playwright browser checks. No backward compatibility is included.
