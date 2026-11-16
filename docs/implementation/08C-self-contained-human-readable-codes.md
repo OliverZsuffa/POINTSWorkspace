@@ -66,7 +66,9 @@ Text escaping ensures that structural separators never occur literally inside a 
 
 Numbers use their canonical ECMAScript decimal string representation. Exponents are permitted. Negative values are permitted where the domain type is numeric, even if the value makes the sequence semantically invalid. Negative zero is written as `-0`.
 
-A decoder must reject NaN, positive infinity and negative infinity.
+A decoder must reject NaN, positive infinity and negative infinity. In a compound field where a period or plus sign is also a structural separator, a numeric decimal point is written as `%2E` and a plus sign inside an exponent is written as `%2B`. The decoder reverses these escapes before parsing the number. Standalone numeric fields do not need these escapes.
+
+Examples: `1.5` becomes `1%2E5` in a compound field, and `1e+21` becomes `1e%2B21`.
 
 ### 4.2 Integers and references
 
@@ -124,7 +126,7 @@ Three period separated fields:
 numerator.denominator.grouping
 ```
 
-Grouping values are separated by plus signs. An empty grouping list is represented by `-`. Numerator, denominator and grouping values are all explicitly encoded. P3 never assumes the usual time signature.
+Grouping values are separated by plus signs. An empty grouping list is represented by `-`. Numerator, denominator and grouping values are all explicitly encoded. Numeric decimal points and exponent plus signs use the compound numeric escapes defined in section 4.1. P3 never assumes the usual time signature.
 
 Example: `4.4.1+1+1+1` represents 4/4 grouped into four quarter note beats. `6.8.3+3` represents 6/8 grouped into two dotted quarter note beats.
 
@@ -202,7 +204,7 @@ A comma separated list of subdivision records. Each record has four fields:
 <beat index>.<start rational>.<duration rational>.<depth>
 ```
 
-Records are ordered first by beat index and then by their original order within that beat. A beat with no subdivisions has no records in this section. The main beat count remains explicit in section B, so empty beats are retained.
+Records are ordered first by beat index and then by their original order within that beat. A beat with no subdivisions has no records in this section. The main beat count remains explicit in Field 4, so empty beats are retained. Subdivision depth uses compound numeric escaping.
 
 Subdivision identifiers are internal implementation identifiers and are regenerated during decoding. Their order and semantic values are preserved.
 
@@ -259,7 +261,7 @@ Circle position target:
 c<position>_<direction>_<distance>
 ```
 
-Position is A, B or C. Direction is L, R or `-` when absent. Distance is a number or `-` when absent. The direction and distance are independently optional because the domain model permits either one to be present without the other. Self targeting is represented by both optional values being absent.
+Position is A, B or C. Direction is L, R or `-` when absent. Distance is a number or `-` when absent. Distance uses compound numeric escaping. The direction and distance are independently optional because the domain model permits either one to be present without the other. Self targeting is represented by both optional values being absent.
 
 Individual passing source target:
 
@@ -328,6 +330,8 @@ Polygon edge:
 ```text
 <performer index>.P.<edge index>
 ```
+
+Edge and seat indices use compound numeric escaping.
 
 Rectangle side:
 
