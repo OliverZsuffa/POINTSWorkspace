@@ -55,6 +55,59 @@ function encodeAction(action: NotationAction, sequence: Sequence, linkIndex: (id
 function isPacked(value: unknown): value is Packed {
   return Array.isArray(value);
 }
+
+function encodePacked(value: unknown): string {
+  if (Array.isArray(value)) return `(${value.map(encodePacked).join(',')})`;
+  if (typeof value === 'string') return `~${encodeURIComponent(value).replace(/~/g, '%7E')}`;
+  if (typeof value === 'number' && Number.isFinite(value)) return String(value);
+  throw new Error('Unsupported packed value');
+}
+
+function decodePacked(source: string): unknown {
+  let cursor = 0;
+  const readValue = (): unknown => {
+    if (source[cursor] === '(') {
+      cursor += 1;
+      const values: unknown[] = [];
+      if (source[cursor] === ')') {
+        cursor += 1;
+        return values;
+      }
+      while (cursor < source.length) {
+        values.push(readValue());
+        if (source[cursor] === ',') {
+          cursor += 1;
+          continue;
+        }
+        if (source[cursor] === ')') {
+          cursor += 1;
+          return values;
+        }
+        throw new Error('Invalid tuple separator');
+      }
+      throw new Error('Unclosed tuple');
+    }
+    if (source[cursor] === '~') {
+      cursor += 1;
+      const start = cursor;
+      while (cursor < source.length && source[cursor] !== ',' && source[cursor] !== ')') cursor += 1;
+      return decodeURIComponent(source.slice(start, cursor));
+    }
+    const start = cursor;
+    while (cursor < source.length && source[cursor] !== ',' && source[cursor] !== ')') cursor += 1;
+    const token = source.slice(start, cursor);
+    if (!/^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?(?:[eE][+-]?\\d+)?$/.test(token)) {
+      throw new Error('Invalid numeric value');
+    }
+    const number = Number(token);
+    if (!Number.isFinite(number)) throw new Error('Invalid numeric value');
+    return number;
+  };
+
+  const value = readValue();
+  if (cursor !== source.length) throw new Error('Trailing packed data');
+  return value;
+}
 function decodeTarget(value: unknown, positions: PositionDefinition[], performers: Performer[]) {
   if (!isPacked(value)) throw new Error('Invalid action target');
   if (value[0] === 'P') return { kind: 'position' as const, positionId: positions[Number(value[1])]!.id };
@@ -132,14 +185,14 @@ export const sequenceCodec: SequenceCodec = {
       layout, seats,
     ];
     // Readable action initials remain visible in the action stream. Tuple keys and UUIDs are omitted.
-    return PREFIX + JSON.stringify(packed);
+    return PREFIX + encodePacked(packed);
   },
   decode(code): SequenceDecodeResult {
     const trimmed = code.trim();
     if (!trimmed.startsWith('P')) return { ok: false, code: 'malformed', message: 'This is not a POINTS sequence code.' };
     if (!trimmed.startsWith(PREFIX)) return { ok: false, code: 'unsupported-version', message: 'This sequence code uses an unsupported format version.' };
     try {
-      const raw: unknown = JSON.parse(trimmed.slice(PREFIX.length));
+      const raw: unknown = decodePacked(trimmed.slice(PREFIX.length));
       if (!isPacked(raw) || raw.length !== 12) throw new Error('Invalid sequence tuple');
       const [kind, bpm, signature, rawPerformers, rawPositions, ballCount, rawPlacements, rawBeats, rawNotation, individualLayout, rawLayout, rawSeats] = raw;
       if (!isPacked(rawPerformers) || !isPacked(rawPositions) || !isPacked(rawPlacements) || !isPacked(rawBeats) || !isPacked(rawNotation) || !isPacked(rawLayout) || !isPacked(rawSeats) || !isPacked(signature)) throw new Error('Invalid sections');
