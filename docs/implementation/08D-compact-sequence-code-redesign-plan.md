@@ -2,9 +2,9 @@
 
 ## Status
 
-Proposed for review. No implementation is authorised until Oliver approves this plan.
+Approved by Oliver on 16 November 2026. The approved grammar is implemented in the P4 branch and is undergoing verification.
 
-The current P3 format remains the active format until a replacement is implemented and approved for release. This proposal is for a complete replacement, provisionally named P4. P3 will not remain supported after the replacement unless Oliver explicitly changes the versioning rule.
+P3 remains active on main until P4 is released. P4 will replace it completely. This proposal is for a complete replacement, provisionally named P4. P3 will not remain supported after the replacement unless Oliver explicitly changes the versioning rule.
 
 ## 1. Problem to solve
 
@@ -184,7 +184,7 @@ Internal UUIDs and transient editor state are not semantic content. They may be 
 
 ## 7. Implementation scope after design approval
 
-Once the grammar and examples have been reviewed and approved, implementation will replace P3 completely.
+The grammar and examples were approved. Implementation replaces P3 completely.
 
 Expected work:
 1. Write the normative P4 specification.
@@ -267,6 +267,6 @@ There is one active version only. Replacing P3 means removing P3 support rather 
 
 ## 11. Approval boundary
 
-This document is a plan, not implementation approval.
+This plan was approved. The grammar proposal was reviewed and approved, and P4 implementation is now underway.
 
-The next deliverable after approval is the concrete grammar proposal with worked examples and measured character counts. Implementation begins only after that proposal is reviewed and approved.
+The approved concrete grammar is documented in 08F. Implementation and verification are tracked in Package 06.
