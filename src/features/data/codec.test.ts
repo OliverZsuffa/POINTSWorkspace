@@ -114,6 +114,12 @@ describe('readable sequence code', () => {
     expect(code).toContain(',0:R:');
   });
 
+  it('matches the published canonical solo example', () => {
+    expect(sequenceCodec.encode(representativeSoloSequence)).toBe(
+      'P3;S:s;Q:120;T:4.4.1+1+1+1;B:4;P:~9:Juggler%201.-;X:T.~1:A.p0,T.~1:B.p0,T.~1:C.p0,B.L.0.L,B.R.0.R;O:1;I:0.P.0;D:1.0.1/2.1,1.1/2.1/2.1;A:0:L:3.3.0.T.p2,0:R:0.0.0.L.p0.-+1.1.0.H+2.2.0.V.p1.-;J:n;M:s;C:',
+    );
+  });
+
   it('keeps action initials visible in the code', () => {
     const sequence = { ...representativeSoloSequence, notation: [...representativeSoloSequence.notation, ...representativeNotationExamples] };
     const code = sequenceCodec.encode(sequence);
