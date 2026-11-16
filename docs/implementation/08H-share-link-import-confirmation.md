@@ -13,13 +13,14 @@ Manual code import already asks for confirmation before replacing the current se
 ## Required behaviour
 
 1. On startup, restore the current tab's saved sequence first, exactly as when opening the app without a share code.
-2. If the URL contains a valid P4 code, decode it without changing the editor sequence or saved progress.
-3. Present the same confirmation dialogue used by manual code import, with the same replacement meaning and clear accept and cancel choices.
-4. If the user accepts, replace the current sequence with the decoded shared sequence through the normal editor replacement path. The accepted sequence then becomes the sequence saved for the current tab.
+2. If the URL contains a valid P4 code, decode it without changing saved progress.
+3. If the restored sequence contains one or more notation entries, present the same confirmation dialogue used by manual code import.
+4. If the user accepts, replace the current sequence with the decoded shared sequence. The accepted sequence then becomes the sequence saved for the current tab.
 5. If the user cancels or dismisses the dialogue, keep the restored sequence and its saved progress unchanged.
-6. Invalid or unsupported codes must not trigger an override dialogue and must continue to show the existing error while preserving saved progress.
-7. A URL without a code must retain the existing local restoration behaviour.
-8. Keep the share code in the URL. Reloading the same link asks for confirmation again rather than silently applying it.
+6. A saved sequence with zero notation entries is empty and does not count as saved progress. In this case, load a valid shared sequence directly without asking for confirmation. The same applies when there is no saved sequence.
+7. Invalid or unsupported codes must not trigger an override dialogue and must continue to show the existing error while preserving saved progress.
+8. A URL without a code must retain the existing local restoration behaviour.
+9. Keep the share code in the URL. Reloading the same link asks for confirmation again only when nonempty saved progress exists.
 
 ## Implementation approach
 
@@ -58,4 +59,4 @@ Run formatting, lint, TypeScript, unit tests, production build, and the complete
 
 ## Approval
 
-Status: Awaiting approval.
+Status: Approved and implemented in PR #27. Automated verification pending.
