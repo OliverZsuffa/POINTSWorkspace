@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { sequenceCodec } from './codec';
 import { rational } from '../../domain/time/rational';
+import { asActionEntryId, asBallId } from '../../domain/ids';
 import type { Sequence } from '../../domain/model';
 import {
   invalidInitialStateSequence,
@@ -77,6 +78,35 @@ describe('P4 compact sequence code', () => {
       }
     },
   );
+
+  it('keeps the approved two ball four beat example compact', () => {
+    const base = representativeSoloSequence;
+    const performer = base.performers[0]!;
+    const first = base.positions.find((item) => item.kind === 'table' && item.name === 'A')!;
+    const last = base.positions.find((item) => item.kind === 'table' && item.name === 'C')!;
+    const sequence: Sequence = {
+      ...base,
+      performers: [{ ...performer, identifier: 'a' }],
+      positions: base.positions,
+      balls: [{ id: asBallId('ball-one') }, { id: asBallId('ball-two') }],
+      beats: base.beats.map((beat) => ({ ...beat, subdivisions: [] })),
+      initialState: { placements: [
+        { ballId: asBallId('ball-one'), location: { kind: 'position', positionId: first.id } },
+        { ballId: asBallId('ball-two'), location: { kind: 'position', positionId: last.id } },
+      ] },
+      notation: [
+        { id: asActionEntryId('p4-lift'), performerId: performer.id, hand: 'left', time: { beatId: base.beats[0]!.id, offset: rational(0) }, action: { type: 'LIFT', target: { kind: 'position', positionId: first.id } } },
+        { id: asActionEntryId('p4-hold-one'), performerId: performer.id, hand: 'left', time: { beatId: base.beats[1]!.id, offset: rational(0) }, action: { type: 'HOLD' } },
+        { id: asActionEntryId('p4-hold-two'), performerId: performer.id, hand: 'left', time: { beatId: base.beats[2]!.id, offset: rational(0) }, action: { type: 'HOLD' } },
+        { id: asActionEntryId('p4-leave'), performerId: performer.id, hand: 'left', time: { beatId: base.beats[3]!.id, offset: rational(0) }, action: { type: 'LEAVE', target: { kind: 'position', positionId: first.id } } },
+      ],
+    };
+    const code = sequenceCodec.encode(sequence);
+    expect(code.length).toBeLessThanOrEqual(110);
+    const decoded = sequenceCodec.decode(code);
+    expect(decoded.ok).toBe(true);
+    if (decoded.ok) expect(semanticShape(decoded.sequence)).toEqual(semanticShape(sequence));
+  });
 
   it('encodes the recognisable action initials', () => {
     const sequence = { ...representativeSoloSequence, notation: [...representativeSoloSequence.notation, ...representativeNotationExamples] };
