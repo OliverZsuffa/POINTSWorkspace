@@ -2,7 +2,7 @@
 
 ## Status
 
-Work is active on branch `feature/05-sequence-generator`. The discrete half beat migration is implemented across the model, editor, simulator, renderer and P5 codec. The deterministic search engine, immutable base completion, action and transfer constraints, structural fragment matching, loop checks, advanced constraint controls and notation result panel are implemented. Variation generation is explicitly excluded. Resumable pagination and broader search space optimisation remain outstanding. Looping candidate deduplication now canonicalizes cyclic beat rotations while retaining the initial state as part of semantic identity.
+Work is active on branch `feature/05-sequence-generator`. The discrete half beat migration is implemented across the model, editor, simulator, renderer and P5 codec. The deterministic search engine, immutable base completion, action and transfer constraints, structural fragment matching, loop checks, advanced constraint controls and notation result panel are implemented. Variation generation is explicitly excluded. Progressive result delivery, cancellation and exact in-session continuation through Load more are implemented. The async search iterator remains paused between pages, so continuation does not restart or repeat the search. Continuation is intentionally session-local and is not persisted across reloads. Broader search space optimisation remains outstanding. Looping candidate deduplication canonicalizes cyclic beat rotations while retaining the initial state as part of semantic identity.
 
 ## Goal
 
@@ -77,7 +77,7 @@ Support progressive results and cancellation. The current UI can stop a search w
 8. [x] Implement required and forbidden fragment matching.
 9. [x] Use the shared validator to reject invalid candidates.
 10. [x] Implement deterministic enumeration and semantic duplicate filtering, including cyclic rotation canonicalization for required loops.
-11. [ ] Implement progressive results, cancellation and exact resumable continuation with pagination.
+11. [x] Implement progressive results, cancellation and exact in-session continuation with Load more pagination.
 12. [x] Build the initial constraint interface and notation preview gallery.
 13. [x] Integrate result selection into the editor.
 14. Benchmark representative search spaces and keep the interface responsive.
