@@ -189,7 +189,7 @@ function targetFromCode(value: string, positions: PositionDefinition[], performe
       kind: 'circle-position' as const,
       position: circle[1] as 'A' | 'B' | 'C',
       ...(circle[2] === '-' ? {} : { direction: circle[2] === 'L' ? 'left' as const : 'right' as const }),
-      ...(circle[3] === '-' ? {} : { distance: parseNumber(circle[3], 'circle distance') }),
+      ...(circle[3] === '-' ? {} : { distance: parseNumber(circle[3]!, 'circle distance') }),
     };
   }
   const source = /^s(0|[1-9]\d*)$/.exec(value);
