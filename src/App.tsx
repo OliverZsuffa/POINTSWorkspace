@@ -38,8 +38,10 @@ import { confirmSequenceImport } from './features/data/import-confirmation';
 let nextId = 1;
 const id = (prefix: string) => prefix + '-' + (++nextId).toString(36);
 const hands: readonly Hand[] = ['left', 'right'];
-const actionNames = ['LIFT', 'HOLD', 'LEAVE', 'BOUNCE', 'TAP', 'EMPTY', 'ZIP'] as const;
+const actionNames = ['LIFT', 'HOLD', 'LEAVE', 'BOUNCE', 'TAP', 'EMPTY', 'ZIP', 'SPECIAL'] as const;
 type ActionName = (typeof actionNames)[number];
+const generatorActionNames = ['LIFT', 'HOLD', 'LEAVE', 'BOUNCE', 'TAP', 'EMPTY', 'ZIP'] as const;
+type GeneratorActionName = (typeof generatorActionNames)[number];
 type GeneratorActionMode = 'any' | 'required' | 'forbidden' | 'exact';
 type EditorCell = { performerId: string; hand: Hand; beatId: string; offset?: Rational; duration?: Rational };
 type ClipboardItem = { entry: NotationEntry; rowOffset: number; beatOffset: number };
@@ -362,10 +364,10 @@ export default function App() {
   const [showGenerator, setShowGenerator] = useState(false);
   const [generatorMode, setGeneratorMode] = useState<GeneratorRequest['mode']>('from-scratch');
   const [generatorLooping, setGeneratorLooping] = useState<GeneratorRequest['constraints']['looping']>('either');
-  const [generatorActionModes, setGeneratorActionModes] = useState<Record<ActionName, GeneratorActionMode>>({ HOLD: 'any', LIFT: 'any', LEAVE: 'any', BOUNCE: 'any', TAP: 'any', EMPTY: 'any', ZIP: 'any' });
-  const [generatorActionCounts, setGeneratorActionCounts] = useState<Record<ActionName, number>>({ HOLD: 1, LIFT: 1, LEAVE: 1, BOUNCE: 1, TAP: 1, EMPTY: 1, ZIP: 1 });
+  const [generatorActionModes, setGeneratorActionModes] = useState<Record<GeneratorActionName, GeneratorActionMode>>({ HOLD: 'any', LIFT: 'any', LEAVE: 'any', BOUNCE: 'any', TAP: 'any', EMPTY: 'any', ZIP: 'any' });
+  const [generatorActionCounts, setGeneratorActionCounts] = useState<Record<GeneratorActionName, number>>({ HOLD: 1, LIFT: 1, LEAVE: 1, BOUNCE: 1, TAP: 1, EMPTY: 1, ZIP: 1 });
   const [generatorPerformerScope, setGeneratorPerformerScope] = useState('all');
-  const [generatorRequiredPerformerAction, setGeneratorRequiredPerformerAction] = useState<ActionName>('LIFT');
+  const [generatorRequiredPerformerAction, setGeneratorRequiredPerformerAction] = useState<GeneratorActionName>('LIFT');
   const [generatorRequireEachPerformer, setGeneratorRequireEachPerformer] = useState(false);
   const [generatorZipCount, setGeneratorZipCount] = useState('');
   const [generatorPassCount, setGeneratorPassCount] = useState('');
@@ -1007,7 +1009,7 @@ export default function App() {
 
     const performerId = generatorPerformerScope === 'all' ? undefined : asPerformerId(generatorPerformerScope);
     const actionRequirements: ActionRequirement[] = [];
-    for (const actionType of actionNames) {
+    for (const actionType of generatorActionNames) {
       const mode = generatorActionModes[actionType];
       if (mode === 'any') continue;
       const scope = performerId ? { performerId } : {};
@@ -2038,7 +2040,7 @@ export default function App() {
           <details className="generator-advanced">
             <summary>Constraints</summary>
             <div className="generator-action-constraints">
-              {actionNames.map((actionType) => (
+              {generatorActionNames.map((actionType) => (
                 <label key={actionType}>
                   <span>{actionType}</span>
                   <select value={generatorActionModes[actionType]} onChange={(event) => setGeneratorActionModes((current) => ({ ...current, [actionType]: event.target.value as GeneratorActionMode }))} disabled={generatorRunning}>
@@ -2054,8 +2056,8 @@ export default function App() {
             <label className="generator-each-performer">
               <input type="checkbox" checked={generatorRequireEachPerformer} onChange={(event) => setGeneratorRequireEachPerformer(event.target.checked)} disabled={generatorRunning} />
               Require an action for every performer
-              <select value={generatorRequiredPerformerAction} onChange={(event) => setGeneratorRequiredPerformerAction(event.target.value as ActionName)} disabled={generatorRunning || !generatorRequireEachPerformer}>
-                {actionNames.map((action) => <option key={action} value={action}>{action}</option>)}
+              <select value={generatorRequiredPerformerAction} onChange={(event) => setGeneratorRequiredPerformerAction(event.target.value as GeneratorActionName)} disabled={generatorRunning || !generatorRequireEachPerformer}>
+                {generatorActionNames.map((action) => <option key={action} value={action}>{action}</option>)}
               </select>
             </label>
             <div className="generator-transfer-counts">
