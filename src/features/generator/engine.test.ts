@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { asActionEntryId, asLinkId } from '../../domain/ids';
 import type { GeneratorRequest } from '../../domain/model';
 import { representativeSoloSequence } from '../../fixtures/sequences';
 import { candidateKey, isAbstractStateValid, sequenceGenerator } from './engine';
@@ -199,6 +200,29 @@ describe('sequence generator', () => {
         entry.action.type === 'TAP' || entry.action.type === 'BOUNCE') &&
       entry.action.target.kind === 'position',
     )).toBe(true);
+  });
+
+  it('accepts a linked CLAP with otherwise valid empty-hand actions', () => {
+    const base = representativeSoloSequence;
+    const performer = base.performers[0]!;
+    const clapLink = asLinkId('abstract-clap');
+    const notation = [
+      ...(['left', 'right'] as const).map((hand) => ({
+        id: asActionEntryId('abstract-clap-' + hand),
+        performerId: performer.id,
+        hand,
+        time: { beatId: base.beats[0]!.id, offset: { numerator: 0, denominator: 1 } },
+        action: { type: 'SPECIAL' as const, text: 'Clap', linkId: clapLink },
+      })),
+      ...base.beats.slice(1).map((beat, index) => ({
+        id: asActionEntryId('abstract-tap-' + index),
+        performerId: performer.id,
+        hand: 'left' as const,
+        time: { beatId: beat.id, offset: { numerator: 0, denominator: 1 } },
+        action: { type: 'TAP' as const, target: { kind: 'position' as const, positionId: base.positions[0]!.id } },
+      })),
+    ];
+    expect(isAbstractStateValid({ ...base, notation })).toBe(true);
   });
 
   it('rejects an abstract structure made entirely of HOLD when hands start empty', () => {
