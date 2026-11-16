@@ -2059,11 +2059,11 @@ export default function App() {
                     <div className="generator-preview-performer" key={performer.id}>
                       <strong>{performer.name}</strong>
                       {hands.map((hand) => (
-                        <div className="generator-preview-row" key={hand} style={{ gridTemplateColumns: `24px repeat(${result.beats.length}, 48px)` }}>
-                          <span>{hand === 'left' ? 'L' : 'R'}</span>
+                        <div className="generator-preview-row" key={hand} style={{ gridTemplateColumns: `82px repeat(${result.beats.length}, var(--notation-cell-size))` }}>
+                          <span className="row-label">{hand === 'left' ? 'L' : 'R'}</span>
                           {result.beats.map((beat) => {
                             const entry = result.notation.find((item) => item.performerId === performer.id && item.hand === hand && item.time.beatId === beat.id);
-                            return <div className="generator-preview-cell" key={beat.id}>{entry ? <ActionSymbol action={entry.action} sequence={result} hand={hand} abstractTargets={!generatorRequestRef.current?.baseSequence?.notation.some((baseEntry) => baseEntry.id === entry.id)} /> : null}</div>;
+                            return <div className="notation-cell generator-preview-cell" key={beat.id}>{entry ? <ActionSymbol action={entry.action} sequence={result} hand={hand} abstractTargets={!generatorRequestRef.current?.baseSequence?.notation.some((baseEntry) => baseEntry.id === entry.id)} /> : null}</div>;
                           })}
                         </div>
                       ))}
@@ -2081,11 +2081,11 @@ export default function App() {
                     <div className="generator-preview-performer" key={performer.id}>
                       <strong>{performer.name}</strong>
                       {hands.map((hand) => (
-                        <div className="generator-preview-row" key={hand} style={{ gridTemplateColumns: `24px repeat(${result.beats.length}, 48px)` }}>
-                          <span>{hand === 'left' ? 'L' : 'R'}</span>
+                        <div className="generator-preview-row" key={hand} style={{ gridTemplateColumns: `82px repeat(${result.beats.length}, var(--notation-cell-size))` }}>
+                          <span className="row-label">{hand === 'left' ? 'L' : 'R'}</span>
                           {result.beats.map((beat) => {
                             const entry = result.notation.find((item) => item.performerId === performer.id && item.hand === hand && item.time.beatId === beat.id);
-                            return <div className="generator-preview-cell" key={beat.id}>{entry ? <ActionSymbol action={entry.action} sequence={result} hand={hand} /> : null}</div>;
+                            return <div className="notation-cell generator-preview-cell" key={beat.id}>{entry ? <ActionSymbol action={entry.action} sequence={result} hand={hand} /> : null}</div>;
                           })}
                         </div>
                       ))}
