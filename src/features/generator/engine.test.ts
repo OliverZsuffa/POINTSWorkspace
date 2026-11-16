@@ -107,6 +107,7 @@ describe('sequence generator', () => {
     const clapRequest: GeneratorRequest = {
       ...request('from-scratch'),
       templateSequence: { ...base, notation: [] },
+      locationMode: 'abstract',
       constraints: {
         looping: 'either',
         actionRequirements: [{ actionType: 'SPECIAL', occurrence: 'exact-count', count: 2 }],
