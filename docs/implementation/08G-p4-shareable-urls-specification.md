@@ -15,10 +15,11 @@ The fragment is intentionally used instead of a query parameter. Browsers do not
 On application startup:
 
 1. If the URL contains a `code` fragment parameter, decode it with the P4 codec.
-2. If decoding succeeds, load that sequence into the editor and renderer.
-3. The shared sequence takes precedence over the sequence saved locally for the current tab.
-4. Keep the fragment in the address bar. Reloading or reopening the URL therefore loads the same shared sequence.
+2. Restore the current tab's saved sequence before considering the shared sequence.
+3. If the saved sequence contains notation entries, show the same confirmation dialogue as manual code import. Only replace the saved sequence if the user accepts. Cancelling leaves the saved sequence unchanged.
+4. A saved sequence with no notation entries is empty and does not count as saved progress. A valid share link loads directly without asking for confirmation when there is no saved sequence or the saved sequence is empty.
 5. If the code is invalid or unsupported, show an error and retain the current tab's locally saved sequence. Do not overwrite local persistence with the default sequence.
+6. Keep the fragment in the address bar. Reloading or reopening the URL repeats the same decision, so a link is never silently reapplied over nonempty saved progress.
 
 If the URL has no `code` parameter, the existing per tab local restoration behavior is unchanged.
 
