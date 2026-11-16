@@ -149,6 +149,28 @@ describe('readable sequence code', () => {
     expect(sequenceCodec.decode('not a code')).toMatchObject({ ok: false, code: 'malformed' });
   });
 
+  it('rejects malformed action tuples, unknown actions and invalid references', () => {
+    const code = sequenceCodec.encode(representativeSoloSequence);
+    expect(sequenceCodec.decode(code.replace('(H)', '(H,0)')).ok).toBe(false);
+    expect(sequenceCodec.decode(code.replace('(H)', '(Q)')).ok).toBe(false);
+    expect(sequenceCodec.decode(code.replace('(P,0)', '(P,99)')).ok).toBe(false);
+  });
+
+  it('rejects invalid circle target direction and distance combinations', () => {
+    const performer = representativeSoloSequence.performers[0]!;
+    const sequence = {
+      ...representativeSoloSequence,
+      sequenceType: 'circle-passing' as const,
+      notation: [{
+        ...representativeSoloSequence.notation[0]!,
+        action: { type: 'LIFT' as const, target: { kind: 'circle-position' as const, position: 'A' as const } },
+      }],
+    };
+    const code = sequenceCodec.encode(sequence);
+    expect(code.includes('(C,A,~,0)')).toBe(true);
+    expect(sequenceCodec.decode(code.replace('(C,A,~,0)', '(C,A,R,0)')).ok).toBe(false);
+  });
+
   it('does not support the abandoned experimental P1 format', () => {
     expect(sequenceCodec.decode('P1.anything')).toMatchObject({ ok: false, code: 'unsupported-version' });
   });
