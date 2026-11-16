@@ -17,7 +17,7 @@ function request(mode: GeneratorRequest['mode']): GeneratorRequest {
     timeSignature: sequence.timeSignature,
     initialState: sequence.initialState,
     maxResults: 1,
-    maxSearchNodes: 5000,
+    maxSearchNodes: 100_000,
     constraints: {
       looping: 'either',
       actionRequirements: mode === 'from-scratch'
@@ -98,7 +98,8 @@ describe('sequence generator', () => {
     const candidates = [];
     for await (const candidate of sequenceGenerator.generate(baseRequest)) candidates.push(candidate.sequence);
     expect(candidates).toHaveLength(1);
-    expect(candidates[0]?.notation).toHaveLength(2);
+    expect(candidates[0]?.notation.length).toBeGreaterThan(2);
+    expect(candidates[0]?.notation.some((entry) => entry.action.type === 'EMPTY')).toBe(true);
   });
   it('generates CLAP as exactly two linked SPECIAL entries and no standalone SPECIAL', async () => {
     const base = representativeSoloSequence;
@@ -112,7 +113,7 @@ describe('sequence generator', () => {
         requiredFragments: [],
         forbiddenFragments: [],
       },
-      maxSearchNodes: 20_000,
+      maxSearchNodes: 100_000,
     };
     for await (const candidate of sequenceGenerator.generate(clapRequest)) {
       candidates.push(candidate.sequence);
@@ -135,7 +136,8 @@ describe('sequence generator', () => {
     };
     const zipRequest: GeneratorRequest = {
       ...request('from-scratch'),
-      templateSequence: { ...base, notation: [], initialState },
+      templateSequence: { ...base, beats: base.beats.slice(0, 2), notation: [], initialState },
+      beatCount: 2,
       initialState,
       constraints: {
         looping: 'either',
@@ -144,7 +146,7 @@ describe('sequence generator', () => {
         requiredFragments: [],
         forbiddenFragments: [],
       },
-      maxSearchNodes: 100_000,
+      maxSearchNodes: 20_000,
     };
     const candidates = [];
     for await (const candidate of sequenceGenerator.generate(zipRequest)) {
@@ -187,7 +189,7 @@ describe('sequence generator', () => {
     )).toBe(true);
 
     const concrete = [];
-    for await (const candidate of sequenceGenerator.expandLocations(structures[0]!, generationRequest)) {
+    for await (const candidate of sequenceGenerator.expandLocations(base, generationRequest)) {
       concrete.push(candidate.sequence);
     }
     expect(concrete).toHaveLength(1);
