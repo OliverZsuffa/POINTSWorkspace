@@ -100,6 +100,7 @@ function decodePacked(source: string): unknown {
     const start = cursor;
     while (cursor < source.length && source[cursor] !== ',' && source[cursor] !== ')') cursor += 1;
     const token = source.slice(start, cursor);
+    if (/^[A-Za-z]$/.test(token)) return token;
     if (!/^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?$/.test(token)) {
       throw new Error('Invalid numeric value');
     }
