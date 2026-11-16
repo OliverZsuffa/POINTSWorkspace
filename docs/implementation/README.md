@@ -7,7 +7,7 @@ The implementation is divided into bounded work packages so separate agents can 
 ## Work package order
 
 | ID | Work package | Responsibility | Depends on | Status |
-|---|---|---|---|
+|---|---|---|---|---|
 | 01 | Foundation and domain model | Project scaffold, shared types, sequence model and interfaces | None | Implemented and merged to main |
 | 02 | Object state and validation | Simultaneous beat processing, state transitions and validity checks | 01 | Implemented and merged to main |
 | 03 | Sequence editor | Notation grid, editing interactions, settings and undo | 01, 02 | Implemented and merged to main via PR #6 |
@@ -16,19 +16,20 @@ The implementation is divided into bounded work packages so separate agents can 
 | 04 | Sequence renderer | 3D scene, animation, playback and editor synchronisation | 01, 02 | Implemented in PR #7; correction pass 04B merged through PR #11; manual visual review remains |
 | 05 | Sequence generator | Constraint search and candidate generation | 01, 02 | Awaiting approval |
 | 06 | Data, persistence and export | Sequence codes, import, per tab persistence, presets and PNG export | 01, 02 | P3 implemented and merged through PR #22; P2 and all older formats are unsupported; manual PNG visual review remains |
+| 06B | Compact sequence code redesign | Replace the verbose P3 grammar with a sparse punctuation, compact alphanumeric format | 06 | Plan proposed in 08D; awaiting approval |
 | 07 | Workspace shell and PWA | Application layout, responsive shell, panel management and offline support | 01 | Implemented and merged through PR #15; CI and Chromium offline verification passed |
 | 07C | Circle passing and renderer playback corrections | Separate the authored pattern from visual participants, correct triangular geometry, preserve object state across loops and align beat navigation | 07 | Implemented and merged through PR #16; CI and browser checks passed |
 | 07D | Circle validation and polygon spacing fix | Project initial objects for every visual participant in editor validation and prevent position overlap on adjacent polygon edges | 07C | Implemented and merged through PR #17; CI, browser checks and 3 and 4 participant screenshot review passed |
 | 07E | Circle orientation, two person layout and notation controls | Correct relative target orientation, support two visual participants, improve BPM editing and render CLAP as a bar | 07D | Implemented in PR #18; formatting, lint, TypeScript, unit tests, production build and Chromium browser tests passed; focused screenshots reviewed |
 | 08 | Integration and quality assurance | Cross package integration, end to end tests and release readiness | 01 to 07 | Awaiting approval |
 
-The normative P3 self contained human readable sequence code specification is in [`08C-self-contained-human-readable-codes.md`](08C-self-contained-human-readable-codes.md). P3 replaces P2 completely, with no legacy decoder.
+The normative P3 sequence code specification is in [08C](08C-self-contained-human-readable-codes.md). P3 remains the active format until a replacement is approved and released. The proposed redesign plan is in [08D](08D-compact-sequence-code-redesign-plan.md). P3 will then be replaced completely, without a legacy decoder.
 
-The Package 03C requirement by requirement audit is tracked in [`03C-feature-verification.md`](03C-feature-verification.md). Its current statuses distinguish automated evidence from manual visual verification.
+The Package 03C requirement by requirement audit is tracked in [03C-feature-verification.md](03C-feature-verification.md). Its current statuses distinguish automated evidence from manual visual verification.
 
 ## Parallel execution strategy
 
-Work package 01 must establish and document the shared domain model and public interfaces before feature agents begin implementation. Work package 02 then implements the state simulation and validation contract. Once those interfaces are stable, work packages 03, 04, 05, 06 and 07 can proceed in parallel.
+Work package 01 must establish and document the shared domain model and public interfaces before feature agents begin work. Work package 02 then implements the state simulation and validation contract. Once those interfaces are stable, work packages 03, 04, 05, 06 and 07 can proceed in parallel.
 
 Agents must not independently redefine shared sequence types, action semantics, time calculations, object identity, validation results or sequence code formats. Proposed interface changes must be coordinated with the foundation owner.
 
@@ -51,15 +52,14 @@ Each agent should work in its own branch and limit changes to its assigned files
 ## Current cross package blockers
 
 1. Compound meter subdivision representation. Conventional 6/8 grouping must be represented, but the current editor subdivision model only splits intervals in half.
-2. Compound meter subdivision representation. Conventional 6/8 grouping is represented in the domain model, but the current editor subdivision model only splits intervals in half.
-3. Exact generator result limit, page size and continuation mechanics.
-4. Renderer playhead fallback when an edit removes the previous timeline position.
-5. Exact manual seat reassignment interaction.
-6. Manual visual inspection of PNG exports at short and long sequence lengths remains outstanding.
-7. Remaining cell editing gestures and manual responsive visual verification.
+2. Exact generator result limit, page size and continuation mechanics.
+3. Renderer playhead fallback when an edit removes the previous timeline position.
+4. Exact manual seat reassignment interaction.
+5. Manual visual inspection of PNG exports at short and long sequence lengths remains outstanding.
+6. Remaining cell editing gestures and manual responsive visual verification.
 
 Agents may implement unrelated parts while a blocker remains open, but must not make an irreversible architectural decision for it.
 
 ## Approval
 
-Packages 01, 02, 03 and 03B are implemented and merged. Package 03C first pass is merged through PR #9. Its final correction and verification pass merged through PR #10. Automated checks and six viewport screenshot reviews pass. Remaining Partial requirements are documented in the 03C verification matrix. Package 04 was implemented and merged through PR #7. Renderer correction pass 04B was merged through PR #11. Manual visual review of the actual 3D renderer remains outstanding. Package 07 was approved by Oliver on 12 November 2026 and merged through PR #15 on 13 November 2026. Package 07C was approved by Oliver on 13 November 2026 and merged through PR #16. Package 07D was approved and merged through PR #17 on 13 November 2026. Its checks passed formatting, lint, TypeScript, unit tests, production build and browser tests. The three and four participant screenshots were manually reviewed. Automated geometry tests cover 3 through 20 participants. Package 05 remains awaiting approval. Package 06 P3 code replacement was merged through PR #22. P2 and all older formats are unsupported. Manual visual inspection of exported PNG files remains outstanding. Package 08 has a detailed implementation plan and remains awaiting approval.
+Packages 01, 02, 03 and 03B are implemented and merged. Package 03C first pass is merged through PR #9. Its final correction and verification pass merged through PR #10. Automated checks and six viewport screenshot reviews pass. Remaining Partial requirements are documented in the 03C verification matrix. Package 04 was implemented and merged through PR #7. Renderer correction pass 04B was merged through PR #11. Manual visual review of the actual 3D renderer remains outstanding. Package 07 was approved by Oliver on 12 November 2026 and merged through PR #15 on 13 November 2026. Package 07C was approved by Oliver on 13 November 2026 and merged through PR #16. Package 07D was approved and merged through PR #17 on 13 November 2026. Its checks passed formatting, lint, TypeScript, unit tests, production build and browser tests. The three and four participant screenshots were manually reviewed. Automated geometry tests cover 3 through 20 participants. Package 05 remains awaiting approval. Package 06 P3 code replacement was merged through PR #22. P2 and all older formats are unsupported. Manual visual inspection of exported PNG files remains outstanding. Package 08 has a detailed implementation plan and remains awaiting approval. Package 06B is a proposed redesign plan and has not been approved for implementation.
