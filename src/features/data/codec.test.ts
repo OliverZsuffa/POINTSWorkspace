@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { sequenceCodec } from './codec';
 import { rational } from '../../domain/time/rational';
+import { asActionEntryId, asBallId } from '../../domain/ids';
 import { createTimeSignature } from '../../domain/time/time-signature';
 import type { LeaveActionTarget, LiftActionTarget, Sequence, TableActionTarget } from '../../domain/model';
 import {
@@ -72,7 +73,7 @@ describe('readable sequence code', () => {
     'round trips semantic sequence data',
     (sequence) => {
       const code = sequenceCodec.encode(sequence);
-      expect(code.startsWith('P2.')).toBe(true);
+      expect(code.startsWith('P3;')).toBe(true);
       expect(code).not.toContain('{');
       expect(code).not.toContain('[');
       expect(code).not.toContain(']');
@@ -103,21 +104,126 @@ describe('readable sequence code', () => {
     },
   );
 
+
+  it('encodes standard settings and both hands explicitly', () => {
+    const code = sequenceCodec.encode(representativeSoloSequence);
+    expect(code).toContain(';120;');
+    expect(code).toContain(';4.4.1+1+1+1;');
+    expect(code).toContain(';4;');
+    expect(code).toContain(';n;s;');
+    expect(code).toContain(';L:');
+    expect(code).toContain(',R:');
+  });
+
+  it('matches the published canonical solo example', () => {
+    expect(sequenceCodec.encode(representativeSoloSequence)).toBe(
+      'P3;s;120;4.4.1+1+1+1;4;~9:Juggler%201.-;T.~1:A.p0,T.~1:B.p0,T.~1:C.p0,B.L.0.L,B.R.0.R;1;0.P.0;1.0.1/2.1,1.1/2.1/2.1;L:-3|3.0.T.p2,R:0.0.L.p0.-|1.0.H|2.0.V.p1.-|-;n;s;',
+    );
+  });
+
+
+  it('compresses the equivalent two ball four beat example', () => {
+    const performer = representativeSoloSequence.performers[0]!;
+    const firstPosition = representativeSoloSequence.positions[0]!;
+    const lastPosition = representativeSoloSequence.positions[2]!;
+    const sequence: Sequence = {
+      ...representativeSoloSequence,
+      performers: [{ ...performer, identifier: 'a' }],
+      balls: [{ id: asBallId('ball-one') }, { id: asBallId('ball-two') }],
+      initialState: {
+        placements: [
+          { ballId: asBallId('ball-one'), location: { kind: 'position', positionId: firstPosition.id } },
+          { ballId: asBallId('ball-two'), location: { kind: 'position', positionId: lastPosition.id } },
+        ],
+      },
+      beats: representativeSoloSequence.beats.map((beat) => ({ ...beat, subdivisions: [] })),
+      notation: [
+        {
+          id: asActionEntryId('p3-lift'),
+          performerId: performer.id,
+          hand: 'left',
+          time: { beatId: representativeSoloSequence.beats[0]!.id, offset: rational(0) },
+          action: { type: 'LIFT', target: { kind: 'position', positionId: firstPosition.id } },
+        },
+        {
+          id: asActionEntryId('p3-hold-one'),
+          performerId: performer.id,
+          hand: 'left',
+          time: { beatId: representativeSoloSequence.beats[1]!.id, offset: rational(0) },
+          action: { type: 'HOLD' },
+        },
+        {
+          id: asActionEntryId('p3-hold-two'),
+          performerId: performer.id,
+          hand: 'left',
+          time: { beatId: representativeSoloSequence.beats[2]!.id, offset: rational(0) },
+          action: { type: 'HOLD' },
+        },
+        {
+          id: asActionEntryId('p3-leave'),
+          performerId: performer.id,
+          hand: 'left',
+          time: { beatId: representativeSoloSequence.beats[3]!.id, offset: rational(0) },
+          action: { type: 'LEAVE', target: { kind: 'position', positionId: firstPosition.id } },
+        },
+      ],
+    };
+    const code = sequenceCodec.encode(sequence);
+    expect(code).toBe(
+      'P3;s;120;4.4.1+1+1+1;4;~9:Juggler%201.~1:a;T.~1:A.p0,T.~1:B.p0,T.~1:C.p0,B.L.0.L,B.R.0.R;2;0.P.0,1.P.2;;L:0.0.L.p0.-|1.0.H|2.0.H|3.0.V.p0.-,R:-4;n;s;',
+    );
+    expect(code).toHaveLength(149);
+    const decoded = sequenceCodec.decode(code);
+    expect(decoded.ok).toBe(true);
+    if (decoded.ok) expect(semanticShape(decoded.sequence)).toEqual(semanticShape(sequence));
+  });
+
+
+  it('preserves fractional numeric values inside compound fields', () => {
+    const performer = representativeSoloSequence.performers[0]!;
+    const sequence: Sequence = {
+      ...representativeSoloSequence,
+      timeSignature: {
+        ...representativeSoloSequence.timeSignature,
+        numerator: 4.5,
+        beatGrouping: [1.5, 2.5],
+      },
+      beats: representativeSoloSequence.beats.map((beat) => ({
+        ...beat,
+        subdivisions: beat.subdivisions.map((subdivision) => ({ ...subdivision, depth: 1.5 })),
+      })),
+      notation: representativeSoloSequence.notation.map((entry, index) => index === 0
+        ? {
+            ...entry,
+            action: {
+              type: 'LIFT' as const,
+              target: { kind: 'circle-position' as const, position: 'A' as const, direction: 'right' as const, distance: 2.5 },
+            },
+          }
+        : entry),
+      seatAssignments: [
+        { performerId: performer.id, seat: { kind: 'polygon-edge' as const, edgeIndex: 1.5 } },
+      ],
+    };
+    const code = sequenceCodec.encode(sequence);
+    expect(code).toContain('4%2E5.4.1%2E5+2%2E5');
+    expect(code).toContain('cA_R_2%2E5');
+    expect(code).toContain('0.P.1%2E5');
+    const decoded = sequenceCodec.decode(code);
+    expect(decoded.ok).toBe(true);
+    if (decoded.ok) expect(semanticShape(decoded.sequence)).toEqual(semanticShape(sequence));
+  });
+
   it('keeps action initials visible in the code', () => {
     const sequence = { ...representativeSoloSequence, notation: [...representativeSoloSequence.notation, ...representativeNotationExamples] };
     const code = sequenceCodec.encode(sequence);
-    expect(code).toContain('(L');
-    expect(code).toContain('(H');
-    expect(code).toContain('(V');
-    expect(code).toContain('(T');
-    expect(code).toContain('(B');
-    expect(code).toContain('(E');
-    expect(code).toContain('(Z');
-    expect(code).toContain('(S');
+    for (const action of ['L', 'H', 'V', 'T', 'B', 'E', 'Z', 'S']) {
+      expect(code).toMatch(new RegExp(`\\.${action}(?:\\.|\\+|,|;|\\|)`));
+    }
     const decoded = sequenceCodec.decode(code);
     expect(decoded.ok).toBe(true);
     if (decoded.ok) expect(sequenceCodec.encode(decoded.sequence)).toBe(code);
-    expect(sequenceCodec.decode(code.replace('(Z,S,0', '(Z,S,99')).ok).toBe(false);
+    expect(sequenceCodec.decode(code.replace('.Z.S.l0', '.Z.S.l99')).ok).toBe(false);
   });
 
   it('round trips circle targets, polygon seats and relative distance', () => {
@@ -271,31 +377,31 @@ describe('readable sequence code', () => {
   it('escapes delimiters and reserved characters in user supplied text', () => {
     const sequence = {
       ...representativeSoloSequence,
-      performers: [{ ...representativeSoloSequence.performers[0]!, name: 'A, (B) ~ 100%' }],
+      performers: [{ ...representativeSoloSequence.performers[0]!, name: 'A, (B) ~ 100% Ω 🥎\nSecond line' }],
       notation: [{
         ...representativeSoloSequence.notation[0]!,
-        action: { type: 'SPECIAL' as const, text: 'Clap, (turn) ~ 100%' },
+        action: { type: 'SPECIAL' as const, text: 'Clap, (turn) ~ 100% Ω 🥎\nSecond line' },
       }],
     };
     const code = sequenceCodec.encode(sequence);
     const decoded = sequenceCodec.decode(code);
     expect(decoded.ok).toBe(true);
     if (decoded.ok) {
-      expect(decoded.sequence.performers[0]?.name).toBe('A, (B) ~ 100%');
-      expect(decoded.sequence.notation[0]?.action).toEqual({ type: 'SPECIAL', text: 'Clap, (turn) ~ 100%' });
+      expect(decoded.sequence.performers[0]?.name).toBe('A, (B) ~ 100% Ω 🥎\nSecond line');
+      expect(decoded.sequence.notation[0]?.action).toEqual({ type: 'SPECIAL', text: 'Clap, (turn) ~ 100% Ω 🥎\nSecond line' });
     }
   });
 
   it('rejects damaged codes without producing partial sequences', () => {
-    expect(sequenceCodec.decode('P2.not-valid').ok).toBe(false);
+    expect(sequenceCodec.decode('P3;not-valid').ok).toBe(false);
     expect(sequenceCodec.decode('not a code')).toMatchObject({ ok: false, code: 'malformed' });
   });
 
   it('rejects malformed action tuples, unknown actions and invalid references', () => {
     const code = sequenceCodec.encode(representativeSoloSequence);
-    expect(sequenceCodec.decode(code.replace('(H)', '(H,0)')).ok).toBe(false);
-    expect(sequenceCodec.decode(code.replace('(H)', '(Q)')).ok).toBe(false);
-    expect(sequenceCodec.decode(code.replace('(P,0)', '(P,99)')).ok).toBe(false);
+    expect(sequenceCodec.decode(code.replace('.H', '.H.0')).ok).toBe(false);
+    expect(sequenceCodec.decode(code.replace('.H', '.Q')).ok).toBe(false);
+    expect(sequenceCodec.decode(code.replace('.p0.', '.p99.')).ok).toBe(false);
   });
 
   it('preserves structurally complete circle targets even when their optional fields are invalid', () => {
@@ -308,8 +414,8 @@ describe('readable sequence code', () => {
       }],
     };
     const code = sequenceCodec.encode(sequence);
-    expect(code.includes('(C,A,~,0,0)')).toBe(true);
-    const directionOnlyCode = code.replace('(C,A,~,0,0)', '(C,A,R,0,0)');
+    expect(code.includes('cA_-_-')).toBe(true);
+    const directionOnlyCode = code.replace('cA_-_-', 'cA_R_-');
     const directionOnly = sequenceCodec.decode(directionOnlyCode);
     expect(directionOnly.ok).toBe(true);
     if (directionOnly.ok) {
@@ -318,7 +424,7 @@ describe('readable sequence code', () => {
         target: { kind: 'circle-position', position: 'A', direction: 'right' },
       });
     }
-    const distanceOnlyCode = code.replace('(C,A,~,0,0)', '(C,A,~,1,2)');
+    const distanceOnlyCode = code.replace('cA_-_-', 'cA_-_2');
     const distanceOnly = sequenceCodec.decode(distanceOnlyCode);
     expect(distanceOnly.ok).toBe(true);
     if (distanceOnly.ok) {
@@ -329,12 +435,13 @@ describe('readable sequence code', () => {
     }
   });
 
-  it('does not support the abandoned experimental P1 format', () => {
+  it('does not support superseded P1 or P2 formats', () => {
     expect(sequenceCodec.decode('P1.anything')).toMatchObject({ ok: false, code: 'unsupported-version' });
+    expect(sequenceCodec.decode('P2.anything')).toMatchObject({ ok: false, code: 'unsupported-version' });
   });
 
   it('reports unknown formats separately', () => {
-    expect(sequenceCodec.decode('P9.abc')).toMatchObject({ ok: false, code: 'unsupported-version' });
+    expect(sequenceCodec.decode('P9;abc')).toMatchObject({ ok: false, code: 'unsupported-version' });
   });
 
   it('uses a deterministic representation', () => {
