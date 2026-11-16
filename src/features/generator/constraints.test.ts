@@ -3,7 +3,7 @@ import { asActionEntryId, asLinkId } from '../../domain/ids';
 import type { Sequence, SequenceFragment } from '../../domain/model';
 import { rational } from '../../domain/time/rational';
 import { representativeSoloSequence } from '../../fixtures/sequences';
-import { matchesFragment, preservesBaseSequence, satisfiesActionRequirements } from './constraints';
+import { allBeatsUsed, matchesFragment, preservesBaseSequence, satisfiesActionRequirements } from './constraints';
 
 describe('generator constraints', () => {
   it('keeps every base beat and existing notation entry immutable', () => {
@@ -93,6 +93,30 @@ describe('generator constraints', () => {
       requiredFragments: [],
       forbiddenFragments: [],
     })).toBe(false);
+  });
+
+  it('rejects a beat where both hands are EMPTY or have no action', () => {
+    const base = representativeSoloSequence;
+    const performerId = base.performers[0]!.id;
+    const firstBeat = base.beats[0]!;
+    const used = {
+      id: asActionEntryId('used-left'),
+      performerId,
+      hand: 'left' as const,
+      time: { beatId: firstBeat.id, offset: rational(0) },
+      action: { type: 'HOLD' as const },
+    };
+    expect(allBeatsUsed({ ...base, notation: [used] })).toBe(false);
+    const filled = base.beats.map((beat) => ({
+      id: asActionEntryId('hold-' + beat.id),
+      performerId,
+      hand: 'left' as const,
+      time: { beatId: beat.id, offset: rational(0) },
+      action: { type: 'HOLD' as const },
+    }));
+    expect(allBeatsUsed({ ...base, notation: filled })).toBe(true);
+    const emptyBeat = { ...filled[0]!, action: { type: 'EMPTY' as const } };
+    expect(allBeatsUsed({ ...base, notation: [emptyBeat, ...filled.slice(1)] })).toBe(false);
   });
 
 });
