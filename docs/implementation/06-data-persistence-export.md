@@ -2,23 +2,23 @@
 
 ## Status
 
-Base package implemented and merged through PR #19 on 13 November 2026. The P2 sequence code redesign and decoder audit are implemented in PR #20. Formatting, lint, strict TypeScript, 160 unit tests and production build passed. The final browser viewport check passed. Formatting, lint, strict TypeScript, 160 unit tests, production build and 16 browser tests all passed. PR #20 is awaiting merge. Manual visual inspection of exported PNG files remains outstanding.
+Base package and P2 sequence code implementation were merged through PR #20. P3 is replacing P2 in PR #22. The P3 decoder is the only supported decoder after merge. Manual visual inspection of exported PNG files remains outstanding.
 
 ## User facing data format
 
 The only sequence representation exposed to users is a compact POINTS code. Users do not need to see or edit JSON.
 
-The current experimental format uses the version prefix `P2.` followed by a compact tuple grammar. Tuples use parentheses and comma separators. Single letter tokens, including action initials, are unquoted. Other strings use a `~` marker and percent escaped text. Numbers are unquoted. Action initials remain visible as `H`, `L`, `V`, `B`, `T`, `E`, `Z` and `S`. The code contains no JSON syntax, Base64 payload, UUIDs or internal object keys.
+The active format is P3. It uses explicit ordered sections separated by semicolons, compact records, performer and hand action streams, local references and length checked escaped text. Action initials remain visible as `H`, `L`, `V`, `B`, `T`, `E`, `Z` and `S`. The code contains no JSON syntax, Base64 payload, UUIDs or internal object keys. The complete independent decoder specification is in `08C-self-contained-human-readable-codes.md`.
 
 The codec is deterministic. The same sequence produces the same code. Decoding distinguishes malformed input, unsupported format versions and structurally invalid data. The codec does not run notation validation during decoding. Structurally readable but notation invalid sequences are imported and reported by the existing validator.
 
-P2 is an experimental development format. P1 is intentionally unsupported, with no decoder or migration path. The format may change again before public release.
+P3 completely replaces P2. P1, P2 and other superseded formats are unsupported. There is no legacy decoder or migration path unless Oliver explicitly requests one. Future format revisions replace the active format in the same way.
 
 ## Implemented scope
 
 ### Sequence code and import
 
-- Compact P2 tuple sequence code.
+- Compact P3 self contained sequence code.
 - Deterministic encode and decode.
 - Full sequence round trip, including BPM, time signature, beats and subdivisions, performers, positions, balls, initial placements, notation, passing layout, table layout and seat assignments.
 - Import by pasting a code.
@@ -57,7 +57,7 @@ The curated preset registry is repository data and supports text search. Initial
 
 | File | Responsibility |
 |---|---|
-| `src/features/data/codec.ts` | Compact P2 tuple sequence code |
+| `src/features/data/codec.ts` | Compact P3 self contained sequence code |
 | `src/features/data/codec.test.ts` | Round trip and malformed input tests |
 | `src/features/data/persistence.ts` | Per tab local save and restore |
 | `src/features/data/persistence.test.ts` | Persistence tests |
@@ -69,9 +69,9 @@ The curated preset registry is repository data and supports text search. Initial
 
 ## Verification
 
-- [x] Deterministic P2 tuple grammar implemented.
+- [x] Deterministic P3 grammar implemented.
 - [x] Complete canonical sequence round trip covered by tests.
-- [x] Unsupported versions and malformed codes distinguished.
+- [x] Superseded versions and malformed codes distinguished.
 - [x] Import uses undoable editor replacement.
 - [x] Failed import does not mutate the current sequence.
 - [x] Automatic per tab persistence integrated.
@@ -88,7 +88,7 @@ The curated preset registry is repository data and supports text search. Initial
 
 ## Known limitations to review
 
-1. The compact code is intended to be recognisable and partly decipherable. Users copy and paste it rather than edit it manually.
+1. P3 keeps action initials recognisable and can be decoded independently using the published specification. Users can copy and paste the complete code.
 2. PNG export currently prioritises a clear print summary and notation grid. A future visual pass may refine action geometry and support explicit export options.
 3. Preset library starts with two canonical examples. Additional curated material can be added without changing the code format.
 4. The tab collision mechanism depends on BroadcastChannel where available. Browsers without it still use per tab session identifiers and local storage.
