@@ -500,7 +500,14 @@ export const sequenceCodec: SequenceCodec = {
 
       const streamRecords = records(section.actionStreams).map(parseStream);
       if (streamRecords.length !== performers.length * 2) throw new Error('Action stream count does not match performers.');
-      const rawEvents: { ordinal: number; performer: number; hand: 'left' | 'right'; parts: string[] }[] = [];
+      const rawEvents: {
+        ordinal: number;
+        performer: number;
+        hand: 'left' | 'right';
+        beat: number;
+        offset: string;
+        actionParts: string[];
+      }[] = [];
       streamRecords.forEach((stream, streamIndex) => {
         const expectedPerformer = Math.floor(streamIndex / 2);
         const expectedHand = streamIndex % 2 === 0 ? 'left' : 'right';
@@ -528,9 +535,9 @@ export const sequenceCodec: SequenceCodec = {
 
       const linkIndexes = new Set<number>();
       rawEvents.forEach((event) => {
-        const actionType = event.parts[2];
+        const actionType = event.actionParts[0];
         if (actionType === 'L' || actionType === 'V' || actionType === 'Z' || actionType === 'S') {
-          const linkPart = actionType === 'Z' ? event.parts[4] : event.parts[4];
+          const linkPart = event.actionParts[2];
           if (linkPart !== '-') {
             const index = linkNumber(linkPart!, actionType !== 'Z');
             if (index !== undefined) linkIndexes.add(index);
@@ -542,15 +549,14 @@ export const sequenceCodec: SequenceCodec = {
       const links = sortedLinks.map((index) => asLinkId(`l${index}`));
 
       const notation: NotationEntry[] = rawEvents.map((event, index) => {
-        const [beatText, offsetText, ...actionParts] = event.parts;
-        const beat = beats[parseInteger(beatText!, 'action beat')];
+        const beat = beats[event.beat];
         if (!beat) throw new Error('Unknown action beat.');
         return {
           id: asActionEntryId(`a${index}`),
           performerId: performers[event.performer]!.id,
           hand: event.hand,
-          time: { beatId: beat.id, offset: decodeRational(offsetText!) },
-          action: decodeAction(actionParts, positions, performers, links),
+          time: { beatId: beat.id, offset: decodeRational(event.offset) },
+          action: decodeAction(event.actionParts, positions, performers, links),
         };
       });
 
