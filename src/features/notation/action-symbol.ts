@@ -18,7 +18,8 @@ function positionReference(sequence: Sequence, positionId: string): string {
   const position = sequence.positions.find((item) => item.id === positionId);
   if (!position) return '?';
   if (position.kind === 'table' && position.owner.kind === 'performer') {
-    const identifier = sequence.performers.find((person) => person.id === position.owner.performerId)?.identifier;
+    const owner = position.owner as Extract<Sequence['positions'][number], { kind: 'table' }>['owner'] & { readonly kind: 'performer'; readonly performerId: Sequence['performers'][number]['id'] };
+    const identifier = sequence.performers.find((person) => person.id === owner.performerId)?.identifier;
     return identifier ? position.name + '(' + identifier + ')' : position.name;
   }
   return position.name;
@@ -47,7 +48,8 @@ export function getActionSymbolGeometry(
       else if (action.target.kind === 'circle-position') { label = action.target.position; subscript = circleSubscript(action.target); }
       else if (action.target.kind === 'pass-source') {
         label = 'X';
-        subscript = sequence.performers.find((person) => person.id === action.target.performerId)?.identifier ?? '?';
+        const target = action.target as Extract<NotationAction, { type: 'LIFT' }>['target'] & { readonly kind: 'pass-source'; readonly performerId: Sequence['performers'][number]['id'] };
+        subscript = sequence.performers.find((person) => person.id === target.performerId)?.identifier ?? '?';
       }
       break;
     case 'LEAVE':
@@ -57,7 +59,8 @@ export function getActionSymbolGeometry(
       else if (action.target.kind === 'pass-recipient-hand') {
         label = action.target.hand === 'left' ? 'L' : 'R';
         circledTarget = true;
-        subscript = sequence.performers.find((person) => person.id === action.target.performerId)?.identifier ?? '?';
+        const target = action.target as Extract<NotationAction, { type: 'LEAVE' }>['target'] & { readonly kind: 'pass-recipient-hand'; readonly performerId: Sequence['performers'][number]['id'] };
+        subscript = sequence.performers.find((person) => person.id === target.performerId)?.identifier ?? '?';
       }
       break;
     case 'BOUNCE':
