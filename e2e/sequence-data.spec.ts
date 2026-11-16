@@ -52,7 +52,8 @@ test('share links require confirmation before replacing saved notation', async (
     void dialog.accept();
   });
   await page.goto(shareUrl);
-  expect(confirmationCount).toBe(1);
+  await page.reload();
+  await expect.poll(() => confirmationCount).toBe(1);
   await expect.poll(async () => {
     const saved = await readSavedSequence(page);
     return saved ? JSON.parse(saved).notation.length : -1;
