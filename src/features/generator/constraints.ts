@@ -123,6 +123,19 @@ export function preservesBaseSequence(base: Sequence, candidate: Sequence): bool
   return base.notation.every((entry) => JSON.stringify(candidateEntries.get(entry.id)) === JSON.stringify(entry));
 }
 
+/** Every performer must have at least one non-EMPTY hand action in every beat. */
+export function allBeatsUsed(sequence: Sequence): boolean {
+  return sequence.performers.every((performer) =>
+    sequence.beats.every((beat) =>
+      sequence.notation.some((entry) =>
+        entry.performerId === performer.id &&
+        entry.time.beatId === beat.id &&
+        entry.action.type !== 'EMPTY',
+      ),
+    ),
+  );
+}
+
 export function satisfiesActionRequirements(sequence: Sequence, constraints: GeneratorConstraints): boolean {
   for (const requirement of constraints.actionRequirements) {
     const matchingEntries = sequence.notation.filter((entry) =>
