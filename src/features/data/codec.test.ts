@@ -178,6 +178,42 @@ describe('readable sequence code', () => {
     if (decoded.ok) expect(semanticShape(decoded.sequence)).toEqual(semanticShape(sequence));
   });
 
+
+  it('preserves fractional numeric values inside compound fields', () => {
+    const performer = representativeSoloSequence.performers[0]!;
+    const sequence: Sequence = {
+      ...representativeSoloSequence,
+      timeSignature: {
+        ...representativeSoloSequence.timeSignature,
+        numerator: 4.5,
+        beatGrouping: [1.5, 2.5],
+      },
+      beats: representativeSoloSequence.beats.map((beat) => ({
+        ...beat,
+        subdivisions: beat.subdivisions.map((subdivision) => ({ ...subdivision, depth: 1.5 })),
+      })),
+      notation: representativeSoloSequence.notation.map((entry, index) => index === 0
+        ? {
+            ...entry,
+            action: {
+              type: 'LIFT',
+              target: { kind: 'circle-position', position: 'A', direction: 'right', distance: 2.5 },
+            },
+          }
+        : entry),
+      seatAssignments: [
+        { performerId: performer.id, seat: { kind: 'polygon-edge', edgeIndex: 1.5 } },
+      ],
+    };
+    const code = sequenceCodec.encode(sequence);
+    expect(code).toContain('4%2E5.4.1%2E5+2%2E5');
+    expect(code).toContain('cA_R_2%2E5');
+    expect(code).toContain('0.P.1%2E5');
+    const decoded = sequenceCodec.decode(code);
+    expect(decoded.ok).toBe(true);
+    if (decoded.ok) expect(semanticShape(decoded.sequence)).toEqual(semanticShape(sequence));
+  });
+
   it('keeps action initials visible in the code', () => {
     const sequence = { ...representativeSoloSequence, notation: [...representativeSoloSequence.notation, ...representativeNotationExamples] };
     const code = sequenceCodec.encode(sequence);
