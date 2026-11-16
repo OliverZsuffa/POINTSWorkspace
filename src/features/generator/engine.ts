@@ -356,28 +356,45 @@ export const sequenceGenerator = {
         }
 
         const choices = buildChoices(template, cell, cells, occupied, request.locationMode === 'abstract');
-        if (exactZipTarget !== undefined && exactZipTarget > 0) {
-          choices.sort((left, right) =>
-            Number(right.entries.some((entry) => entry.action.type === 'ZIP')) -
-            Number(left.entries.some((entry) => entry.action.type === 'ZIP')),
-          );
+        const currentEntries = [...template.notation, ...entries];
+        const currentSpecialCount = currentEntries.filter((entry) => entry.action.type === 'SPECIAL').length;
+        const clapStillNeeded = exactSpecialTarget !== undefined && currentSpecialCount < exactSpecialTarget;
+        const requiredActionTypes = new Set<string>();
+        for (const requirement of request.constraints.actionRequirements) {
+          const count = requirement.actionType === 'ZIP'
+            ? new Set(currentEntries.flatMap((entry) => entry.action.type === 'ZIP' ? [entry.action.linkId] : [])).size
+            : currentEntries.filter((entry) => entry.action.type === requirement.actionType).length;
+          if (requirement.occurrence === 'at-least-once' && count === 0) requiredActionTypes.add(requirement.actionType);
+          if (requirement.occurrence === 'exact-count' && count < requirement.count) requiredActionTypes.add(requirement.actionType);
         }
-        if (exactSpecialTarget !== undefined && exactSpecialTarget >= 2 && exactSpecialTarget % 2 === 0) {
-          choices.sort((left, right) =>
-            Number(right.entries.length === 2 && right.entries.every((entry) =>
-              entry.action.type === 'SPECIAL' && entry.action.text === 'Clap',
-            )) -
-            Number(left.entries.length === 2 && left.entries.every((entry) =>
-              entry.action.type === 'SPECIAL' && entry.action.text === 'Clap',
-            )),
-          );
+        if (request.constraints.requiredActionPerPerformer &&
+          !currentEntries.some((entry) =>
+            entry.performerId === cell.performerId &&
+            entry.action.type === request.constraints.requiredActionPerPerformer,
+          )) {
+          requiredActionTypes.add(request.constraints.requiredActionPerPerformer);
         }
+        const choicePriority = (choice: Choice): number => {
+          let score = 0;
+          if (zipStillNeeded && choice.entries.some((entry) => entry.action.type === 'ZIP')) score += 1000;
+          if (clapStillNeeded && choice.entries.length === 2 && choice.entries.every((entry) =>
+            entry.action.type === 'SPECIAL' && entry.action.text === 'Clap',
+          )) score += 1000;
+          for (const actionType of requiredActionTypes) {
+            if (choice.entries.some((entry) => entry.action.type === actionType)) score += 100;
+          }
+          return score;
+        };
+        choices.sort((left, right) => choicePriority(right) - choicePriority(left));
         for (const choice of choices) {
           if (signal?.aborted || visited >= maxSearchNodes || yielded >= maxResults) return;
           if (mustUseThisPerformerBeat && choice.entries.every((entry) => entry.action.type === 'EMPTY')) continue;
           if (exactZipTarget !== undefined &&
             currentZipLinks.size >= exactZipTarget &&
             choice.entries.some((entry) => entry.action.type === 'ZIP')) continue;
+          if (exactSpecialTarget !== undefined &&
+            currentSpecialCount >= exactSpecialTarget &&
+            choice.entries.some((entry) => entry.action.type === 'SPECIAL')) continue;
           const newlyCovered = choice.coveredCells.filter((covered) => !occupied.has(covered));
           if (newlyCovered.length !== choice.coveredCells.length) continue;
           newlyCovered.forEach((covered) => occupied.add(covered));
