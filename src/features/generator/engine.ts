@@ -252,10 +252,12 @@ export function isAbstractStateValid(sequence: Sequence): boolean {
       } else if (passes.length === 2 && passes.length === group.length) {
         const sender = passes.find((entry) => entry.action.type === 'LEAVE' && entry.action.target.kind === 'pass-recipient-hand');
         const receiver = passes.find((entry) => entry.action.type === 'LIFT' && entry.action.target.kind === 'pass-source');
-        if (!sender || !receiver || sender.action.type !== 'LEAVE' || receiver.action.type !== 'LIFT' ||
-          sender.performerId === receiver.performerId || sender.action.target.kind !== 'pass-recipient-hand' ||
-          sender.action.target.performerId !== receiver.performerId || sender.action.target.hand !== receiver.hand ||
-          receiver.action.target.performerId !== sender.performerId ||
+        const senderTarget = sender?.action.type === 'LEAVE' ? sender.action.target : undefined;
+        const receiverTarget = receiver?.action.type === 'LIFT' ? receiver.action.target : undefined;
+        if (!sender || !receiver || sender.performerId === receiver.performerId ||
+          senderTarget?.kind !== 'pass-recipient-hand' || receiverTarget?.kind !== 'pass-source' ||
+          senderTarget.performerId !== receiver.performerId || senderTarget.hand !== receiver.hand ||
+          receiverTarget.performerId !== sender.performerId ||
           !held.get(handKey(sender)) || held.get(handKey(receiver))) return false;
         nextHeld.set(handKey(sender), false);
         nextHeld.set(handKey(receiver), true);
