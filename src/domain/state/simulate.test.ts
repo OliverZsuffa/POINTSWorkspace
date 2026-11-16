@@ -82,6 +82,60 @@ describe('object state simulation', () => {
     expect(bounceResult.snapshots[1]?.handStates[performerId]?.right.heldBallId).toBe('ball-1');
   });
 
+  it('rejects different actions using the same position in one beat', () => {
+    const sequence: Sequence = {
+      ...representativeSoloSequence,
+      notation: [
+        entry('lift-position-a', 'right', {
+          type: 'LIFT',
+          target: { kind: 'position', positionId: positionA },
+        }),
+        entry('tap-position-a', 'left', {
+          type: 'TAP',
+          target: { kind: 'position', positionId: positionA },
+        }),
+      ],
+    };
+
+    const result = validateSequence(sequence);
+    const conflict = result.issues.find((item) => item.code === 'conflicting-position-actions');
+    expect(result.isValid).toBe(false);
+    expect(conflict?.affectedEntries).toEqual(expect.arrayContaining(['lift-position-a', 'tap-position-a']));
+    expect(conflict?.affectedEntries).toHaveLength(2);
+    expect(conflict?.affectedPositions).toEqual([positionA]);
+  });
+
+  it('rejects two TAP actions on the same position in one beat', () => {
+    const sequence: Sequence = {
+      ...representativeSoloSequence,
+      performers: [
+        ...representativeSoloSequence.performers,
+        { id: asPerformerId('performer-2'), name: 'Juggler 2' },
+      ],
+      positions: [
+        ...representativeSoloSequence.positions,
+        {
+          id: asPositionId('position-A-performer-2'),
+          kind: 'table',
+          name: 'A',
+          owner: { kind: 'performer', performerId: asPerformerId('performer-2') },
+        },
+      ],
+      notation: [
+        entry('tap-position-a-one', 'right', {
+          type: 'TAP',
+          target: { kind: 'position', positionId: positionA },
+        }),
+        entry('tap-position-a-two', 'right', {
+          type: 'TAP',
+          target: { kind: 'position', positionId: positionA },
+        }, asPerformerId('performer-2')),
+      ],
+    };
+
+    expect(validateSequence(sequence).issues.map((item) => item.code)).toContain('conflicting-position-actions');
+  });
+
   it('can LIFT from and LEAVE onto a hand back position', () => {
     const liftFromBack: Sequence = {
       ...representativeSoloSequence,
