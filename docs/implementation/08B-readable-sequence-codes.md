@@ -2,7 +2,7 @@
 
 ## Status
 
-Approved. Implementation in progress.
+Approved. Implementation in progress on PR #20.
 
 ## Goal
 
@@ -22,13 +22,7 @@ The code is a compact representation of the juggling sequence, not a compressed 
 
 ## Proposed code shape
 
-Use a compact version prefix followed by short labelled sections. The precise punctuation and ordering will be settled after checking all model cases and fixture examples. Conceptually:
-
-```
-P2.<header>.<performers>.<positions>.<objects>.<beats/actions>
-```
-
-The action stream should make action initials and references visible. For example, a lift should visibly begin with `L`, and references should use compact performer or position indices. This example illustrates the readability goal, not a final grammar.
+Use a compact version prefix followed by nested tuples. Tuples use parentheses and comma separators. Strings use a `~` marker followed by percent escaped text. Numbers remain unquoted. There are no JSON brackets, quoted strings, field names, Base64 payloads or UUIDs. For example, action tuples begin with `~L`, `~H`, `~V`, `~B`, `~T`, `~E`, `~Z` or `~S`. The rest of each tuple contains only the references and parameters needed by that action.
 
 The encoder should omit values only when they can be reconstructed without ambiguity. Examples include default solo layout, default time signature, default performer identifiers where derivable, and internal entity IDs. Names, non-default settings, subdivisions, custom SPECIAL text, unusual table geometry and initial object placements must be preserved when present.
 
@@ -59,18 +53,17 @@ The encoder should omit values only when they can be reconstructed without ambig
 
 ## Format replacement
 
-- Keep the current P1 decoder unchanged as a legacy path.
-- P2 is the only format emitted by the new encoder.
-- `isSequenceCode` recognises both supported prefixes.
-- P1 imports decode to the same Sequence structure as before. Re-encoding an imported P1 sequence emits P2.
-- Unknown future versions continue to return the existing unsupported-version result.
+- P2 is the only format emitted and recognised by the new codec.
+- P1 is intentionally unsupported. No legacy decoder, migration or compatibility path is retained.
+- `isSequenceCode` recognises P2 only.
+- Unknown versions return the unsupported-version result.
 
 ## Implementation scope
 
 - Replace the codec with a P2 domain-specific encoder and decoder.
 - Add focused grammar helpers if this keeps the codec maintainable.
 - Update import detection and any UI copy that assumes only P1.
-- Update documentation to describe the readable grammar and legacy compatibility.
+- Update documentation to describe the readable grammar and intentional lack of backward compatibility.
 - Do not change persistence, presets, PNG export or the domain model unless a narrowly scoped integration change is required.
 
 ## Verification and acceptance criteria
@@ -81,7 +74,7 @@ The encoder should omit values only when they can be reconstructed without ambig
 4. Verify P1 is not treated as a supported format.
 5. Verify malformed and unsupported versions are distinguished.
 6. Verify deterministic output.
-7. Add tests proving the code contains visible action initials and does not contain UUIDs, JSON field names or Base64 payloads.
+7. Add tests proving the code contains visible action initials and does not contain UUIDs, JSON syntax or Base64 payloads.
 8. Measure code lengths for representative simple, medium and complex sequences. Compare P2 against current P1 and report the actual reduction. Optimise based on those measurements, not an arbitrary promise.
 9. Run formatting, lint, strict TypeScript, unit tests, browser tests and production build. Verify GitHub Pages deployment after merge.
 
