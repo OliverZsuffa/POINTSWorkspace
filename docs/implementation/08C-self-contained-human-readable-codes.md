@@ -51,7 +51,8 @@ The structural separators are:
 | `:` | Separates a section name from its value, and separates action stream header fields |
 | `.` | Separates fields within a record |
 | `,` | Separates records within a list |
-| `+` | Separates events within one action stream, and groups within a time signature |
+| `+` | Separates multiple events within one beat cell, and groups within a time signature |
+| `|` | Separates successive beat cells within an action stream |
 | `_` | Separates components of circle targets and rectangle dimensions |
 | `~` | Begins an encoded text value |
 | `-` | Represents an absent optional value where explicitly allowed |
@@ -208,21 +209,25 @@ Subdivision identifiers are internal implementation identifiers and are regenera
 
 There are exactly two streams per performer, in canonical order: performer zero left hand, performer zero right hand, performer one left hand, performer one right hand, and so on.
 
-Each stream has three colon separated fields:
+Each stream has two colon separated fields:
 
 ```text
-<performer index>:<L or R>:<events>
+<L or R>:<beat cells>
 ```
 
-Streams are separated by commas. An empty stream uses `-` for its events field.
+Streams are separated by commas. The performer is determined by the stream's position in this ordered list. The hand is stated explicitly in the stream header.
 
-Events within a stream are separated by plus signs. Every event has this common prefix:
+Each stream contains exactly the number of beat cells declared in Field 4. Beat cells are separated by vertical bars. The first cell represents beat zero, the second cell beat one, and so on. An empty beat cell is `-`. If the sequence has zero beats, the stream has no cell content after the colon.
+
+Multiple events within one beat cell are separated by plus signs. Every event has this common prefix:
 
 ```text
-<notation ordinal>.<beat index>.<offset rational>.<action token>
+<notation ordinal>.<offset rational>.<action token>
 ```
 
-The notation ordinal is the zero based index of the entry in the original notation array. It preserves the original order of notation entries across streams. The beat index refers to section B. Offset is a rational position relative to the beginning of that main beat.
+The notation ordinal is the zero based index of the entry in the original notation array. It preserves the original order of notation entries across streams. The beat index is represented by the beat cell position and is not repeated in each event. Offset is a rational position relative to the beginning of that main beat.
+
+This is the main timeline compression rule: the beat count is stored once, and every performer hand stream is divided into exactly that many beat cells.
 
 Action parameters follow the action token as additional period separated fields:
 
@@ -345,21 +350,21 @@ The P3 sections encode every persisted field in the current Sequence model:
 
 | Domain field | P3 section |
 |---|---|
-| sequenceType | S |
-| bpm | Q |
-| timeSignature numerator, denominator and beatGrouping | T |
-| beats and beat count | B |
-| performer names and optional identifiers | P |
-| positions, names, ownership and hand associations | X |
-| balls | O |
-| initialState placements | I |
-| beat subdivisions and exact timing | D |
-| notation performer, hand, beat, offset and action | A |
-| action targets and parameters | A |
-| action link relationships | A |
-| individualPassingLayout | J |
-| tableLayout | M |
-| seatAssignments | C |
+| sequenceType | Field 1 |
+| bpm | Field 2 |
+| timeSignature numerator, denominator and beatGrouping | Field 3 |
+| beats and beat count | Field 4 |
+| performer names and optional identifiers | Field 5 |
+| positions, names, ownership and hand associations | Field 6 |
+| balls | Field 7 |
+| initialState placements | Field 8 |
+| beat subdivisions and exact timing | Field 9 |
+| notation performer, hand, beat, offset and action | Field 10 |
+| action targets and parameters | Field 10 |
+| action link relationships | Field 10 |
+| individualPassingLayout | Field 11 |
+| tableLayout | Field 12 |
+| seatAssignments | Field 13 |
 
 The sequence ID and entity IDs are intentionally regenerated because they are not semantic sequence content.
 
@@ -407,10 +412,10 @@ Encoding a decoded P3 sequence must reproduce the same canonical code.
 This example represents four beats, one performer, one ball, three table positions, two hand back positions, a 4/4 signature and four notation entries.
 
 ```text
-P3;s;120;4.4.1+1+1+1;4;~9:Juggler%201.-;T.~1:A.p0,T.~1:B.p0,T.~1:C.p0,B.L.0.L,B.R.0.R;1;0.P.0;1.0.1/2.1,1.1/2.1/2.1;L:3.3.0.T.p2,R:0.0.0.L.p0.-+1.1.0.H+2.2.0.V.p1.-;n;s;
+P3;s;120;4.4.1+1+1+1;4;~9:Juggler%201.-;T.~1:A.p0,T.~1:B.p0,T.~1:C.p0,B.L.0.L,B.R.0.R;1;0.P.0;1.0.1/2.1,1.1/2.1/2.1;L:-|-|-|3.0.T.p2,R:0.0.L.p0.-|1.0.H|2.0.V.p1.-|-;n;s;
 ```
 
-The left hand stream contains the TAP on beat four. The right hand stream contains LIFT, HOLD and LEAVE on beats one, two and three. The stream order establishes performer ownership, and each stream header establishes its hand. The event fields establish the original notation order, beat and offset.
+The left hand stream contains three empty beat cells followed by the TAP on beat four. The right hand stream contains LIFT, HOLD and LEAVE on beats one, two and three, followed by an empty cell. The stream order establishes performer ownership, each stream header establishes its hand, and the cell position establishes the beat. Event ordinals preserve the original notation array order.
 
 ## 11. Format replacement policy
 
