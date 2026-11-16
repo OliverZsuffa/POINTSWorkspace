@@ -2,7 +2,7 @@
 
 ## Status
 
-Approved. Implementation in progress on PR #20.
+Implementation complete in PR #20. Formatting, lint, strict TypeScript, all 152 unit tests, production build and all 16 Playwright browser tests passed. Awaiting merge.
 
 ## Goal
 
@@ -88,4 +88,4 @@ The encoder should omit values only when they can be reconstructed without ambig
 
 ## Review checkpoint
 
-Please review the grammar direction and scope before implementation. After approval, implement P2 on this branch, test it against the acceptance criteria, open a pull request and wait for approval before merging.
+The P2 grammar and implementation are complete in PR #20. Automated verification passed. Review the resulting codes in the pull request before merging. No backward compatibility is included.
