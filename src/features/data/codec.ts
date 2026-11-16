@@ -1,6 +1,6 @@
 import type {
-  Ball, Beat, NotationAction, NotationEntry, ObjectLocation, Performer, PositionDefinition, Sequence,
-  SequenceDecodeResult, SeatAssignment, TableLayout,
+  Ball, Beat, NotationAction, NotationEntry, ObjectLocation, Performer, PositionDefinition,
+  Sequence, SequenceDecodeResult, SeatAssignment, TableLayout,
 } from '../../domain/model';
 import type { SequenceCodec } from '../../contracts';
 import type { LinkId } from '../../domain/ids';
@@ -9,631 +9,471 @@ import {
   asSequenceId, asSubdivisionId,
 } from '../../domain/ids';
 
-const PREFIX = 'P3;';
 const MAX_CODE_LENGTH = 1_000_000;
-const MAX_SEQUENCE_ITEMS = 100_000;
-type Sections = {
-  sequenceType: string;
-  bpm: string;
-  timeSignature: string;
-  beatCount: string;
-  performers: string;
-  positions: string;
-  ballCount: string;
-  placements: string;
-  subdivisions: string;
-  actionStreams: string;
-  individualPassingLayout: string;
-  tableLayout: string;
-  seats: string;
-};
-
+const MAX_ITEMS = 100_000;
+const ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
 const ACTION_CODES: Record<NotationAction['type'], string> = {
-  HOLD: 'H',
-  LIFT: 'L',
-  LEAVE: 'V',
-  BOUNCE: 'B',
-  TAP: 'T',
-  EMPTY: 'E',
-  ZIP: 'Z',
-  SPECIAL: 'S',
+  HOLD: 'H', LIFT: 'L', LEAVE: 'V', BOUNCE: 'B', TAP: 'T', EMPTY: 'E', ZIP: 'Z', SPECIAL: 'S',
 };
+type Cursor = { at: number };
 
-function indexOf<T extends { readonly id: string }>(items: readonly T[], id: string): number {
-  const index = items.findIndex((item) => item.id === id);
-  if (index < 0) throw new Error(`Unknown sequence reference: ${id}`);
-  return index;
+function u(value: number): string {
+  if (!Number.isSafeInteger(value) || value < 0) throw new Error('Invalid unsigned integer.');
+  if (value < 26) return ALPHABET[value]!;
+  const adjusted = value - 26;
+  return String(Math.floor(adjusted / 26)) + ALPHABET[adjusted % 26]!;
 }
-
-function numberText(value: number): string {
+function ru(input: string, cursor: Cursor): number {
+  const first = input[cursor.at];
+  if (!first) throw new Error('Unexpected end of code.');
+  if (/[A-Z]/.test(first)) {
+    cursor.at += 1;
+    return ALPHABET.indexOf(first);
+  }
+  const start = cursor.at;
+  while (/[0-9]/.test(input[cursor.at] ?? '')) cursor.at += 1;
+  const prefix = input.slice(start, cursor.at);
+  const terminal = input[cursor.at];
+  if (!prefix || !terminal || !/[A-Z]/.test(terminal) || (prefix.length > 1 && prefix[0] === '0')) {
+    throw new Error('Invalid integer token.');
+  }
+  cursor.at += 1;
+  const value = Number(prefix) * 26 + ALPHABET.indexOf(terminal) + 26;
+  if (!Number.isSafeInteger(value)) throw new Error('Integer exceeds safe range.');
+  return value;
+}
+function tx(value: string): string {
+  const bytes = new TextEncoder().encode(value);
+  if (bytes.length === 1 && /^[A-Za-z0-9]$/.test(value) && value !== 't') return value;
+  let body = '';
+  for (const byte of bytes) {
+    const char = String.fromCharCode(byte);
+    body += /^[A-Za-z0-9]$/.test(char) ? char : '~' + byte.toString(16).toUpperCase().padStart(2, '0');
+  }
+  return 't' + u(bytes.length) + body;
+}
+function rtx(input: string, cursor: Cursor): string {
+  const first = input[cursor.at];
+  if (!first) throw new Error('Missing text value.');
+  if (first !== 't') {
+    if (!/^[A-Za-z0-9]$/.test(first)) throw new Error('Invalid short text value.');
+    cursor.at += 1;
+    return first;
+  }
+  cursor.at += 1;
+  const length = ru(input, cursor);
+  if (length > MAX_CODE_LENGTH) throw new Error('Text exceeds decoder limit.');
+  const bytes: number[] = [];
+  while (bytes.length < length) {
+    const char = input[cursor.at++];
+    if (!char) throw new Error('Truncated text value.');
+    if (char === '~') {
+      const hex = input.slice(cursor.at, cursor.at + 2);
+      if (!/^[0-9A-F]{2}$/.test(hex)) throw new Error('Invalid text escape.');
+      bytes.push(parseInt(hex, 16));
+      cursor.at += 2;
+    } else {
+      if (!/^[A-Za-z0-9]$/.test(char)) throw new Error('Invalid text byte.');
+      bytes.push(char.charCodeAt(0));
+    }
+  }
+  try { return new TextDecoder('utf-8', { fatal: true }).decode(new Uint8Array(bytes)); }
+  catch { throw new Error('Invalid UTF8 text.'); }
+}
+function num(value: number): string {
   if (!Number.isFinite(value)) throw new Error('Sequence numbers must be finite.');
-  return Object.is(value, -0) ? '-0' : String(value);
+  return tx(Object.is(value, -0) ? '-0' : String(value));
 }
-
-function numberField(value: number): string {
-  return numberText(value).split('.').join('%2E').split('+').join('%2B');
+function rnum(input: string, cursor: Cursor, label: string): number {
+  const raw = rtx(input, cursor);
+  if (!/^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?$/.test(raw)) throw new Error('Invalid ' + label + '.');
+  const value = Number(raw);
+  if (!Number.isFinite(value)) throw new Error('Invalid ' + label + '.');
+  return value;
 }
-
-function integerText(value: number): string {
-  if (!Number.isSafeInteger(value)) throw new Error('Sequence integer is outside the safe integer range.');
-  return String(value);
-}
-
-function parseNumber(value: string, label: string): number {
-  const decoded = value.split('%2E').join('.').split('%2e').join('.').split('%2B').join('+').split('%2b').join('+');
-  if (!/^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?$/.test(decoded)) {
-    throw new Error('Invalid ' + label + '.');
-  }
-  const parsed = Number(decoded);
-  if (!Number.isFinite(parsed)) throw new Error('Invalid ' + label + '.');
-  return parsed;
-}
-function parseInteger(value: string, label: string, minimum = 0): number {
-  if (!/^(?:0|[1-9]\d*)$/.test(value)) throw new Error(`Invalid ${label}.`);
-  const parsed = Number(value);
-  if (!Number.isSafeInteger(parsed) || parsed < minimum) throw new Error(`Invalid ${label}.`);
-  return parsed;
-}
-
-function encodeText(value: string): string {
-  const encoded = encodeURIComponent(value)
-    .replace(/\./g, '%2E')
-    .replace(/~/g, '%7E');
-  return `~${new TextEncoder().encode(value).length}:${encoded}`;
-}
-
-function decodeText(value: string): string {
-  const match = /^~(0|[1-9]\d*):(.*)$/.exec(value);
-  if (!match) throw new Error('Invalid text value.');
-  const decoded = decodeURIComponent(match[2]!);
-  if (new TextEncoder().encode(decoded).length !== Number(match[1])) {
-    throw new Error('Text length does not match its encoded value.');
-  }
-  return decoded;
-}
-
-function encodeRational(value: { numerator: number; denominator: number }): string {
+function rat(value: { numerator: number; denominator: number }): string {
   if (!Number.isSafeInteger(value.numerator) || !Number.isSafeInteger(value.denominator) || value.denominator <= 0) {
     throw new Error('Invalid rational value.');
   }
-  return value.denominator === 1
-    ? integerText(value.numerator)
-    : `${integerText(value.numerator)}/${integerText(value.denominator)}`;
+  if (value.numerator === 0 && value.denominator === 1) return '0';
+  return (value.numerator < 0 ? 'n' : 'p') + u(Math.abs(value.numerator)) + u(value.denominator);
 }
-
-function decodeRational(value: string): { numerator: number; denominator: number } {
-  const match = /^(-?(?:0|[1-9]\d*))(?:\/([1-9]\d*))?$/.exec(value);
-  if (!match) throw new Error('Invalid rational value.');
-  const numerator = Number(match[1]);
-  const denominator = match[2] === undefined ? 1 : Number(match[2]);
-  if (!Number.isSafeInteger(numerator) || !Number.isSafeInteger(denominator)) {
-    throw new Error('Rational value is outside the safe integer range.');
-  }
-  return { numerator, denominator };
+function rrat(input: string, cursor: Cursor): { numerator: number; denominator: number } {
+  const sign = input[cursor.at++];
+  if (sign === '0') return { numerator: 0, denominator: 1 };
+  if (sign !== 'p' && sign !== 'n') throw new Error('Invalid rational value.');
+  const magnitude = ru(input, cursor);
+  const denominator = ru(input, cursor);
+  if (!denominator) throw new Error('Rational denominator must be positive.');
+  return { numerator: sign === 'n' ? -magnitude : magnitude, denominator };
 }
-
-function records(value: string): string[] {
-  return value === '' ? [] : value.split(',');
+function idx<T extends { readonly id: string }>(items: readonly T[], id: string): number {
+  const value = items.findIndex((item) => item.id === id);
+  if (value < 0) throw new Error('Unknown sequence reference: ' + id);
+  return value;
 }
-
-function fields(value: string, count: number, label: string): string[] {
-  const result = value.split('.');
-  if (result.length !== count) throw new Error(`Invalid ${label}.`);
-  return result;
+function hc(hand: 'left' | 'right'): string { return hand === 'left' ? 'L' : 'R'; }
+function rh(input: string, cursor: Cursor): 'left' | 'right' {
+  const value = input[cursor.at++];
+  if (value === 'L') return 'left';
+  if (value === 'R') return 'right';
+  throw new Error('Invalid hand.');
 }
-
-function sectionMap(code: string): Sections {
-  const parts = code.split(';');
-  if (parts[0] !== 'P3' || parts.length !== 14) {
-    throw new Error('Invalid P3 document framing.');
-  }
-  const values = parts.slice(1);
-  return {
-    sequenceType: values[0]!,
-    bpm: values[1]!,
-    timeSignature: values[2]!,
-    beatCount: values[3]!,
-    performers: values[4]!,
-    positions: values[5]!,
-    ballCount: values[6]!,
-    placements: values[7]!,
-    subdivisions: values[8]!,
-    actionStreams: values[9]!,
-    individualPassingLayout: values[10]!,
-    tableLayout: values[11]!,
-    seats: values[12]!,
-  };
-}
-
-function encodeTarget(
-  target: Extract<NotationAction, { type: 'LIFT' | 'LEAVE' | 'BOUNCE' | 'TAP' }>['target'],
-  sequence: Sequence,
-): string {
-  if (target.kind === 'position') return `p${indexOf(sequence.positions, target.positionId)}`;
+function targetOut(target: Extract<NotationAction, { type: 'LIFT' | 'LEAVE' | 'BOUNCE' | 'TAP' }>['target'], sequence: Sequence): string {
+  if (target.kind === 'position') return 'p' + u(idx(sequence.positions, target.positionId));
   if (target.kind === 'circle-position') {
-    const direction = target.direction === 'left' ? 'L' : target.direction === 'right' ? 'R' : '-';
-    const distance = target.distance === undefined ? '-' : numberField(target.distance);
-    return `c${target.position}_${direction}_${distance}`;
+    return 'c' + target.position + (target.direction === undefined ? '0' : target.direction === 'left' ? '1' : '2') +
+      (target.distance === undefined ? '0' : '1' + num(target.distance));
   }
-  if (target.kind === 'pass-source') return `s${indexOf(sequence.performers, target.performerId)}`;
-  return `r${indexOf(sequence.performers, target.performerId)}_${target.hand === 'left' ? 'L' : 'R'}`;
+  if (target.kind === 'pass-source') return 's' + u(idx(sequence.performers, target.performerId));
+  return 'r' + u(idx(sequence.performers, target.performerId)) + hc(target.hand);
 }
-
-function encodeActionParts(
-  action: NotationAction,
-  sequence: Sequence,
-  linkIndex: (id: LinkId) => number,
-): string[] {
-  const code = ACTION_CODES[action.type];
-  switch (action.type) {
-    case 'HOLD':
-    case 'EMPTY':
-      return [code];
-    case 'LIFT':
-    case 'LEAVE':
-      return [code, encodeTarget(action.target, sequence), action.linkId === undefined ? '-' : `l${linkIndex(action.linkId)}`];
-    case 'BOUNCE':
-    case 'TAP':
-      return [code, encodeTarget(action.target, sequence)];
-    case 'ZIP':
-      return [code, action.role === 'source' ? 'S' : 'R', `l${linkIndex(action.linkId)}`];
-    case 'SPECIAL':
-      return [code, encodeText(action.text), action.linkId === undefined ? '-' : `l${linkIndex(action.linkId)}`];
+function targetIn(input: string, cursor: Cursor, positions: PositionDefinition[], performers: Performer[]) {
+  const tag = input[cursor.at++];
+  if (tag === 'p') {
+    const value = positions[ru(input, cursor)];
+    if (!value) throw new Error('Unknown position target.');
+    return { kind: 'position' as const, positionId: value.id };
   }
-}
-
-function encodeLocation(location: ObjectLocation, sequence: Sequence): string[] {
-  if (location.kind === 'position') return ['P', String(indexOf(sequence.positions, location.positionId))];
-  if (location.kind === 'hand-held') {
-    return ['H', String(indexOf(sequence.performers, location.performerId)), location.hand === 'left' ? 'L' : 'R'];
-  }
-  return [
-    'B',
-    String(indexOf(sequence.positions, location.positionId)),
-    String(indexOf(sequence.performers, location.performerId)),
-    location.hand === 'left' ? 'L' : 'R',
-  ];
-}
-
-function linkNumber(value: string, optional: boolean): number | undefined {
-  if (value === '-' && optional) return undefined;
-  const match = /^l(0|[1-9]\d*)$/.exec(value);
-  if (!match) throw new Error('Invalid link reference.');
-  return parseInteger(match[1]!, 'link reference');
-}
-
-function targetFromCode(value: string, positions: PositionDefinition[], performers: Performer[]) {
-  if (/^p(0|[1-9]\d*)$/.test(value)) {
-    const index = parseInteger(value.slice(1), 'position reference');
-    const position = positions[index];
-    if (!position) throw new Error('Unknown position reference.');
-    return { kind: 'position' as const, positionId: position.id };
-  }
-  const circle = /^c([ABC])_([LR-])_(-|[^_]+)$/.exec(value);
-  if (circle) {
+  if (tag === 'c') {
+    const position = input[cursor.at++] as 'A' | 'B' | 'C';
+    if (!['A', 'B', 'C'].includes(position)) throw new Error('Invalid circle position.');
+    const direction = input[cursor.at++];
+    if (!['0', '1', '2'].includes(direction ?? '')) throw new Error('Invalid circle direction.');
+    const hasDistance = input[cursor.at++];
+    if (hasDistance !== '0' && hasDistance !== '1') throw new Error('Invalid circle distance marker.');
     return {
-      kind: 'circle-position' as const,
-      position: circle[1] as 'A' | 'B' | 'C',
-      ...(circle[2] === '-' ? {} : { direction: circle[2] === 'L' ? 'left' as const : 'right' as const }),
-      ...(circle[3] === '-' ? {} : { distance: parseNumber(circle[3]!, 'circle distance') }),
+      kind: 'circle-position' as const, position,
+      ...(direction === '0' ? {} : { direction: direction === '1' ? 'left' as const : 'right' as const }),
+      ...(hasDistance === '1' ? { distance: rnum(input, cursor, 'circle distance') } : {}),
     };
   }
-  const source = /^s(0|[1-9]\d*)$/.exec(value);
-  if (source) {
-    const performer = performers[parseInteger(source[1]!, 'pass source')];
-    if (!performer) throw new Error('Unknown pass source.');
-    return { kind: 'pass-source' as const, performerId: performer.id };
+  if (tag === 's') {
+    const person = performers[ru(input, cursor)];
+    if (!person) throw new Error('Unknown pass source.');
+    return { kind: 'pass-source' as const, performerId: person.id };
   }
-  const recipient = /^r(0|[1-9]\d*)_([LR])$/.exec(value);
-  if (recipient) {
-    const performer = performers[parseInteger(recipient[1]!, 'pass recipient')];
-    if (!performer) throw new Error('Unknown pass recipient.');
-    return { kind: 'pass-recipient-hand' as const, performerId: performer.id, hand: recipient[2] === 'L' ? 'left' as const : 'right' as const };
+  if (tag === 'r') {
+    const person = performers[ru(input, cursor)];
+    if (!person) throw new Error('Unknown pass recipient.');
+    return { kind: 'pass-recipient-hand' as const, performerId: person.id, hand: rh(input, cursor) };
   }
-  throw new Error('Unknown action target.');
+  throw new Error('Unknown target type.');
 }
-
-function decodeAction(
-  parts: string[],
-  positions: PositionDefinition[],
-  performers: Performer[],
-  links: LinkId[],
-): NotationAction {
-  const type = parts[0];
-  const getLink = (value: string, optional: boolean): LinkId | undefined => {
-    const index = linkNumber(value, optional);
-    if (index === undefined) return undefined;
-    const link = links[index];
-    if (!link) throw new Error('Unknown link reference.');
-    return link;
-  };
+function linkOut(id: LinkId | undefined, linkIndex: (id: LinkId) => number): string {
+  return id === undefined ? '0' : '1' + u(linkIndex(id));
+}
+function actionOut(action: NotationAction, sequence: Sequence, linkIndex: (id: LinkId) => number): string {
+  switch (action.type) {
+    case 'HOLD':
+    case 'EMPTY': return ACTION_CODES[action.type];
+    case 'LIFT':
+    case 'LEAVE': return ACTION_CODES[action.type] + targetOut(action.target, sequence) + linkOut(action.linkId, linkIndex);
+    case 'BOUNCE':
+    case 'TAP': return ACTION_CODES[action.type] + targetOut(action.target, sequence);
+    case 'ZIP': return 'Z' + (action.role === 'source' ? 'S' : 'R') + u(linkIndex(action.linkId));
+    case 'SPECIAL': return 'S' + tx(action.text) + linkOut(action.linkId, linkIndex);
+  }
+}
+function linkIn(input: string, cursor: Cursor): number | undefined {
+  const marker = input[cursor.at++];
+  if (marker === '0') return undefined;
+  if (marker !== '1') throw new Error('Invalid link marker.');
+  return ru(input, cursor);
+}
+function actionIn(input: string, cursor: Cursor, positions: PositionDefinition[], performers: Performer[]): { action: NotationAction; links: number[] } {
+  const type = input[cursor.at++];
   switch (type) {
-    case 'H':
-      if (parts.length !== 1) throw new Error('Invalid HOLD action.');
-      return { type: 'HOLD' };
-    case 'E':
-      if (parts.length !== 1) throw new Error('Invalid EMPTY action.');
-      return { type: 'EMPTY' };
+    case 'H': return { action: { type: 'HOLD' }, links: [] };
+    case 'E': return { action: { type: 'EMPTY' }, links: [] };
     case 'L': {
-      if (parts.length !== 3) throw new Error('Invalid LIFT action.');
-      const target = targetFromCode(parts[1]!, positions, performers);
+      const target = targetIn(input, cursor, positions, performers);
       if (target.kind === 'pass-recipient-hand') throw new Error('Invalid LIFT target.');
-      return { type: 'LIFT', target, ...(getLink(parts[2]!, true) ? { linkId: getLink(parts[2]!, true) } : {}) };
+      const link = linkIn(input, cursor);
+      return { action: { type: 'LIFT', target, ...(link === undefined ? {} : { linkId: asLinkId('l' + link) }) }, links: link === undefined ? [] : [link] };
     }
     case 'V': {
-      if (parts.length !== 3) throw new Error('Invalid LEAVE action.');
-      const target = targetFromCode(parts[1]!, positions, performers);
+      const target = targetIn(input, cursor, positions, performers);
       if (target.kind === 'pass-source') throw new Error('Invalid LEAVE target.');
-      return { type: 'LEAVE', target, ...(getLink(parts[2]!, true) ? { linkId: getLink(parts[2]!, true) } : {}) };
+      const link = linkIn(input, cursor);
+      return { action: { type: 'LEAVE', target, ...(link === undefined ? {} : { linkId: asLinkId('l' + link) }) }, links: link === undefined ? [] : [link] };
     }
     case 'B':
     case 'T': {
-      if (parts.length !== 2) throw new Error('Invalid tap action.');
-      const target = targetFromCode(parts[1]!, positions, performers);
+      const target = targetIn(input, cursor, positions, performers);
       if (target.kind !== 'position' && target.kind !== 'circle-position') throw new Error('Invalid tap target.');
-      return type === 'B' ? { type: 'BOUNCE', target } : { type: 'TAP', target };
+      return { action: type === 'B' ? { type: 'BOUNCE', target } : { type: 'TAP', target }, links: [] };
     }
     case 'Z': {
-      if (parts.length !== 3 || (parts[1] !== 'S' && parts[1] !== 'R')) throw new Error('Invalid ZIP action.');
-      const linkId = getLink(parts[2]!, false);
-      if (!linkId) throw new Error('Invalid ZIP link.');
-      return { type: 'ZIP', role: parts[1] === 'S' ? 'source' : 'receiver', linkId };
+      const role = input[cursor.at++];
+      if (role !== 'S' && role !== 'R') throw new Error('Invalid ZIP role.');
+      const link = ru(input, cursor);
+      return { action: { type: 'ZIP', role: role === 'S' ? 'source' : 'receiver', linkId: asLinkId('l' + link) }, links: [link] };
     }
     case 'S': {
-      if (parts.length !== 3) throw new Error('Invalid SPECIAL action.');
-      const linkId = getLink(parts[2]!, true);
-      return { type: 'SPECIAL', text: decodeText(parts[1]!), ...(linkId ? { linkId } : {}) };
+      const value = rtx(input, cursor);
+      const link = linkIn(input, cursor);
+      return { action: { type: 'SPECIAL', text: value, ...(link === undefined ? {} : { linkId: asLinkId('l' + link) }) }, links: link === undefined ? [] : [link] };
     }
-    default:
-      throw new Error('Unknown action code.');
+    default: throw new Error('Unknown action code.');
   }
 }
-
-function compressEmptyCells(cells: string[]): string[] {
-  const result: string[] = [];
-  for (let index = 0; index < cells.length;) {
-    if (cells[index] !== '-') {
-      result.push(cells[index]!);
-      index += 1;
-      continue;
-    }
-    let end = index + 1;
-    while (end < cells.length && cells[end] === '-') end += 1;
-    const count = end - index;
-    result.push(count === 1 ? '-' : `-${count}`);
-    index = end;
-  }
-  return result;
+function locationOut(value: ObjectLocation, sequence: Sequence): string {
+  if (value.kind === 'position') return 'P' + u(idx(sequence.positions, value.positionId));
+  if (value.kind === 'hand-held') return 'H' + u(idx(sequence.performers, value.performerId)) + hc(value.hand);
+  return 'B' + u(idx(sequence.positions, value.positionId)) + u(idx(sequence.performers, value.performerId)) + hc(value.hand);
 }
-
-function parseStream(value: string): { hand: 'left' | 'right'; cells: string[] } {
-  const separator = value.indexOf(':');
-  if (separator !== 1) throw new Error('Invalid action stream.');
-  const handCode = value[0];
-  if (handCode !== 'L' && handCode !== 'R') throw new Error('Invalid stream hand.');
-  const timeline = value.slice(separator + 1);
-  return {
-    hand: handCode === 'L' ? 'left' : 'right',
-    cells: timeline === '' ? [] : timeline.split('|'),
-  };
+function locationIn(input: string, cursor: Cursor, positions: PositionDefinition[], performers: Performer[]): ObjectLocation {
+  const tag = input[cursor.at++];
+  if (tag === 'P') {
+    const position = positions[ru(input, cursor)];
+    if (!position) throw new Error('Unknown placement position.');
+    return { kind: 'position', positionId: position.id };
+  }
+  if (tag === 'H') {
+    const person = performers[ru(input, cursor)];
+    if (!person) throw new Error('Unknown held performer.');
+    return { kind: 'hand-held', performerId: person.id, hand: rh(input, cursor) };
+  }
+  if (tag === 'B') {
+    const position = positions[ru(input, cursor)];
+    const person = performers[ru(input, cursor)];
+    if (!position || !person) throw new Error('Unknown hand back placement reference.');
+    return { kind: 'hand-back', positionId: position.id, performerId: person.id, hand: rh(input, cursor) };
+  }
+  throw new Error('Unknown placement type.');
+}
+function seatSideCode(side: 'long-a' | 'long-b' | 'short-a' | 'short-b'): string {
+  return String(['long-a', 'long-b', 'short-a', 'short-b'].indexOf(side));
+}
+function readSeatSide(value: string): 'long-a' | 'long-b' | 'short-a' | 'short-b' {
+  const sides = ['long-a', 'long-b', 'short-a', 'short-b'] as const;
+  const side = sides[Number(value)];
+  if (!side || !/^[0-3]$/.test(value)) throw new Error('Invalid rectangle side.');
+  return side;
 }
 
 export const sequenceCodec: SequenceCodec = {
   encode(sequence) {
-    const performerIndex = (id: string) => indexOf(sequence.performers, id);
-    const ballIndex = (id: string) => indexOf(sequence.balls, id);
-    const beatIndex = (id: string) => indexOf(sequence.beats, id);
+    const counts = [sequence.timeSignature.beatGrouping.length, sequence.beats.length, sequence.performers.length, sequence.positions.length, sequence.balls.length, sequence.initialState.placements.length, sequence.seatAssignments.length, sequence.notation.length];
+    if (counts.some((count) => count > MAX_ITEMS)) throw new Error('Sequence exceeds codec item limits.');
     sequence.notation.forEach((entry) => {
-      performerIndex(entry.performerId);
-      beatIndex(entry.time.beatId);
+      idx(sequence.performers, entry.performerId);
+      idx(sequence.beats, entry.time.beatId);
     });
-    const linkIds = [...new Set(sequence.notation.flatMap(({ action }) =>
+    const links = [...new Set(sequence.notation.flatMap(({ action }) =>
       'linkId' in action && action.linkId !== undefined ? [action.linkId] : [],
     ))];
-    const linkIndex = (id: LinkId) => {
-      const index = linkIds.indexOf(id);
-      if (index < 0) throw new Error('Unknown link reference.');
-      return index;
+    const li = (id: LinkId) => {
+      const value = links.indexOf(id);
+      if (value < 0) throw new Error('Unknown link reference.');
+      return value;
     };
-
-    const sequenceType = sequence.sequenceType === 'solo' ? 's'
-      : sequence.sequenceType === 'circle-passing' ? 'c' : 'i';
-    const timeSignature = [
-      numberField(sequence.timeSignature.numerator),
-      numberField(sequence.timeSignature.denominator),
-      sequence.timeSignature.beatGrouping.length
-        ? sequence.timeSignature.beatGrouping.map(numberField).join('+')
-        : '-',
-    ].join('.');
-    const performers = sequence.performers.map((performer) =>
-      `${encodeText(performer.name)}.${performer.identifier === undefined ? '-' : encodeText(performer.identifier)}`,
-    ).join(',');
-    const positions = sequence.positions.map((position) => position.kind === 'table'
-      ? `T.${encodeText(position.name)}.${position.owner.kind === 'shared' ? 's' : `p${performerIndex(position.owner.performerId)}`}`
-      : `B.${position.name}.${performerIndex(position.performerId)}.${position.hand === 'left' ? 'L' : 'R'}`,
-    ).join(',');
-    const placements = sequence.initialState.placements.map((placement) => [
-      String(ballIndex(placement.ballId)),
-      ...encodeLocation(placement.location, sequence),
-    ].join('.')).join(',');
-    const subdivisions = sequence.beats.flatMap((beat, beatIndexValue) =>
-      beat.subdivisions.map((subdivision) => [
-        String(beatIndexValue),
-        encodeRational(subdivision.start),
-        encodeRational(subdivision.duration),
-        numberField(subdivision.depth),
-      ].join('.')),
-    ).join(',');
-    const streams = sequence.performers.flatMap((performer) =>
-      (['left', 'right'] as const).map((hand) => {
-        const handCode = hand === 'left' ? 'L' : 'R';
-        const cells = sequence.beats.map((beat) => {
-          const events = sequence.notation.flatMap((entry, ordinal) =>
-            entry.performerId === performer.id &&
-            entry.hand === hand &&
-            entry.time.beatId === beat.id
-              ? [[
-                  String(ordinal),
-                  encodeRational(entry.time.offset),
-                  ...encodeActionParts(entry.action, sequence, linkIndex),
-                ].join('.')]
-              : [],
-          );
-          return events.length ? events.join('+') : '-';
-        });
-        return `${handCode}:${compressEmptyCells(cells).join('|')}`;
-      }),
-    ).join(',');
-    const individualLayout = sequence.individualPassingLayout === undefined ? 'n'
-      : sequence.individualPassingLayout === 'shared-positions' ? 's' : 'p';
-    const tableLayout = sequence.tableLayout.type === 'solo' ? 's'
-      : sequence.tableLayout.type === 'polygon' ? `p${numberText(sequence.tableLayout.sideCount)}`
-        : `r${numberText(sequence.tableLayout.longSideSeatCount)}_${numberText(sequence.tableLayout.shortSideSeatCount)}`;
-    const seats = sequence.seatAssignments.map((assignment) => assignment.seat.kind === 'polygon-edge'
-      ? `${performerIndex(assignment.performerId)}.P.${numberField(assignment.seat.edgeIndex)}`
-      : `${performerIndex(assignment.performerId)}.R.${assignment.seat.side}.${numberField(assignment.seat.seatIndex)}`,
-    ).join(',');
-
-    return [
-      'P3',
-      sequenceType,
-      numberText(sequence.bpm),
-      timeSignature,
-      String(sequence.beats.length),
-      performers,
-      positions,
-      String(sequence.balls.length),
-      placements,
-      subdivisions,
-      streams,
-      individualLayout,
-      tableLayout,
-      seats,
-    ].join(';');
+    let out = 'P4' + (sequence.sequenceType === 'solo' ? 'S' : sequence.sequenceType === 'circle-passing' ? 'C' : 'I');
+    out += num(sequence.bpm) + num(sequence.timeSignature.numerator) + num(sequence.timeSignature.denominator);
+    out += u(sequence.timeSignature.beatGrouping.length);
+    sequence.timeSignature.beatGrouping.forEach((value) => { out += num(value); });
+    out += u(sequence.beats.length) + u(sequence.performers.length);
+    sequence.performers.forEach((person) => {
+      out += tx(person.name) + (person.identifier === undefined ? '0' : '1' + tx(person.identifier));
+    });
+    out += u(sequence.positions.length);
+    sequence.positions.forEach((position) => {
+      if (position.kind === 'table') {
+        out += 'T' + tx(position.name) + (position.owner.kind === 'shared' ? 'S' : 'P' + u(idx(sequence.performers, position.owner.performerId)));
+      } else {
+        out += 'B' + position.name + u(idx(sequence.performers, position.performerId)) + hc(position.hand);
+      }
+    });
+    out += u(sequence.balls.length) + u(sequence.initialState.placements.length);
+    sequence.initialState.placements.forEach((placement) => {
+      out += u(idx(sequence.balls, placement.ballId)) + locationOut(placement.location, sequence);
+    });
+    sequence.beats.forEach((beat) => {
+      out += u(beat.subdivisions.length);
+      beat.subdivisions.forEach((part) => { out += rat(part.start) + rat(part.duration) + num(part.depth); });
+    });
+    out += sequence.individualPassingLayout === undefined ? 'N'
+      : sequence.individualPassingLayout === 'shared-positions' ? 'S' : 'P';
+    const layout = sequence.tableLayout;
+    out += layout.type === 'solo' ? 'S'
+      : layout.type === 'polygon' ? 'P' + num(layout.sideCount)
+        : 'R' + num(layout.longSideSeatCount) + num(layout.shortSideSeatCount);
+    out += u(sequence.seatAssignments.length);
+    sequence.seatAssignments.forEach((assignment) => {
+      out += u(idx(sequence.performers, assignment.performerId));
+      out += assignment.seat.kind === 'polygon-edge'
+        ? 'P' + num(assignment.seat.edgeIndex)
+        : 'R' + seatSideCode(assignment.seat.side) + num(assignment.seat.seatIndex);
+    });
+    out += '.';
+    sequence.performers.forEach((person) => {
+      (['left', 'right'] as const).forEach((hand) => {
+        const cells = sequence.beats.map((beat) => sequence.notation
+          .map((entry, ordinal) => ({ entry, ordinal }))
+          .filter(({ entry }) => entry.performerId === person.id && entry.hand === hand && entry.time.beatId === beat.id));
+        for (let i = 0; i < cells.length;) {
+          if (cells[i]!.length === 0) {
+            let end = i + 1;
+            while (end < cells.length && cells[end]!.length === 0) end += 1;
+            const count = end - i;
+            out += count > 1 ? 'e' + u(count) : 'A';
+            i = end;
+          } else {
+            out += u(cells[i]!.length);
+            cells[i]!.forEach(({ entry, ordinal }) => {
+              out += u(ordinal) + rat(entry.time.offset) + actionOut(entry.action, sequence, li);
+            });
+            i += 1;
+          }
+        }
+      });
+    });
+    if (out.length > MAX_CODE_LENGTH) throw new Error('Sequence code exceeds the maximum supported length.');
+    return out;
   },
 
   decode(code): SequenceDecodeResult {
-    const trimmed = code.trim();
-    if (!trimmed.startsWith('P')) {
-      return { ok: false, code: 'malformed', message: 'This is not a POINTS sequence code.' };
-    }
-    if (!trimmed.startsWith(PREFIX)) {
-      return { ok: false, code: 'unsupported-version', message: 'This sequence code uses a superseded or unsupported format.' };
-    }
-
+    if (!code.startsWith('P')) return { ok: false, code: 'malformed', message: 'This is not a POINTS sequence code.' };
+    if (!code.startsWith('P4')) return { ok: false, code: 'unsupported-version', message: 'This sequence code uses a superseded or unsupported format.' };
     try {
-      if (trimmed.length > MAX_CODE_LENGTH) throw new Error('Sequence code exceeds the maximum supported length.');
-      const section = sectionMap(trimmed);
-      const sequenceType = section.sequenceType === 's' ? 'solo'
-        : section.sequenceType === 'c' ? 'circle-passing'
-          : section.sequenceType === 'i' ? 'individual-passing' : null;
+      if (code.length > MAX_CODE_LENGTH) throw new Error('Sequence code exceeds the maximum supported length.');
+      if (/\s/.test(code)) throw new Error('Whitespace is not permitted in a sequence code.');
+      const cursor: Cursor = { at: 2 };
+      const type = code[cursor.at++];
+      const sequenceType = type === 'S' ? 'solo' : type === 'C' ? 'circle-passing' : type === 'I' ? 'individual-passing' : null;
       if (!sequenceType) throw new Error('Invalid sequence type.');
-
-      const bpm = parseNumber(section.bpm, 'BPM');
-      const [numeratorText, denominatorText, groupingText] = fields(section.timeSignature, 3, 'time signature');
-      const timeSignature = {
-        numerator: parseNumber(numeratorText!, 'time signature numerator'),
-        denominator: parseNumber(denominatorText!, 'time signature denominator') as Sequence['timeSignature']['denominator'],
-        beatGrouping: groupingText === '-' ? [] : groupingText!.split('+').map((value) => parseNumber(value, 'beat grouping')),
-      };
-      const beatCount = parseInteger(section.beatCount, 'beat count');
-      if (beatCount > MAX_SEQUENCE_ITEMS) throw new Error('Beat count exceeds the decoder limit.');
-      const performerRecords = records(section.performers);
-      if (performerRecords.length > MAX_SEQUENCE_ITEMS) throw new Error('Performer count exceeds the decoder limit.');
-      const performers: Performer[] = performerRecords.map((record, index) => {
-        const [name, identifier] = fields(record, 2, 'performer');
-        return {
-          id: asPerformerId(`p${index}`),
-          name: decodeText(name!),
-          ...(identifier === '-' ? {} : { identifier: decodeText(identifier!) }),
-        };
+      const bpm = rnum(code, cursor, 'BPM');
+      const numerator = rnum(code, cursor, 'time signature numerator');
+      const denominator = rnum(code, cursor, 'time signature denominator') as Sequence['timeSignature']['denominator'];
+      const groupCount = ru(code, cursor);
+      if (groupCount > MAX_ITEMS) throw new Error('Too many time signature groups.');
+      const beatGrouping = Array.from({ length: groupCount }, () => rnum(code, cursor, 'beat grouping'));
+      const beatCount = ru(code, cursor);
+      const performerCount = ru(code, cursor);
+      if (beatCount > MAX_ITEMS || performerCount > MAX_ITEMS) throw new Error('Sequence exceeds decoder limits.');
+      const performers: Performer[] = Array.from({ length: performerCount }, (_, index) => {
+        const name = rtx(code, cursor);
+        const marker = code[cursor.at++];
+        if (marker !== '0' && marker !== '1') throw new Error('Invalid performer identifier marker.');
+        return { id: asPerformerId('p' + index), name, ...(marker === '1' ? { identifier: rtx(code, cursor) } : {}) };
       });
-      const positions: PositionDefinition[] = records(section.positions).map((record, index) => {
-        const parts = record.split('.');
-        if (parts[0] === 'T' && parts.length === 3) {
-          const owner = parts[2]!;
-          return {
-            id: asPositionId(`x${index}`),
-            kind: 'table' as const,
-            name: decodeText(parts[1]!),
-            owner: owner === 's'
-              ? { kind: 'shared' as const }
-              : /^p(0|[1-9]\d*)$/.test(owner)
-                ? { kind: 'performer' as const, performerId: performers[parseInteger(owner.slice(1), 'position owner')]!.id }
-                : (() => { throw new Error('Invalid position owner.'); })(),
-          };
-        }
-        if (parts[0] === 'B' && parts.length === 4) {
-          const performer = performers[parseInteger(parts[2]!, 'hand back performer')];
-          if (!performer || (parts[3] !== 'L' && parts[3] !== 'R') || (parts[1] !== 'L' && parts[1] !== 'R')) {
-            throw new Error('Invalid hand back position.');
+      const positionCount = ru(code, cursor);
+      if (positionCount > MAX_ITEMS) throw new Error('Too many positions.');
+      const positions: PositionDefinition[] = Array.from({ length: positionCount }, (_, index) => {
+        const tag = code[cursor.at++];
+        if (tag === 'T') {
+          const name = rtx(code, cursor);
+          const owner = code[cursor.at++];
+          if (owner === 'S') return { id: asPositionId('x' + index), kind: 'table', name, owner: { kind: 'shared' } };
+          if (owner === 'P') {
+            const person = performers[ru(code, cursor)];
+            if (!person) throw new Error('Unknown position owner.');
+            return { id: asPositionId('x' + index), kind: 'table', name, owner: { kind: 'performer', performerId: person.id } };
           }
-          return {
-            id: asPositionId(`x${index}`), kind: 'hand-back' as const,
-            name: parts[1] as 'L' | 'R', performerId: performer.id,
-            hand: parts[3] === 'L' ? 'left' as const : 'right' as const,
-          };
+          throw new Error('Invalid position owner.');
+        }
+        if (tag === 'B') {
+          const name = code[cursor.at++];
+          const person = performers[ru(code, cursor)];
+          const hand = rh(code, cursor);
+          if ((name !== 'L' && name !== 'R') || !person) throw new Error('Invalid hand back position.');
+          return { id: asPositionId('x' + index), kind: 'hand-back', name, performerId: person.id, hand };
         }
         throw new Error('Invalid position definition.');
       });
-      const ballCount = parseInteger(section.ballCount, 'object count');
-      if (ballCount > MAX_SEQUENCE_ITEMS) throw new Error('Object count exceeds the decoder limit.');
-      const balls: Ball[] = Array.from({ length: ballCount }, (_, index) => ({ id: asBallId(`o${index}`) }));
-      const placements = records(section.placements).map((record) => {
-        const parts = record.split('.');
-        const ball = balls[parseInteger(parts[0]!, 'placement object')];
-        if (!ball) throw new Error('Unknown placement object.');
-        let location: ObjectLocation;
-        if (parts[1] === 'P' && parts.length === 3) {
-          const position = positions[parseInteger(parts[2]!, 'placement position')];
-          if (!position) throw new Error('Unknown placement position.');
-          location = { kind: 'position', positionId: position.id };
-        } else if (parts[1] === 'H' && parts.length === 4) {
-          const performer = performers[parseInteger(parts[2]!, 'held performer')];
-          if (!performer || (parts[3] !== 'L' && parts[3] !== 'R')) throw new Error('Invalid held placement.');
-          location = { kind: 'hand-held', performerId: performer.id, hand: parts[3] === 'L' ? 'left' : 'right' };
-        } else if (parts[1] === 'B' && parts.length === 5) {
-          const position = positions[parseInteger(parts[2]!, 'balanced position')];
-          const performer = performers[parseInteger(parts[3]!, 'balanced performer')];
-          if (!position || !performer || (parts[4] !== 'L' && parts[4] !== 'R')) throw new Error('Invalid hand back placement.');
-          location = {
-            kind: 'hand-back', positionId: position.id, performerId: performer.id,
-            hand: parts[4] === 'L' ? 'left' : 'right',
-          };
-        } else throw new Error('Invalid object placement.');
-        return { ballId: ball.id, location };
+      const ballCount = ru(code, cursor);
+      const placementCount = ru(code, cursor);
+      if (ballCount > MAX_ITEMS || placementCount > MAX_ITEMS) throw new Error('Too many objects or placements.');
+      const balls: Ball[] = Array.from({ length: ballCount }, (_, index) => ({ id: asBallId('o' + index) }));
+      const placements = Array.from({ length: placementCount }, () => {
+        const ball = balls[ru(code, cursor)];
+        if (!ball) throw new Error('Unknown placed object.');
+        return { ballId: ball.id, location: locationIn(code, cursor, positions, performers) };
       });
-      const beats: Beat[] = Array.from({ length: beatCount }, (_, index) => ({
-        id: asBeatId(`b${index}`), subdivisions: [],
-      }));
-      records(section.subdivisions).forEach((record) => {
-        const [beatText, startText, durationText, depthText] = fields(record, 4, 'subdivision');
-        const beat = beats[parseInteger(beatText!, 'subdivision beat')];
-        if (!beat) throw new Error('Unknown subdivision beat.');
-        const mutableBeat = beat as { id: Beat['id']; subdivisions: Beat['subdivisions'][number][] };
-        mutableBeat.subdivisions.push({
-          id: asSubdivisionId(`b${beatText}s${mutableBeat.subdivisions.length}`),
-          start: decodeRational(startText!),
-          duration: decodeRational(durationText!),
-          depth: parseNumber(depthText!, 'subdivision depth'),
-        });
+      const beats: Beat[] = Array.from({ length: beatCount }, (_, index) => {
+        const count = ru(code, cursor);
+        if (count > MAX_ITEMS) throw new Error('Too many subdivisions.');
+        const subdivisions = Array.from({ length: count }, (_, subIndex) => ({
+          id: asSubdivisionId('b' + index + 's' + subIndex),
+          start: rrat(code, cursor),
+          duration: rrat(code, cursor),
+          depth: rnum(code, cursor, 'subdivision depth'),
+        }));
+        return { id: asBeatId('b' + index), subdivisions };
       });
-
-      const streamRecords = records(section.actionStreams).map(parseStream);
-      if (streamRecords.length !== performers.length * 2) throw new Error('Action stream count does not match performers.');
-      const rawEvents: {
-        ordinal: number;
-        performer: number;
-        hand: 'left' | 'right';
-        beat: number;
-        offset: string;
-        actionParts: string[];
-      }[] = [];
-      streamRecords.forEach((stream, streamIndex) => {
-        const expectedPerformer = Math.floor(streamIndex / 2);
-        const expectedHand = streamIndex % 2 === 0 ? 'left' : 'right';
-        if (stream.hand !== expectedHand) {
-          throw new Error('Action streams do not match the performer and hand structure.');
-        }
-        const cells = stream.cells.flatMap((cell) => {
-          if (cell === '-') return ['-'];
-          const emptyRun = /^-(2|[3-9]\d*)$/.exec(cell);
-          if (emptyRun) {
-            const count = parseInteger(emptyRun[1]!, 'empty beat run', 2);
-            if (count > MAX_SEQUENCE_ITEMS) throw new Error('Empty beat run exceeds the decoder limit.');
-            return Array.from({ length: count }, () => '-');
-          }
-          if (cell.startsWith('-')) throw new Error('Invalid empty beat run.');
-          return [cell];
-        });
-        if (cells.length !== beats.length) throw new Error('Action stream beat count does not match the sequence.');
-        cells.forEach((cell, beatPosition) => {
-          if (cell === '-') return;
-          cell.split('+').forEach((event) => {
-            const eventParts = event.split('.');
-            if (eventParts.length < 3) throw new Error('Invalid action event.');
-            rawEvents.push({
-              ordinal: parseInteger(eventParts[0]!, 'event order'),
-              performer: expectedPerformer,
-              hand: stream.hand,
-              beat: beatPosition,
-              offset: eventParts[1]!,
-              actionParts: eventParts.slice(2),
-            });
-          });
-        });
-      });
-      rawEvents.sort((left, right) => left.ordinal - right.ordinal);
-      if (rawEvents.some((event, index) => event.ordinal !== index)) throw new Error('Action event order is incomplete.');
-
-      const linkIndexes = new Set<number>();
-      rawEvents.forEach((event) => {
-        const actionType = event.actionParts[0];
-        if (actionType === 'L' || actionType === 'V' || actionType === 'Z' || actionType === 'S') {
-          const linkPart = event.actionParts[2];
-          if (linkPart !== '-') {
-            const index = linkNumber(linkPart!, actionType !== 'Z');
-            if (index !== undefined) linkIndexes.add(index);
-          }
-        }
-      });
-      const sortedLinks = [...linkIndexes].sort((left, right) => left - right);
-      if (sortedLinks.some((value, index) => value !== index)) throw new Error('Link references are not contiguous.');
-      const links = sortedLinks.map((index) => asLinkId(`l${index}`));
-
-      const notation: NotationEntry[] = rawEvents.map((event, index) => {
-        const beat = beats[event.beat];
-        if (!beat) throw new Error('Unknown action beat.');
-        return {
-          id: asActionEntryId(`a${index}`),
-          performerId: performers[event.performer]!.id,
-          hand: event.hand,
-          time: { beatId: beat.id, offset: decodeRational(event.offset) },
-          action: decodeAction(event.actionParts, positions, performers, links),
-        };
-      });
-
-      const individualPassingLayout = section.individualPassingLayout === 'n' ? undefined
-        : section.individualPassingLayout === 's' ? 'shared-positions'
-          : section.individualPassingLayout === 'p' ? 'per-performer-positions' : null;
+      const passingCode = code[cursor.at++];
+      const individualPassingLayout = passingCode === 'N' ? undefined
+        : passingCode === 'S' ? 'shared-positions' : passingCode === 'P' ? 'per-performer-positions' : null;
       if (individualPassingLayout === null) throw new Error('Invalid individual passing layout.');
+      const tableCode = code[cursor.at++];
       let tableLayout: TableLayout;
-      if (section.tableLayout === 's') tableLayout = { type: 'solo' };
-      else if (section.tableLayout.startsWith('p')) {
-        tableLayout = { type: 'polygon', sideCount: parseNumber(section.tableLayout.slice(1), 'polygon side count') };
-      } else if (section.tableLayout.startsWith('r')) {
-        const dimensions = section.tableLayout.slice(1).split('_');
-        if (dimensions.length !== 2) throw new Error('Invalid rectangle table layout.');
-        tableLayout = {
-          type: 'rectangle',
-          longSideSeatCount: parseNumber(dimensions[0]!, 'rectangle long side seat count'),
-          shortSideSeatCount: parseNumber(dimensions[1]!, 'rectangle short side seat count'),
-        };
-      } else throw new Error('Invalid table layout.');
-
-      const seatAssignments: SeatAssignment[] = records(section.seats).map((record) => {
-        const parts = record.split('.');
-        const performer = performers[parseInteger(parts[0]!, 'seat performer')];
-        if (!performer) throw new Error('Unknown seat performer.');
-        if (parts[1] === 'P' && parts.length === 3) {
-          return { performerId: performer.id, seat: { kind: 'polygon-edge', edgeIndex: parseNumber(parts[2]!, 'polygon edge') } };
-        }
-        if (parts[1] === 'R' && parts.length === 4) {
-          if (!['long-a', 'long-b', 'short-a', 'short-b'].includes(parts[2]!)) throw new Error('Invalid rectangle side.');
-          return {
-            performerId: performer.id,
-            seat: { kind: 'rectangle-side', side: parts[2] as 'long-a' | 'long-b' | 'short-a' | 'short-b', seatIndex: parseNumber(parts[3]!, 'rectangle seat') },
-          };
+      if (tableCode === 'S') tableLayout = { type: 'solo' };
+      else if (tableCode === 'P') tableLayout = { type: 'polygon', sideCount: rnum(code, cursor, 'table side count') };
+      else if (tableCode === 'R') tableLayout = {
+        type: 'rectangle',
+        longSideSeatCount: rnum(code, cursor, 'long side seat count'),
+        shortSideSeatCount: rnum(code, cursor, 'short side seat count'),
+      };
+      else throw new Error('Invalid table layout.');
+      const seatCount = ru(code, cursor);
+      if (seatCount > MAX_ITEMS) throw new Error('Too many seat assignments.');
+      const seatAssignments: SeatAssignment[] = Array.from({ length: seatCount }, () => {
+        const person = performers[ru(code, cursor)];
+        const tag = code[cursor.at++];
+        if (!person) throw new Error('Unknown seat performer.');
+        if (tag === 'P') return { performerId: person.id, seat: { kind: 'polygon-edge', edgeIndex: rnum(code, cursor, 'polygon edge') } };
+        if (tag === 'R') {
+          const side = readSeatSide(code[cursor.at++] ?? '');
+          return { performerId: person.id, seat: { kind: 'rectangle-side', side, seatIndex: rnum(code, cursor, 'seat index') } };
         }
         throw new Error('Invalid seat assignment.');
       });
-
-      return {
-        ok: true,
-        sequence: {
-          id: asSequenceId('sequence'),
+      if (code[cursor.at++] !== '.') throw new Error('Missing metadata separator.');
+      const raw: { ordinal: number; performer: number; hand: 'left' | 'right'; beat: number; offset: { numerator: number; denominator: number }; action: NotationAction }[] = [];
+      const linkRefs = new Set<number>();
+      for (let performer = 0; performer < performerCount; performer += 1) {
+        for (const hand of ['left', 'right'] as const) {
+          let beat = 0;
+          while (beat < beatCount) {
+            const marker = code[cursor.at];
+            if (marker === 'e') {
+              cursor.at += 1;
+              const count = ru(code, cursor);
+              if (count < 2 || beat + count > beatCount) throw new Error('Invalid empty beat run.');
+              beat += count;
+              continue;
+            }
+            const eventCount = ru(code, cursor);
+            if (eventCount > MAX_ITEMS) throw new Error('Too many events in a beat.');
+            for (let event = 0; event < eventCount; event += 1) {
+              const ordinal = ru(code, cursor);
+              const offset = rrat(code, cursor);
+              const decoded = actionIn(code, cursor, positions, performers);
+              decoded.links.forEach((link) => linkRefs.add(link));
+              if (raw.length >= MAX_ITEMS) throw new Error('Too many notation events.');
+              raw.push({ ordinal, performer, hand, beat, offset, action: decoded.action });
+            }
+            beat += 1;
+          }
+        }
+      }
+      if (cursor.at !== code.length) throw new Error('Unexpected trailing data.');
+      raw.sort((a, b) => a.ordinal - b.ordinal);
+      if (raw.some((event, index) => event.ordinal !== index)) throw new Error('Event ordinals must be contiguous.');
+      const sortedLinks = [...linkRefs].sort((a, b) => a - b);
+      if (sortedLinks.some((value, index) => value !== index)) throw new Error('Link references must be contiguous.');
+      const notation: NotationEntry[] = raw.map((event, index) => ({
+        id: asActionEntryId('a' + index),
+        performerId: performers[event.performer]!.id,
+        hand: event.hand,
+        time: { beatId: beats[event.beat]!.id, offset: event.offset },
+        action: event.action,
+      }));
+      const sequence: Sequence = {
+          id: asSequenceId('sequence-imported'),
           sequenceType,
-          timeSignature,
+          timeSignature: { numerator, denominator, beatGrouping },
           bpm,
           beats,
           performers,
@@ -644,14 +484,11 @@ export const sequenceCodec: SequenceCodec = {
           ...(individualPassingLayout === undefined ? {} : { individualPassingLayout }),
           tableLayout,
           seatAssignments,
-        },
       };
-    } catch {
-      return { ok: false, code: 'malformed', message: 'The sequence code is damaged or incomplete.' };
+      if (sequenceCodec.encode(sequence) !== code) throw new Error('Sequence code is not canonical.');
+      return { ok: true, sequence };
+    } catch (error) {
+      return { ok: false, code: 'invalid-data', message: error instanceof Error ? error.message : 'Invalid sequence code.' };
     }
   },
 };
-
-export function isSequenceCode(value: string): boolean {
-  return value.trim().startsWith('P3;');
-}

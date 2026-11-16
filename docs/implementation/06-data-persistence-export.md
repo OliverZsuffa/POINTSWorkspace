@@ -2,23 +2,23 @@
 
 ## Status
 
-P3 replaced P2 and was merged through PR #22. P3 is the only supported sequence code format. Manual visual inspection of exported PNG files remains outstanding.
+P4 replaces P3. The compact codec is implemented in the P4 branch and is awaiting verification and merge. P3 will not be supported after release. Manual visual inspection of exported PNG files remains outstanding.
 
 ## User facing data format
 
 The only sequence representation exposed to users is a compact POINTS code. Users do not need to see or edit JSON.
 
-The active format is P3. It uses fixed order sections separated by semicolons, compact records, performer and hand action streams sliced into exactly the declared number of beat cells, local references and length checked escaped text. Action initials remain visible as `H`, `L`, `V`, `B`, `T`, `E`, `Z` and `S`. The code contains no JSON syntax, Base64 payload, UUIDs or internal object keys. The complete independent decoder specification is in `08C-self-contained-human-readable-codes.md`.
+The active release candidate is P4. It uses a compact fixed order header, one metadata separator, performer and hand action streams sliced into exactly the declared number of beat cells, local references, compact counts and length checked UTF8 text. Action initials remain visible as `H`, `L`, `V`, `B`, `T`, `E`, `Z` and `S`. The code contains no JSON syntax, Base64 payload, UUIDs or internal object keys. The normative P4 grammar is documented in `08F-p4-compact-sequence-code.md`.
 
 The codec is deterministic. The same sequence produces the same code. Decoding distinguishes malformed input, unsupported format versions and structurally invalid data. The codec does not run notation validation during decoding. Structurally readable but notation invalid sequences are imported and reported by the existing validator.
 
-P3 completely replaces P2. P1, P2 and other superseded formats are unsupported. There is no legacy decoder or migration path unless Oliver explicitly requests one. Future format revisions replace the active format in the same way.
+P4 completely replaces P3. P1, P2, P3 and other superseded formats are unsupported. There is no legacy decoder or migration path unless Oliver explicitly requests one. Future format revisions replace the active format in the same way.
 
 ## Implemented scope
 
 ### Sequence code and import
 
-- Compact P3 self contained sequence code.
+- Compact P4 self contained sequence code.
 - Deterministic encode and decode.
 - Full sequence round trip, including BPM, time signature, beats and subdivisions, performers, positions, balls, initial placements, notation, passing layout, table layout and seat assignments.
 - Import by pasting a code.
@@ -57,7 +57,7 @@ The curated preset registry is repository data and supports text search. Initial
 
 | File | Responsibility |
 |---|---|
-| `src/features/data/codec.ts` | Compact P3 self contained sequence code |
+| `src/features/data/codec.ts` | Compact P4 self contained sequence code |
 | `src/features/data/codec.test.ts` | Round trip and malformed input tests |
 | `src/features/data/persistence.ts` | Per tab local save and restore |
 | `src/features/data/persistence.test.ts` | Persistence tests |
@@ -69,7 +69,7 @@ The curated preset registry is repository data and supports text search. Initial
 
 ## Verification
 
-- [x] Deterministic P3 grammar implemented.
+- [x] Deterministic P4 grammar implemented.
 - [x] Complete canonical sequence round trip covered by tests.
 - [x] Superseded versions and malformed codes distinguished.
 - [x] Import uses undoable editor replacement.
