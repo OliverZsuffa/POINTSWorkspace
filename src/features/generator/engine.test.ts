@@ -100,4 +100,28 @@ describe('sequence generator', () => {
     expect(candidates).toHaveLength(1);
     expect(candidates[0]?.notation).toHaveLength(2);
   });
+  it('generates CLAP as exactly two linked SPECIAL entries and no standalone SPECIAL', async () => {
+    const base = representativeSoloSequence;
+    const candidates = [];
+    const clapRequest: GeneratorRequest = {
+      ...request('from-scratch'),
+      templateSequence: { ...base, notation: [] },
+      constraints: {
+        looping: 'either',
+        actionRequirements: [{ actionType: 'SPECIAL', occurrence: 'exact-count', count: 2 }],
+        requiredFragments: [],
+        forbiddenFragments: [],
+      },
+      maxSearchNodes: 20_000,
+    };
+    for await (const candidate of sequenceGenerator.generate(clapRequest)) {
+      candidates.push(candidate.sequence);
+    }
+    expect(candidates).toHaveLength(1);
+    const clapEntries = candidates[0]!.notation.filter((entry) => entry.action.type === 'SPECIAL');
+    expect(clapEntries).toHaveLength(2);
+    expect(clapEntries.every((entry) => entry.action.type === 'SPECIAL' && entry.action.text === 'Clap')).toBe(true);
+    expect(new Set(clapEntries.map((entry) => entry.action.type === 'SPECIAL' ? entry.action.linkId : undefined)).size).toBe(1);
+  });
+
 });
