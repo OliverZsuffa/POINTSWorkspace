@@ -40,7 +40,7 @@ function encodeLocation(location: ObjectLocation, sequence: Sequence): Packed {
 }
 function encodeTarget(target: Extract<NotationAction, { type: 'LIFT' | 'LEAVE' | 'BOUNCE' | 'TAP' }>['target'], sequence: Sequence): Packed {
   if (target.kind === 'position') return ['P', indexOf(sequence.positions, target.positionId)];
-  if (target.kind === 'circle-position') return ['C', target.position, target.direction === 'left' ? 'L' : target.direction === 'right' ? 'R' : '', target.distance ?? 0];
+  if (target.kind === 'circle-position') return ['C', target.position, target.direction === 'left' ? 'L' : target.direction === 'right' ? 'R' : '', target.distance === undefined ? 0 : 1, target.distance ?? 0];
   if (target.kind === 'pass-source') return ['S', indexOf(sequence.performers, target.performerId)];
   return ['R', indexOf(sequence.performers, target.performerId), target.hand === 'left' ? 'L' : 'R'];
 }
@@ -90,13 +90,14 @@ function assertPackedSequence(raw: unknown): asserts raw is Packed {
   const tuple = expectTuple(raw, 12, 'sequence tuple');
   const [kind, bpm, signatureValue, performerValue, positionValue, ballCount, placementValue, beatValue, notationValue, individualLayout, layoutValue, seatValue] = tuple;
   if (!['s', 'c', 'i'].includes(String(kind))) throw new Error('Invalid sequence type');
-  if (typeof bpm !== 'number' || !Number.isFinite(bpm) || bpm <= 0) throw new Error('Invalid BPM');
+  if (typeof bpm !== 'number' || !Number.isFinite(bpm)) throw new Error('Invalid BPM');
   const signature = expectTuple(signatureValue, 3, 'time signature');
-  const numerator = expectInt(signature[0], 'time signature numerator', 1);
+  if (typeof signature[0] !== 'number' || !Number.isFinite(signature[0])) throw new Error('Invalid time signature numerator');
   const denominator = expectInt(signature[1], 'time signature denominator', 1);
   if (![1, 2, 4, 8, 16, 32, 64].includes(denominator) || !isPacked(signature[2])) throw new Error('Invalid time signature');
-  const grouping = signature[2].map((group) => expectInt(group, 'beat grouping', 1));
-  if (!grouping.length || grouping.reduce((sum, group) => sum + group, 0) !== numerator) throw new Error('Invalid beat grouping');
+  signature[2].forEach((group) => {
+    if (typeof group !== 'number' || !Number.isFinite(group)) throw new Error('Invalid beat grouping');
+  });
 
   if (!isPacked(performerValue) || !performerValue.length) throw new Error('Missing performers');
   const performers = performerValue;
@@ -142,10 +143,10 @@ function assertPackedSequence(raw: unknown): asserts raw is Packed {
       if (!['L', 'R'].includes(expectText(location[2], 'held hand'))) throw new Error('Invalid held hand');
     } else if (location[0] === 'B') {
       expectTuple(location, 4, 'hand back placement');
-      const position = positions[expectIndex(location[1], positions.length, 'hand back position')];
-      const performer = expectIndex(location[2], performers.length, 'hand back performer');
+      expectIndex(location[1], positions.length, 'hand back position');
+      expectIndex(location[2], performers.length, 'hand back performer');
       const hand = expectText(location[3], 'balanced hand');
-      if (!isPacked(position) || position[0] !== 'B' || position[2] !== performer || position[3] !== hand || !['L', 'R'].includes(hand)) throw new Error('Inconsistent hand back placement');
+      if (!['L', 'R'].includes(hand)) throw new Error('Invalid balanced hand');
     } else throw new Error('Unknown placement location');
   });
 
@@ -156,7 +157,7 @@ function assertPackedSequence(raw: unknown): asserts raw is Packed {
       const subdivision = expectTuple(sub, 3, 'subdivision');
       parseFraction(expectText(subdivision[0], 'subdivision start'));
       parseFraction(expectText(subdivision[1], 'subdivision duration'));
-      expectInt(subdivision[2], 'subdivision depth');
+      if (typeof subdivision[2] !== 'number' || !Number.isFinite(subdivision[2])) throw new Error('Invalid subdivision depth');
     });
   });
 
@@ -179,11 +180,11 @@ function assertPackedSequence(raw: unknown): asserts raw is Packed {
         expectTuple(target, 2, 'position target');
         expectIndex(target[1], positions.length, 'target position');
       } else if (target[0] === 'C') {
-        const circle = expectTuple(target, 4, 'circle target');
+        const circle = expectTuple(target, 5, 'circle target');
         if (!['A', 'B', 'C'].includes(expectText(circle[1], 'circle position'))) throw new Error('Invalid circle position');
-        const direction = expectText(circle[2], 'circle direction');
-        const distance = expectInt(circle[3], 'circle distance');
-        if (!((direction === '' && distance === 0) || (['L', 'R'].includes(direction) && distance > 0))) throw new Error('Invalid circle target');
+        if (!['', 'L', 'R'].includes(expectText(circle[2], 'circle direction'))) throw new Error('Invalid circle direction');
+        if (circle[3] !== 0 && circle[3] !== 1) throw new Error('Invalid circle distance flag');
+        if (typeof circle[4] !== 'number' || !Number.isFinite(circle[4])) throw new Error('Invalid circle distance');
       } else if (target[0] === 'S' && actionType === 'L') {
         expectTuple(target, 2, 'pass source target');
         expectIndex(target[1], performers.length, 'pass source');
@@ -201,11 +202,11 @@ function assertPackedSequence(raw: unknown): asserts raw is Packed {
         expectTuple(target, 2, 'position target');
         expectIndex(target[1], positions.length, 'target position');
       } else if (target[0] === 'C') {
-        const circle = expectTuple(target, 4, 'circle target');
+        const circle = expectTuple(target, 5, 'circle target');
         if (!['A', 'B', 'C'].includes(expectText(circle[1], 'circle position'))) throw new Error('Invalid circle position');
-        const direction = expectText(circle[2], 'circle direction');
-        const distance = expectInt(circle[3], 'circle distance');
-        if (!((direction === '' && distance === 0) || (['L', 'R'].includes(direction) && distance > 0))) throw new Error('Invalid circle target');
+        if (!['', 'L', 'R'].includes(expectText(circle[2], 'circle direction'))) throw new Error('Invalid circle direction');
+        if (circle[3] !== 0 && circle[3] !== 1) throw new Error('Invalid circle distance flag');
+        if (typeof circle[4] !== 'number' || !Number.isFinite(circle[4])) throw new Error('Invalid circle distance');
       } else throw new Error('Invalid tap target kind');
     } else if (actionType === 'Z') {
       expectTuple(action, 3, 'ZIP action');
@@ -225,11 +226,10 @@ function assertPackedSequence(raw: unknown): asserts raw is Packed {
   if (layoutValue[0] === 'S') expectTuple(layoutValue, 1, 'solo table layout');
   else if (layoutValue[0] === 'P') {
     const layout = expectTuple(layoutValue, 2, 'polygon table layout');
-    expectInt(layout[1], 'polygon side count', 2);
+    if (typeof layout[1] !== 'number' || !Number.isFinite(layout[1])) throw new Error('Invalid polygon side count');
   } else if (layoutValue[0] === 'R') {
     const layout = expectTuple(layoutValue, 3, 'rectangle table layout');
-    expectInt(layout[1], 'long side seat count');
-    expectInt(layout[2], 'short side seat count');
+    if (typeof layout[1] !== 'number' || !Number.isFinite(layout[1]) || typeof layout[2] !== 'number' || !Number.isFinite(layout[2])) throw new Error('Invalid rectangle seat counts');
   } else throw new Error('Unknown table layout');
 
   seatValue.forEach((item) => {
@@ -237,11 +237,11 @@ function assertPackedSequence(raw: unknown): asserts raw is Packed {
     expectIndex(item[0], performers.length, 'seat performer');
     if (item[1] === 'P') {
       const seat = expectTuple(item, 3, 'polygon seat');
-      expectInt(seat[2], 'polygon edge index');
+      if (typeof seat[2] !== 'number' || !Number.isFinite(seat[2])) throw new Error('Invalid polygon edge index');
     } else if (item[1] === 'R') {
       const seat = expectTuple(item, 4, 'rectangle seat');
       if (!['long-a', 'long-b', 'short-a', 'short-b'].includes(expectText(seat[2], 'rectangle side'))) throw new Error('Invalid rectangle side');
-      expectInt(seat[3], 'rectangle seat index');
+      if (typeof seat[3] !== 'number' || !Number.isFinite(seat[3])) throw new Error('Invalid rectangle seat index');
     } else throw new Error('Unknown seat kind');
   });
 }
@@ -297,7 +297,8 @@ function decodeTarget(value: unknown, positions: PositionDefinition[], performer
   if (value[0] === 'P') return { kind: 'position' as const, positionId: positions[Number(value[1])]!.id };
   if (value[0] === 'C') return {
     kind: 'circle-position' as const, position: value[1] as 'A' | 'B' | 'C',
-    ...(value[2] === 'L' || value[2] === 'R' ? { direction: value[2] === 'L' ? 'left' as const : 'right' as const, distance: Number(value[3]) } : {}),
+    ...(value[2] === 'L' || value[2] === 'R' ? { direction: value[2] === 'L' ? 'left' as const : 'right' as const } : {}),
+    ...(value[3] === 1 ? { distance: Number(value[4]) } : {}),
   };
   if (value[0] === 'S') return { kind: 'pass-source' as const, performerId: performers[Number(value[1])]!.id };
   if (value[0] === 'R') return { kind: 'pass-recipient-hand' as const, performerId: performers[Number(value[1])]!.id, hand: value[2] === 'L' ? 'left' as const : 'right' as const };
