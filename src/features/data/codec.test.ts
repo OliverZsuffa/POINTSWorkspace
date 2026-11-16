@@ -3,6 +3,7 @@ import { sequenceCodec } from './codec';
 import {
   invalidInitialStateSequence,
   representativeIndividualPassingSequence,
+  representativeNotationExamples,
   representativeSoloSequence,
 } from '../../fixtures/sequences';
 
@@ -30,11 +31,37 @@ describe('readable sequence code', () => {
   );
 
   it('keeps action initials visible in the code', () => {
-    const code = sequenceCodec.encode(representativeSoloSequence);
+    const sequence = { ...representativeSoloSequence, notation: [...representativeSoloSequence.notation, ...representativeNotationExamples] };
+    const code = sequenceCodec.encode(sequence);
     expect(code).toContain('"L"');
     expect(code).toContain('"H"');
     expect(code).toContain('"V"');
     expect(code).toContain('"T"');
+    expect(code).toContain('"B"');
+    expect(code).toContain('"E"');
+    expect(code).toContain('"Z"');
+    expect(code).toContain('"S"');
+    const decoded = sequenceCodec.decode(code);
+    expect(decoded.ok).toBe(true);
+    if (decoded.ok) expect(sequenceCodec.encode(decoded.sequence)).toBe(code);
+  });
+
+  it('round trips circle passing targets, including self targets', () => {
+    const sequence = {
+      ...representativeSoloSequence,
+      sequenceType: 'circle-passing' as const,
+      notation: [{
+        ...representativeSoloSequence.notation[0]!,
+        action: { type: 'LIFT' as const, target: { kind: 'circle-position' as const, position: 'A' as const } },
+      }],
+    };
+    const code = sequenceCodec.encode(sequence);
+    const decoded = sequenceCodec.decode(code);
+    expect(decoded.ok).toBe(true);
+    if (decoded.ok) {
+      expect(decoded.sequence.notation[0]?.action).toEqual(sequence.notation[0]?.action);
+      expect(sequenceCodec.encode(decoded.sequence)).toBe(code);
+    }
   });
 
   it('rejects damaged codes without producing partial sequences', () => {
