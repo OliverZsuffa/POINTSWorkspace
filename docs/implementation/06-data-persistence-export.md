@@ -2,7 +2,7 @@
 
 ## Status
 
-Base package implemented and merged through PR #19 on 13 November 2026. The P2 sequence code redesign and decoder audit are implemented in PR #20. Final automated verification is running. PR #20 is awaiting merge. Manual visual inspection of exported PNG files remains outstanding.
+Base package implemented and merged through PR #19 on 13 November 2026. The P2 sequence code redesign and decoder audit are implemented in PR #20. Formatting, lint, strict TypeScript, 160 unit tests and production build passed. The final browser viewport check is running. PR #20 is awaiting merge. Manual visual inspection of exported PNG files remains outstanding.
 
 ## User facing data format
 
@@ -80,7 +80,7 @@ The curated preset registry is repository data and supports text search. Initial
 - [x] Formatting check.
 - [x] Lint.
 - [x] Strict TypeScript check.
-- [x] Full unit test suite: 147 tests passed.
+- [x] Full unit test suite: 160 tests passed.
 - [x] Production build.
 - [x] Browser tests: 16 passed, including import, undo, persistence, preset search and PNG download.
 - [ ] Manual visual inspection of exported PNG at short and long sequence lengths.
