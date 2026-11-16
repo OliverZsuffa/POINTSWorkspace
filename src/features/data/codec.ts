@@ -36,7 +36,7 @@ function encodeLocation(location: ObjectLocation, sequence: Sequence): Packed {
   if (location.kind === 'hand-held') return ['H', indexOf(sequence.performers, location.performerId), location.hand === 'left' ? 'L' : 'R'];
   return ['B', indexOf(sequence.positions, location.positionId), indexOf(sequence.performers, location.performerId), location.hand === 'left' ? 'L' : 'R'];
 }
-function encodeTarget(target: Extract<NotationAction, { type: 'LIFT' | 'LEAVE' | 'BOUNCE' | 'TAP }>['target'], sequence: Sequence): Packed {
+function encodeTarget(target: Extract<NotationAction, { type: 'LIFT' | 'LEAVE' | 'BOUNCE' | 'TAP' }>['target'], sequence: Sequence): Packed {
   if (target.kind === 'position') return ['P', indexOf(sequence.positions, target.positionId)];
   if (target.kind === 'circle-position') return ['C', target.position, target.direction === 'left' ? 'L' : target.direction === 'right' ? 'R' : '', target.distance ?? 0];
   if (target.kind === 'pass-source') return ['S', indexOf(sequence.performers, target.performerId)];
