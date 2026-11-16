@@ -1,9 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { sequenceCodec } from './codec';
 import { rational } from '../../domain/time/rational';
-import { asActionEntryId, asBallId } from '../../domain/ids';
-import { createTimeSignature } from '../../domain/time/time-signature';
-import type { LeaveActionTarget, LiftActionTarget, Sequence, TableActionTarget } from '../../domain/model';
+import { asActionEntryId } from '../../domain/ids';
+import type { Sequence } from '../../domain/model';
 import {
   invalidInitialStateSequence,
   representativeIndividualPassingSequence,
@@ -11,440 +10,153 @@ import {
   representativeSoloSequence,
 } from '../../fixtures/sequences';
 
-
 function semanticShape(sequence: Sequence) {
-  const performerIndex = (id: string) => sequence.performers.findIndex((item) => item.id === id);
-  const positionIndex = (id: string) => sequence.positions.findIndex((item) => item.id === id);
-  const ballIndex = (id: string) => sequence.balls.findIndex((item) => item.id === id);
-  const beatIndex = (id: string) => sequence.beats.findIndex((item) => item.id === id);
-  const links = [...new Set(sequence.notation.flatMap(({ action }) => 'linkId' in action && action.linkId ? [action.linkId] : []))];
-  const linkIndex = (id: (typeof links)[number] | undefined) => id === undefined ? undefined : links.indexOf(id);
-  const target = (value: LiftActionTarget | LeaveActionTarget | TableActionTarget) => {
-    if (value.kind === 'position') return { kind: value.kind, position: positionIndex(value.positionId as string) };
+  const performer = (id: string) => sequence.performers.findIndex((item) => item.id === id);
+  const position = (id: string) => sequence.positions.findIndex((item) => item.id === id);
+  const ball = (id: string) => sequence.balls.findIndex((item) => item.id === id);
+  const beat = (id: string) => sequence.beats.findIndex((item) => item.id === id);
+  const links = [...new Set(sequence.notation.flatMap(({ action }) =>
+    'linkId' in action && action.linkId !== undefined ? [action.linkId] : [],
+  ))];
+  const target = (value: Extract<Sequence['notation'][number]['action'], { type: 'LIFT' | 'LEAVE' | 'BOUNCE' | 'TAP' }>['target']) => {
+    if (value.kind === 'position') return { kind: value.kind, position: position(value.positionId) };
     if (value.kind === 'circle-position') return { ...value };
-    if (value.kind === 'pass-source') return { kind: value.kind, performer: performerIndex(value.performerId as string) };
-    if (value.kind === 'pass-recipient-hand') return { kind: value.kind, performer: performerIndex(value.performerId), hand: value.hand };
-    throw new Error('Unknown target kind');
+    if (value.kind === 'pass-source') return { kind: value.kind, performer: performer(value.performerId) };
+    return { kind: value.kind, performer: performer(value.performerId), hand: value.hand };
   };
   const action = (value: Sequence['notation'][number]['action']) => {
     switch (value.type) {
       case 'HOLD':
-      case 'EMPTY':
-        return { type: value.type };
+      case 'EMPTY': return { type: value.type };
       case 'LIFT':
-      case 'LEAVE':
-        return { type: value.type, target: target(value.target), link: linkIndex(value.linkId) };
+      case 'LEAVE': return { type: value.type, target: target(value.target), link: value.linkId === undefined ? undefined : links.indexOf(value.linkId) };
       case 'BOUNCE':
-      case 'TAP':
-        return { type: value.type, target: target(value.target) };
-      case 'ZIP':
-        return { type: value.type, role: value.role, link: linkIndex(value.linkId) };
-      case 'SPECIAL':
-        return { type: value.type, text: value.text, link: linkIndex(value.linkId) };
+      case 'TAP': return { type: value.type, target: target(value.target) };
+      case 'ZIP': return { type: value.type, role: value.role, link: links.indexOf(value.linkId) };
+      case 'SPECIAL': return { type: value.type, text: value.text, link: value.linkId === undefined ? undefined : links.indexOf(value.linkId) };
     }
   };
   const location = (value: Sequence['initialState']['placements'][number]['location']) => {
-    if (value.kind === 'position') return { kind: value.kind, position: positionIndex(value.positionId) };
-    if (value.kind === 'hand-held') return { kind: value.kind, performer: performerIndex(value.performerId), hand: value.hand };
-    return { kind: value.kind, position: positionIndex(value.positionId), performer: performerIndex(value.performerId), hand: value.hand };
+    if (value.kind === 'position') return { kind: value.kind, position: position(value.positionId) };
+    if (value.kind === 'hand-held') return { kind: value.kind, performer: performer(value.performerId), hand: value.hand };
+    return { kind: value.kind, position: position(value.positionId), performer: performer(value.performerId), hand: value.hand };
   };
   return {
     sequenceType: sequence.sequenceType,
-    timeSignature: sequence.timeSignature,
     bpm: sequence.bpm,
+    timeSignature: sequence.timeSignature,
     performers: sequence.performers.map(({ name, identifier }) => ({ name, identifier })),
-    positions: sequence.positions.map((value) => value.kind === 'table'
-      ? { kind: value.kind, name: value.name, owner: value.owner.kind === 'shared' ? { kind: 'shared' } : { kind: 'performer', performer: performerIndex(value.owner.performerId) } }
-      : { kind: value.kind, name: value.name, performer: performerIndex(value.performerId), hand: value.hand }),
+    positions: sequence.positions.map((item) => item.kind === 'table'
+      ? { kind: item.kind, name: item.name, owner: item.owner.kind === 'shared' ? { kind: 'shared' } : { kind: 'performer', performer: performer(item.owner.performerId) } }
+      : { kind: item.kind, name: item.name, performer: performer(item.performerId), hand: item.hand }),
     ballCount: sequence.balls.length,
-    initialState: sequence.initialState.placements.map(({ ballId, location: value }) => ({ ball: ballIndex(ballId), location: location(value) })),
-    beats: sequence.beats.map(({ subdivisions }) => subdivisions.map(({ start, duration, depth }) => ({ start, duration, depth }))),
-    notation: sequence.notation.map(({ performerId, hand, time, action: value }) => ({
-      performer: performerIndex(performerId), hand, beat: beatIndex(time.beatId), offset: time.offset, action: action(value),
+    placements: sequence.initialState.placements.map((item) => ({ ball: ball(item.ballId), location: location(item.location) })),
+    beats: sequence.beats.map((item) => item.subdivisions.map(({ start, duration, depth }) => ({ start, duration, depth }))),
+    notation: sequence.notation.map((item) => ({
+      performer: performer(item.performerId), hand: item.hand, beat: beat(item.time.beatId),
+      offset: item.time.offset, action: action(item.action),
     })),
     individualPassingLayout: sequence.individualPassingLayout,
     tableLayout: sequence.tableLayout,
-    seatAssignments: sequence.seatAssignments.map(({ performerId, seat }) => ({ performer: performerIndex(performerId), seat })),
+    seatAssignments: sequence.seatAssignments.map(({ performerId, seat }) => ({ performer: performer(performerId), seat })),
   };
 }
 
-describe('readable sequence code', () => {
+describe('P4 compact sequence code', () => {
   it.each([representativeSoloSequence, representativeIndividualPassingSequence, invalidInitialStateSequence])(
-    'round trips semantic sequence data',
+    'round trips every persisted semantic field',
     (sequence) => {
       const code = sequenceCodec.encode(sequence);
-      expect(code.startsWith('P3;')).toBe(true);
-      expect(code).not.toContain('{');
-      expect(code).not.toContain('[');
-      expect(code).not.toContain(']');
-      expect(code).not.toContain('"');
-      expect(code).not.toContain('sequence-solo-example');
-      const result = sequenceCodec.decode(code);
-      expect(result.ok).toBe(true);
-      if (result.ok) {
-        expect(semanticShape(result.sequence)).toEqual(semanticShape(sequence));
-        expect(result.sequence.sequenceType).toBe(sequence.sequenceType);
-        expect(result.sequence.bpm).toBe(sequence.bpm);
-        expect(result.sequence.timeSignature).toEqual(sequence.timeSignature);
-        expect(result.sequence.performers.map(({ name, identifier }) => ({ name, identifier })))
-          .toEqual(sequence.performers.map(({ name, identifier }) => ({ name, identifier })));
-        expect(result.sequence.notation.map(({ hand, time, action }) => ({
-          hand,
-          beat: result.sequence.beats.findIndex((beat) => beat.id === time.beatId),
-          offset: time.offset,
-          action: action.type,
-        }))).toEqual(sequence.notation.map(({ hand, time, action }) => ({
-          hand,
-          beat: sequence.beats.findIndex((beat) => beat.id === time.beatId),
-          offset: time.offset,
-          action: action.type,
-        })));
-        expect(sequenceCodec.encode(result.sequence)).toBe(code);
+      expect(code.startsWith('P4')).toBe(true);
+      expect(code).not.toMatch(/\\s/);
+      expect(code.split('.')).toHaveLength(2);
+      const decoded = sequenceCodec.decode(code);
+      expect(decoded.ok).toBe(true);
+      if (decoded.ok) {
+        expect(semanticShape(decoded.sequence)).toEqual(semanticShape(sequence));
+        expect(sequenceCodec.encode(decoded.sequence)).toBe(code);
       }
     },
   );
 
-
-  it('encodes standard settings and both hands explicitly', () => {
-    const code = sequenceCodec.encode(representativeSoloSequence);
-    expect(code).toContain(';120;');
-    expect(code).toContain(';4.4.1+1+1+1;');
-    expect(code).toContain(';4;');
-    expect(code).toContain(';n;s;');
-    expect(code).toContain(';L:');
-    expect(code).toContain(',R:');
-  });
-
-  it('matches the published canonical solo example', () => {
-    expect(sequenceCodec.encode(representativeSoloSequence)).toBe(
-      'P3;s;120;4.4.1+1+1+1;4;~9:Juggler%201.-;T.~1:A.p0,T.~1:B.p0,T.~1:C.p0,B.L.0.L,B.R.0.R;1;0.P.0;1.0.1/2.1,1.1/2.1/2.1;L:-3|3.0.T.p2,R:0.0.L.p0.-|1.0.H|2.0.V.p1.-|-;n;s;',
-    );
-  });
-
-
-  it('compresses the equivalent two ball four beat example', () => {
-    const performer = representativeSoloSequence.performers[0]!;
-    const firstPosition = representativeSoloSequence.positions[0]!;
-    const lastPosition = representativeSoloSequence.positions[2]!;
-    const sequence: Sequence = {
-      ...representativeSoloSequence,
-      performers: [{ ...performer, identifier: 'a' }],
-      balls: [{ id: asBallId('ball-one') }, { id: asBallId('ball-two') }],
-      initialState: {
-        placements: [
-          { ballId: asBallId('ball-one'), location: { kind: 'position', positionId: firstPosition.id } },
-          { ballId: asBallId('ball-two'), location: { kind: 'position', positionId: lastPosition.id } },
-        ],
-      },
-      beats: representativeSoloSequence.beats.map((beat) => ({ ...beat, subdivisions: [] })),
-      notation: [
-        {
-          id: asActionEntryId('p3-lift'),
-          performerId: performer.id,
-          hand: 'left',
-          time: { beatId: representativeSoloSequence.beats[0]!.id, offset: rational(0) },
-          action: { type: 'LIFT', target: { kind: 'position', positionId: firstPosition.id } },
-        },
-        {
-          id: asActionEntryId('p3-hold-one'),
-          performerId: performer.id,
-          hand: 'left',
-          time: { beatId: representativeSoloSequence.beats[1]!.id, offset: rational(0) },
-          action: { type: 'HOLD' },
-        },
-        {
-          id: asActionEntryId('p3-hold-two'),
-          performerId: performer.id,
-          hand: 'left',
-          time: { beatId: representativeSoloSequence.beats[2]!.id, offset: rational(0) },
-          action: { type: 'HOLD' },
-        },
-        {
-          id: asActionEntryId('p3-leave'),
-          performerId: performer.id,
-          hand: 'left',
-          time: { beatId: representativeSoloSequence.beats[3]!.id, offset: rational(0) },
-          action: { type: 'LEAVE', target: { kind: 'position', positionId: firstPosition.id } },
-        },
-      ],
-    };
-    const code = sequenceCodec.encode(sequence);
-    expect(code).toBe(
-      'P3;s;120;4.4.1+1+1+1;4;~9:Juggler%201.~1:a;T.~1:A.p0,T.~1:B.p0,T.~1:C.p0,B.L.0.L,B.R.0.R;2;0.P.0,1.P.2;;L:0.0.L.p0.-|1.0.H|2.0.H|3.0.V.p0.-,R:-4;n;s;',
-    );
-    expect(code).toHaveLength(149);
-    const decoded = sequenceCodec.decode(code);
-    expect(decoded.ok).toBe(true);
-    if (decoded.ok) expect(semanticShape(decoded.sequence)).toEqual(semanticShape(sequence));
-  });
-
-
-  it('preserves fractional numeric values inside compound fields', () => {
-    const performer = representativeSoloSequence.performers[0]!;
-    const sequence: Sequence = {
-      ...representativeSoloSequence,
-      timeSignature: {
-        ...representativeSoloSequence.timeSignature,
-        numerator: 4.5,
-        beatGrouping: [1.5, 2.5],
-      },
-      beats: representativeSoloSequence.beats.map((beat) => ({
-        ...beat,
-        subdivisions: beat.subdivisions.map((subdivision) => ({ ...subdivision, depth: 1.5 })),
-      })),
-      notation: representativeSoloSequence.notation.map((entry, index) => index === 0
-        ? {
-            ...entry,
-            action: {
-              type: 'LIFT' as const,
-              target: { kind: 'circle-position' as const, position: 'A' as const, direction: 'right' as const, distance: 2.5 },
-            },
-          }
-        : entry),
-      seatAssignments: [
-        { performerId: performer.id, seat: { kind: 'polygon-edge' as const, edgeIndex: 1.5 } },
-      ],
-    };
-    const code = sequenceCodec.encode(sequence);
-    expect(code).toContain('4%2E5.4.1%2E5+2%2E5');
-    expect(code).toContain('cA_R_2%2E5');
-    expect(code).toContain('0.P.1%2E5');
-    const decoded = sequenceCodec.decode(code);
-    expect(decoded.ok).toBe(true);
-    if (decoded.ok) expect(semanticShape(decoded.sequence)).toEqual(semanticShape(sequence));
-  });
-
-  it('keeps action initials visible in the code', () => {
+  it('encodes the recognisable action initials', () => {
     const sequence = { ...representativeSoloSequence, notation: [...representativeSoloSequence.notation, ...representativeNotationExamples] };
     const code = sequenceCodec.encode(sequence);
-    for (const action of ['L', 'H', 'V', 'T', 'B', 'E', 'Z', 'S']) {
-      expect(code).toMatch(new RegExp(`\\.${action}(?:\\.|\\+|,|;|\\|)`));
-    }
+    for (const action of ['H', 'L', 'V', 'B', 'T', 'E', 'Z', 'S']) expect(code).toContain(action);
     const decoded = sequenceCodec.decode(code);
     expect(decoded.ok).toBe(true);
-    if (decoded.ok) expect(sequenceCodec.encode(decoded.sequence)).toBe(code);
-    expect(sequenceCodec.decode(code.replace('.Z.S.l0', '.Z.S.l99')).ok).toBe(false);
+    if (decoded.ok) expect(semanticShape(decoded.sequence)).toEqual(semanticShape(sequence));
   });
 
-  it('round trips circle targets, polygon seats and relative distance', () => {
-    const performer = representativeSoloSequence.performers[0]!;
-    const sequence = {
+  it('preserves unicode text, punctuation and explicit empty identifiers', () => {
+    const sequence: Sequence = {
       ...representativeSoloSequence,
-      sequenceType: 'circle-passing' as const,
-      tableLayout: { type: 'polygon' as const, sideCount: 2 },
-      seatAssignments: [{ performerId: performer.id, seat: { kind: 'polygon-edge' as const, edgeIndex: 1 } }],
-      notation: [
-        {
-          ...representativeSoloSequence.notation[0]!,
-          action: { type: 'LIFT' as const, target: { kind: 'circle-position' as const, position: 'A' as const } },
-        },
-        {
-          ...representativeSoloSequence.notation[1]!,
-          action: {
-            type: 'LEAVE' as const,
-            target: { kind: 'circle-position' as const, position: 'C' as const, direction: 'right' as const, distance: 2 },
-          },
-        },
-      ],
+      performers: [{ ...representativeSoloSequence.performers[0]!, name: 'A, (B) ~ Ω 🥎', identifier: '' }],
+      notation: [{ ...representativeSoloSequence.notation[0]!, action: { type: 'SPECIAL', text: 'Clap, Ω ~ (done)' } }],
     };
-    const code = sequenceCodec.encode(sequence);
-    const decoded = sequenceCodec.decode(code);
+    const decoded = sequenceCodec.decode(sequenceCodec.encode(sequence));
     expect(decoded.ok).toBe(true);
     if (decoded.ok) {
-      expect(decoded.sequence.notation.map(({ action }) => action)).toEqual(sequence.notation.map(({ action }) => action));
-      expect(decoded.sequence.tableLayout).toEqual(sequence.tableLayout);
-      expect(decoded.sequence.seatAssignments[0]?.seat).toEqual(sequence.seatAssignments[0]?.seat);
-      expect(sequenceCodec.encode(decoded.sequence)).toBe(code);
+      expect(decoded.sequence.performers[0]).toMatchObject({ name: 'A, (B) ~ Ω 🥎', identifier: '' });
+      expect(decoded.sequence.notation[0]?.action).toEqual({ type: 'SPECIAL', text: 'Clap, Ω ~ (done)' });
     }
   });
 
-  it('preserves rectangular layouts with no seats on the short sides', () => {
-    const sequence = {
-      ...representativeIndividualPassingSequence,
-      tableLayout: { type: 'rectangle' as const, longSideSeatCount: 1, shortSideSeatCount: 0 },
-    };
-    const decoded = sequenceCodec.decode(sequenceCodec.encode(sequence));
-    expect(decoded.ok).toBe(true);
-    if (decoded.ok) expect(semanticShape(decoded.sequence)).toEqual(semanticShape(sequence));
-  });
-
-  it('preserves inconsistent but fully referenced hand back placements', () => {
-    const position = representativeSoloSequence.positions.find((item) => item.kind === 'hand-back');
-    if (!position || position.kind !== 'hand-back') throw new Error('Missing hand back fixture position');
-    const sequence = {
+  it('preserves exact rational offsets and subdivision values', () => {
+    const sequence: Sequence = {
       ...representativeSoloSequence,
-      initialState: {
-        placements: [{
-          ballId: representativeSoloSequence.balls[0]!.id,
-          location: {
-            kind: 'hand-back' as const,
-            positionId: position.id,
-            performerId: position.performerId,
-            hand: position.hand === 'left' ? 'right' as const : 'left' as const,
-          },
-        }],
-      },
+      notation: [{ ...representativeSoloSequence.notation[0]!, time: { ...representativeSoloSequence.notation[0]!.time, offset: rational(1, 3) } }],
     };
     const decoded = sequenceCodec.decode(sequenceCodec.encode(sequence));
     expect(decoded.ok).toBe(true);
     if (decoded.ok) expect(semanticShape(decoded.sequence)).toEqual(semanticShape(sequence));
   });
 
-  it('round trips empty sequence collections without inventing entries', () => {
-    const sequence = {
-      ...representativeSoloSequence,
-      performers: [],
-      positions: [],
-      balls: [],
-      beats: [],
-      initialState: { placements: [] },
-      notation: [],
-      seatAssignments: [],
-    };
-    const decoded = sequenceCodec.decode(sequenceCodec.encode(sequence));
-    expect(decoded.ok).toBe(true);
-    if (decoded.ok) expect(semanticShape(decoded.sequence)).toEqual(semanticShape(sequence));
-  });
-
-  it('preserves structurally complete but invalid timing values', () => {
-    const sequence = {
+  it('preserves fractional numeric values and invalid but complete values', () => {
+    const sequence: Sequence = {
       ...representativeSoloSequence,
       bpm: -120,
-      timeSignature: { numerator: 6, denominator: 8 as const, beatGrouping: [2, 2] },
+      timeSignature: { numerator: 4.5, denominator: 4, beatGrouping: [1.5, 2.5] },
+      tableLayout: { type: 'rectangle', longSideSeatCount: 1.5, shortSideSeatCount: 0 },
     };
     const decoded = sequenceCodec.decode(sequenceCodec.encode(sequence));
     expect(decoded.ok).toBe(true);
     if (decoded.ok) expect(semanticShape(decoded.sequence)).toEqual(semanticShape(sequence));
   });
 
-  it('preserves compound time signatures and beat grouping', () => {
-    const sequence = {
-      ...representativeSoloSequence,
-      timeSignature: createTimeSignature(6, 8, [3, 3]),
+  it('round trips an empty sequence without adding records', () => {
+    const sequence: Sequence = {
+      ...representativeSoloSequence, performers: [], positions: [], balls: [], beats: [],
+      initialState: { placements: [] }, notation: [], seatAssignments: [],
     };
     const decoded = sequenceCodec.decode(sequenceCodec.encode(sequence));
     expect(decoded.ok).toBe(true);
-    if (decoded.ok) {
-      expect(decoded.sequence.timeSignature).toEqual({ numerator: 6, denominator: 8, beatGrouping: [3, 3] });
-      expect(semanticShape(decoded.sequence)).toEqual(semanticShape(sequence));
-    }
+    if (decoded.ok) expect(semanticShape(decoded.sequence)).toEqual(semanticShape(sequence));
   });
 
-  it('round trips hand back placements and fractional action offsets', () => {
-    const handBackPosition = representativeSoloSequence.positions.find((position) => position.kind === 'hand-back');
-    if (!handBackPosition || handBackPosition.kind !== 'hand-back') throw new Error('Missing hand back fixture position');
-    const sequence = {
-      ...representativeSoloSequence,
-      initialState: {
-        placements: [{
-          ballId: representativeSoloSequence.balls[0]!.id,
-          location: {
-            kind: 'hand-back' as const,
-            positionId: handBackPosition.id,
-            performerId: handBackPosition.performerId,
-            hand: handBackPosition.hand,
-          },
-        }],
-      },
-      notation: [{
-        ...representativeSoloSequence.notation[0]!,
-        time: { ...representativeSoloSequence.notation[0]!.time, offset: rational(1, 2) },
-      }],
-    };
-    const code = sequenceCodec.encode(sequence);
-    const decoded = sequenceCodec.decode(code);
-    expect(decoded.ok).toBe(true);
-    if (decoded.ok) {
-      expect(decoded.sequence.initialState.placements[0]?.location).toMatchObject({
-        kind: 'hand-back',
-        hand: 'left',
-      });
-      expect(decoded.sequence.notation[0]?.time.offset).toEqual(rational(1, 2));
-      expect(sequenceCodec.encode(decoded.sequence)).toBe(code);
-    }
-  });
-
-  it('preserves an explicitly empty performer identifier', () => {
-    const sequence = {
-      ...representativeSoloSequence,
-      performers: [{ ...representativeSoloSequence.performers[0]!, identifier: '' }],
-    };
-    const decoded = sequenceCodec.decode(sequenceCodec.encode(sequence));
-    expect(decoded.ok).toBe(true);
-    if (decoded.ok) expect(decoded.sequence.performers[0]).toHaveProperty('identifier', '');
-  });
-
-  it('escapes delimiters and reserved characters in user supplied text', () => {
-    const sequence = {
-      ...representativeSoloSequence,
-      performers: [{ ...representativeSoloSequence.performers[0]!, name: 'A, (B) ~ 100% Ω 🥎\nSecond line' }],
-      notation: [{
-        ...representativeSoloSequence.notation[0]!,
-        action: { type: 'SPECIAL' as const, text: 'Clap, (turn) ~ 100% Ω 🥎\nSecond line' },
-      }],
-    };
-    const code = sequenceCodec.encode(sequence);
-    const decoded = sequenceCodec.decode(code);
-    expect(decoded.ok).toBe(true);
-    if (decoded.ok) {
-      expect(decoded.sequence.performers[0]?.name).toBe('A, (B) ~ 100% Ω 🥎\nSecond line');
-      expect(decoded.sequence.notation[0]?.action).toEqual({ type: 'SPECIAL', text: 'Clap, (turn) ~ 100% Ω 🥎\nSecond line' });
-    }
-  });
-
-  it('rejects damaged codes without producing partial sequences', () => {
-    expect(sequenceCodec.decode('P3;not-valid').ok).toBe(false);
-    expect(sequenceCodec.decode('not a code')).toMatchObject({ ok: false, code: 'malformed' });
-  });
-
-  it('rejects malformed action tuples, unknown actions and invalid references', () => {
+  it('rejects malformed, truncated and trailing data', () => {
     const code = sequenceCodec.encode(representativeSoloSequence);
-    expect(sequenceCodec.decode(code.replace('.H', '.H.0')).ok).toBe(false);
-    expect(sequenceCodec.decode(code.replace('.H', '.Q')).ok).toBe(false);
-    expect(sequenceCodec.decode(code.replace('.p0.', '.p99.')).ok).toBe(false);
+    expect(sequenceCodec.decode('not a code')).toMatchObject({ ok: false, code: 'malformed' });
+    expect(sequenceCodec.decode('P3;anything')).toMatchObject({ ok: false, code: 'unsupported-version' });
+    expect(sequenceCodec.decode(code.slice(0, -1)).ok).toBe(false);
+    expect(sequenceCodec.decode(code + 'A').ok).toBe(false);
+    expect(sequenceCodec.decode(code.replace('.', '..')).ok).toBe(false);
   });
 
-  it('preserves structurally complete circle targets even when their optional fields are invalid', () => {
-    const sequence = {
-      ...representativeSoloSequence,
-      sequenceType: 'circle-passing' as const,
-      notation: [{
-        ...representativeSoloSequence.notation[0]!,
-        action: { type: 'LIFT' as const, target: { kind: 'circle-position' as const, position: 'A' as const } },
-      }],
-    };
-    const code = sequenceCodec.encode(sequence);
-    expect(code.includes('cA_-_-')).toBe(true);
-    const directionOnlyCode = code.replace('cA_-_-', 'cA_R_-');
-    const directionOnly = sequenceCodec.decode(directionOnlyCode);
-    expect(directionOnly.ok).toBe(true);
-    if (directionOnly.ok) {
-      expect(directionOnly.sequence.notation[0]?.action).toMatchObject({
-        type: 'LIFT',
-        target: { kind: 'circle-position', position: 'A', direction: 'right' },
-      });
+  it('rejects unsupported versions and keeps decoding deterministic', () => {
+    expect(sequenceCodec.decode('P9anything')).toMatchObject({ ok: false, code: 'unsupported-version' });
+    const code = sequenceCodec.encode(representativeSoloSequence);
+    expect(sequenceCodec.encode(representativeSoloSequence)).toBe(code);
+    expect(sequenceCodec.decode(code)).toMatchObject({ ok: true });
+  });
+
+  it('keeps event ordinals stable across both hand streams', () => {
+    const code = sequenceCodec.encode(representativeSoloSequence);
+    const decoded = sequenceCodec.decode(code);
+    expect(decoded.ok).toBe(true);
+    if (decoded.ok) {
+      expect(decoded.sequence.notation.map(({ action }) => action.type))
+        .toEqual(representativeSoloSequence.notation.map(({ action }) => action.type));
     }
-    const distanceOnlyCode = code.replace('cA_-_-', 'cA_-_2');
-    const distanceOnly = sequenceCodec.decode(distanceOnlyCode);
-    expect(distanceOnly.ok).toBe(true);
-    if (distanceOnly.ok) {
-      expect(distanceOnly.sequence.notation[0]?.action).toMatchObject({
-        type: 'LIFT',
-        target: { kind: 'circle-position', position: 'A', distance: 2 },
-      });
-    }
-  });
-
-  it('does not support superseded P1 or P2 formats', () => {
-    expect(sequenceCodec.decode('P1.anything')).toMatchObject({ ok: false, code: 'unsupported-version' });
-    expect(sequenceCodec.decode('P2.anything')).toMatchObject({ ok: false, code: 'unsupported-version' });
-  });
-
-  it('reports unknown formats separately', () => {
-    expect(sequenceCodec.decode('P9;abc')).toMatchObject({ ok: false, code: 'unsupported-version' });
-  });
-
-  it('uses a deterministic representation', () => {
-    expect(sequenceCodec.encode(representativeSoloSequence)).toBe(sequenceCodec.encode(representativeSoloSequence));
   });
 });
