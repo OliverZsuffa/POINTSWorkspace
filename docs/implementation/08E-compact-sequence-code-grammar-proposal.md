@@ -81,8 +81,8 @@ The representation supports the full safe integer range. A decoder must still en
 A signed integer is `p` followed by an unsigned magnitude, or `n` followed by an unsigned magnitude. Zero is represented by the single character `0`.
 
 A rational value is:
-- `0` for exactly zero.
-- Otherwise, a sign marker followed by the unsigned numerator magnitude and the positive denominator.
+- `0` for exactly zero with denominator one.
+- Otherwise, a sign marker followed by the unsigned numerator magnitude and the positive denominator. A zero numerator with a denominator other than one is written with the positive sign marker so its exact stored denominator is retained.
 
 Examples:
 
@@ -94,7 +94,7 @@ Examples:
 | 3/2 | `pDC` |
 | -1/2 | `nBC` |
 
-The numerator and denominator are exact safe integers. Decoding must not use floating point conversion. The decoder preserves the exact stored numerator and denominator.
+The numerator and denominator are exact safe integers. The denominator must be positive. Decoding must not use floating point conversion. The decoder preserves the exact stored numerator and denominator, including a zero numerator with a noncanonical denominator.
 
 ### 3.4 Text values
 
@@ -305,7 +305,7 @@ This is the same semantic sequence used for the P3 compression comparison: one p
 P4 candidate:
 
 ```text
-P4StD120EEEBBBBEBtJJuggler~2011aFTAPATBPATCPABLALBRARCCAPABPCEAAAANSA.BA0LpA0BB0HBC0HBD0VpA0eE
+P4StD12044E1111EBtJJuggler~2011aFTAPATBPATCPABLALBRARCCAPABPCEAAAANSA.BA0LpA0BB0HBC0HBD0VpA0eE
 ```
 
 <text color="secondary" size="sm">94 characters</text>
@@ -331,7 +331,7 @@ P4 candidate:
 P4ItD12044E1111BCtJJuggler~2011atJJuggler~2021bDTASTBSTCSBBAHARBASR11CARA0ABRB0.ABA0VrBLABB0LsAAA
 ```
 
-<text color="secondary" size="sm">96 characters</text>
+<text color="secondary" size="sm">97 characters</text>
 
 The four streams are performer 0 left, performer 0 right, performer 1 left, performer 1 right. Their one beat cells are respectively empty, LEAVE, LIFT and empty. Both passing actions reference the same local link index.
 
@@ -377,8 +377,8 @@ The grammar must represent every persisted Sequence field:
 |---|---|
 | Sequence type | Header type code |
 | BPM | Canonical numeric text |
-| Time signature numerator and denominator | Header integers |
-| Beat grouping | Header count and values |
+| Time signature numerator and denominator | Numeric text values in the header |
+| Beat grouping | Header count and numeric text values |
 | Main beat count | Header integer |
 | Performer names and identifiers | Performer records |
 | Position names, kinds, ownership and hand associations | Position records |
