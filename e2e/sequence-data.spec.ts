@@ -79,6 +79,7 @@ test('cancelling a share link import preserves saved progress across reloads', a
     void dialog.dismiss();
   });
   await page.goto(shareUrl);
+  await page.reload();
   await expect.poll(() => confirmationCount).toBe(1);
   await expect.poll(() => readSavedSequence(page)).toBe(savedProgress);
 
