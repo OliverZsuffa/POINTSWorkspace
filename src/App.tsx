@@ -312,7 +312,13 @@ export default function App() {
     if (sharedCode !== null) {
       const decoded = sequenceCodec.decode(sharedCode);
       if (decoded.ok) setSequence(decoded.sequence);
-      else setShareLinkError(decoded.message);
+      else {
+        setShareLinkError(decoded.message);
+        if (import.meta.env.MODE !== 'test') {
+          const restored = restoreSequence();
+          if (restored) setSequence(restored);
+        }
+      }
     } else if (import.meta.env.MODE !== 'test') {
       const restored = restoreSequence();
       if (restored) setSequence(restored);
