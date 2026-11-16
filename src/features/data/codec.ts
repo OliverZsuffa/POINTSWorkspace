@@ -61,11 +61,11 @@ function integerText(value: number): string {
 
 function parseNumber(value: string, label: string): number {
   const decoded = value.split('%2E').join('.').split('%2e').join('.').split('%2B').join('+').split('%2b').join('+');
-  if (!/^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?$/.test(decoded)) {
-    throw new Error(\`Invalid \${label}.\`);
+  if (!/^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?(?:[eE][+-]?\\d+)?$/.test(decoded)) {
+    throw new Error('Invalid ' + label + '.');
   }
   const parsed = Number(decoded);
-  if (!Number.isFinite(parsed)) throw new Error(\`Invalid \${label}.\`);
+  if (!Number.isFinite(parsed)) throw new Error('Invalid ' + label + '.');
   return parsed;
 }
 function parseInteger(value: string, label: string, minimum = 0): number {
