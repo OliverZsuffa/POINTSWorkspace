@@ -346,7 +346,7 @@ export const sequenceCodec: SequenceCodec = {
     const streams = sequence.performers.flatMap((performer) =>
       (['left', 'right'] as const).map((hand) => {
         const handCode = hand === 'left' ? 'L' : 'R';
-        const cells = sequence.beats.map((beat, beatPosition) => {
+        const cells = sequence.beats.map((beat) => {
           const events = sequence.notation.flatMap((entry, ordinal) =>
             entry.performerId === performer.id &&
             entry.hand === hand &&
