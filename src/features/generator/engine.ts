@@ -70,7 +70,10 @@ function buildChoices(
     ? { kind: 'circle-position' as const, position: position.name as 'A' | 'B' | 'C' }
     : { kind: 'position' as const, positionId: position.id };
 
-  const targetPositions = abstractLocations ? sequence.positions.slice(0, 1) : sequence.positions;
+  const abstractPosition = sequence.positions.find((position) => position.kind === 'table') ?? sequence.positions[0];
+  const targetPositions = abstractLocations
+    ? abstractPosition ? [abstractPosition] : []
+    : sequence.positions;
   const singles: NotationAction[] = [
     { type: 'HOLD' },
     ...targetPositions.flatMap((position) => {
