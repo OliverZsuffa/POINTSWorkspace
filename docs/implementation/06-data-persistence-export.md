@@ -8,7 +8,7 @@ Base package and P2 sequence code implementation were merged through PR #20. P3 
 
 The only sequence representation exposed to users is a compact POINTS code. Users do not need to see or edit JSON.
 
-The active format is P3. It uses explicit ordered sections separated by semicolons, compact records, performer and hand action streams, local references and length checked escaped text. Action initials remain visible as `H`, `L`, `V`, `B`, `T`, `E`, `Z` and `S`. The code contains no JSON syntax, Base64 payload, UUIDs or internal object keys. The complete independent decoder specification is in `08C-self-contained-human-readable-codes.md`.
+The active format is P3. It uses fixed order sections separated by semicolons, compact records, performer and hand action streams sliced into exactly the declared number of beat cells, local references and length checked escaped text. Action initials remain visible as `H`, `L`, `V`, `B`, `T`, `E`, `Z` and `S`. The code contains no JSON syntax, Base64 payload, UUIDs or internal object keys. The complete independent decoder specification is in `08C-self-contained-human-readable-codes.md`.
 
 The codec is deterministic. The same sequence produces the same code. Decoding distinguishes malformed input, unsupported format versions and structurally invalid data. The codec does not run notation validation during decoding. Structurally readable but notation invalid sequences are imported and reported by the existing validator.
 
