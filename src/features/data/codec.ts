@@ -50,6 +50,10 @@ function numberText(value: number): string {
   return Object.is(value, -0) ? '-0' : String(value);
 }
 
+function numberField(value: number): string {
+  return numberText(value).replace(/\\./g, '%2E').replace(/\\+/g, '%2B');
+}
+
 function integerText(value: number): string {
   if (!Number.isSafeInteger(value)) throw new Error('Sequence integer is outside the safe integer range.');
   return String(value);
@@ -59,7 +63,7 @@ function parseNumber(value: string, label: string): number {
   if (!/^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?$/.test(value)) {
     throw new Error(`Invalid ${label}.`);
   }
-  const parsed = Number(value);
+  const parsed = Number(decoded);
   if (!Number.isFinite(parsed)) throw new Error(`Invalid ${label}.`);
   return parsed;
 }
@@ -148,7 +152,7 @@ function encodeTarget(
   if (target.kind === 'position') return `p${indexOf(sequence.positions, target.positionId)}`;
   if (target.kind === 'circle-position') {
     const direction = target.direction === 'left' ? 'L' : target.direction === 'right' ? 'R' : '-';
-    const distance = target.distance === undefined ? '-' : numberText(target.distance);
+    const distance = target.distance === undefined ? '-' : numberField(target.distance);
     return `c${target.position}_${direction}_${distance}`;
   }
   if (target.kind === 'pass-source') return `s${indexOf(sequence.performers, target.performerId)}`;
@@ -335,10 +339,10 @@ export const sequenceCodec: SequenceCodec = {
     const sequenceType = sequence.sequenceType === 'solo' ? 's'
       : sequence.sequenceType === 'circle-passing' ? 'c' : 'i';
     const timeSignature = [
-      numberText(sequence.timeSignature.numerator),
-      numberText(sequence.timeSignature.denominator),
+      numberField(sequence.timeSignature.numerator),
+      numberField(sequence.timeSignature.denominator),
       sequence.timeSignature.beatGrouping.length
-        ? sequence.timeSignature.beatGrouping.map(numberText).join('+')
+        ? sequence.timeSignature.beatGrouping.map(numberField).join('+')
         : '-',
     ].join('.');
     const performers = sequence.performers.map((performer) =>
@@ -357,7 +361,7 @@ export const sequenceCodec: SequenceCodec = {
         String(beatIndexValue),
         encodeRational(subdivision.start),
         encodeRational(subdivision.duration),
-        numberText(subdivision.depth),
+        numberField(subdivision.depth),
       ].join('.')),
     ).join(',');
     const streams = sequence.performers.flatMap((performer) =>
@@ -386,8 +390,8 @@ export const sequenceCodec: SequenceCodec = {
       : sequence.tableLayout.type === 'polygon' ? `p${numberText(sequence.tableLayout.sideCount)}`
         : `r${numberText(sequence.tableLayout.longSideSeatCount)}_${numberText(sequence.tableLayout.shortSideSeatCount)}`;
     const seats = sequence.seatAssignments.map((assignment) => assignment.seat.kind === 'polygon-edge'
-      ? `${performerIndex(assignment.performerId)}.P.${numberText(assignment.seat.edgeIndex)}`
-      : `${performerIndex(assignment.performerId)}.R.${assignment.seat.side}.${numberText(assignment.seat.seatIndex)}`,
+      ? `${performerIndex(assignment.performerId)}.P.${numberField(assignment.seat.edgeIndex)}`
+      : `${performerIndex(assignment.performerId)}.R.${assignment.seat.side}.${numberField(assignment.seat.seatIndex)}`,
     ).join(',');
 
     return [
