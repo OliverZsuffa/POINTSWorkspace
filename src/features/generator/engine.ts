@@ -211,9 +211,9 @@ function isLocationAction(action: NotationAction): action is Extract<NotationAct
     (action.target.kind === 'position' || action.target.kind === 'circle-position');
 }
 
-function locationTarget(sequence: Sequence, position: Sequence['positions'][number]): NotationAction extends never ? never :
-  { kind: 'position'; positionId: Sequence['positions'][number]['id'] } |
-  { kind: 'circle-position'; position: 'A' | 'B' | 'C' } {
+type LocationTarget = Extract<Extract<NotationAction, { type: 'LIFT' }>['target'], { kind: 'position' | 'circle-position' }>;
+
+function locationTarget(sequence: Sequence, position: Sequence['positions'][number]): LocationTarget {
   if (sequence.sequenceType === 'circle-passing' && position.kind === 'table') {
     return { kind: 'circle-position', position: position.name as 'A' | 'B' | 'C' };
   }
@@ -426,7 +426,7 @@ export const sequenceGenerator = {
     let visited = 0;
     let yielded = 0;
     const seen = new Set<string>();
-    const selected = new Map<string, ReturnType<typeof locationTarget>>();
+    const selected = new Map<string, LocationTarget>();
 
     async function* visit(index: number): AsyncGenerator<Sequence> {
       if (signal?.aborted || visited >= maxSearchNodes || yielded >= maxResults) return;
