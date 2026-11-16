@@ -359,7 +359,7 @@ export const sequenceGenerator = {
             Number(left.entries.some((entry) => entry.action.type === 'ZIP')),
           );
         }
-        if (exactSpecialTarget === 2) {
+        if (exactSpecialTarget !== undefined && exactSpecialTarget >= 2 && exactSpecialTarget % 2 === 0) {
           choices.sort((left, right) =>
             Number(right.entries.length === 2 && right.entries.every((entry) =>
               entry.action.type === 'SPECIAL' && entry.action.text === 'Clap',
