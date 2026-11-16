@@ -103,6 +103,17 @@ describe('readable sequence code', () => {
     },
   );
 
+
+  it('encodes standard settings and both hands explicitly', () => {
+    const code = sequenceCodec.encode(representativeSoloSequence);
+    expect(code).toContain(';Q:120;');
+    expect(code).toContain(';T:4.4.1+1+1+1;');
+    expect(code).toContain(';B:4;');
+    expect(code).toContain(';J:n;M:s;C:');
+    expect(code).toContain(';A:0:L:');
+    expect(code).toContain(',0:R:');
+  });
+
   it('keeps action initials visible in the code', () => {
     const sequence = { ...representativeSoloSequence, notation: [...representativeSoloSequence.notation, ...representativeNotationExamples] };
     const code = sequenceCodec.encode(sequence);
@@ -266,18 +277,18 @@ describe('readable sequence code', () => {
   it('escapes delimiters and reserved characters in user supplied text', () => {
     const sequence = {
       ...representativeSoloSequence,
-      performers: [{ ...representativeSoloSequence.performers[0]!, name: 'A, (B) ~ 100%' }],
+      performers: [{ ...representativeSoloSequence.performers[0]!, name: 'A, (B) ~ 100% Ω 🥎\nSecond line' }],
       notation: [{
         ...representativeSoloSequence.notation[0]!,
-        action: { type: 'SPECIAL' as const, text: 'Clap, (turn) ~ 100%' },
+        action: { type: 'SPECIAL' as const, text: 'Clap, (turn) ~ 100% Ω 🥎\nSecond line' },
       }],
     };
     const code = sequenceCodec.encode(sequence);
     const decoded = sequenceCodec.decode(code);
     expect(decoded.ok).toBe(true);
     if (decoded.ok) {
-      expect(decoded.sequence.performers[0]?.name).toBe('A, (B) ~ 100%');
-      expect(decoded.sequence.notation[0]?.action).toEqual({ type: 'SPECIAL', text: 'Clap, (turn) ~ 100%' });
+      expect(decoded.sequence.performers[0]?.name).toBe('A, (B) ~ 100% Ω 🥎\nSecond line');
+      expect(decoded.sequence.notation[0]?.action).toEqual({ type: 'SPECIAL', text: 'Clap, (turn) ~ 100% Ω 🥎\nSecond line' });
     }
   });
 
