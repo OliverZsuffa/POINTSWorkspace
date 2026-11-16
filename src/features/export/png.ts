@@ -1,9 +1,10 @@
 import type { Sequence, NotationEntry } from '../../domain/model';
 import { simulateSequence } from '../../domain/state';
 import { sequenceCodec } from '../data/codec';
+import { getActionSymbolGeometry } from '../notation/action-symbol';
 
-const CELL = 54;
-const ROW = 34;
+const CELL = 56;
+const ROW = 56;
 const HEADER = 150;
 const FOOTER = 72;
 const MAX_HEIGHT = 7600;
@@ -65,18 +66,30 @@ function makeSvg(sequence: Sequence, performers: readonly Sequence['performers']
       parts.push(`<path d="M${x0} ${rowY}h${sequence.beats.length * CELL} M${x0} ${rowY + ROW}h${sequence.beats.length * CELL}" stroke="#d4dbe5" stroke-width="1"/>`);
       sequence.beats.forEach((beat, beatIndex) => {
         const entries = sequence.notation.filter((entry) => entry.performerId === performer.id && entry.hand === hand && entry.time.beatId === beat.id);
+        const x = x0 + beatIndex * CELL;
+        parts.push(`<rect x="${x}" y="${rowY}" width="${CELL}" height="${ROW}" fill="none" stroke="#e0e7f2" stroke-width="1"/>`);
         entries.forEach((entry) => {
-          const x = x0 + beatIndex * CELL;
-          const label = entryText(entry, sequence);
-          const special = entry.action.type === 'SPECIAL';
+          const geometry = getActionSymbolGeometry(entry.action, sequence, hand);
+          if (!geometry) return;
           const invalid = invalidEntries.has(entry.id);
-          const color = invalid ? '#dc2626' : special ? '#8b5cf6' : entry.action.type === 'ZIP' ? '#0f766e' : '#172033';
-          if (entry.action.type === 'HOLD') {
-            parts.push(`<path d="M${x + 4} ${rowY + 5}h${CELL - 8} M${x + 4} ${rowY + ROW - 5}h${CELL - 8}" stroke="${color}" stroke-width="3"/>`);
-          } else {
-            parts.push(`<rect x="${x + 2}" y="${rowY + 2}" width="${CELL - 4}" height="${ROW - 4}" rx="3" fill="${special ? '#f3e8ff' : '#f1f5f9'}" stroke="${color}" stroke-width="1.3"/>`);
-            parts.push(`<text x="${x + CELL / 2}" y="${rowY + 21}" font-size="9" font-weight="700" text-anchor="middle">${escapeXml(label.length > 11 ? label.slice(0, 10) + '…' : label)}</text>`);
+          const color = invalid ? '#dc2626' : '#172033';
+          if (geometry.specialText) {
+            if (geometry.clap) {
+              parts.push(`<path d="M${x + CELL / 2} ${rowY}v${ROW}" stroke="#172033" stroke-width="3"/>`);
+            } else {
+              parts.push(`<text x="${x + CELL / 2}" y="${rowY + ROW / 2}" font-size="11" font-weight="600" text-anchor="middle" dominant-baseline="middle" fill="${color}">${escapeXml(geometry.specialText)}</text>`);
+            }
+            return;
           }
+          parts.push(`<g transform="translate(${x} ${rowY}) scale(${CELL / 100} ${ROW / 100})">`);
+          if (geometry.path) parts.push(`<path d="${geometry.path}" fill="none" stroke="${color}" stroke-width="5.5" stroke-linecap="square" stroke-linejoin="miter"/>`);
+          if (geometry.circledTarget) parts.push('<circle cx="36" cy="50" r="13" fill="none" stroke="#263238" stroke-width="1.8"/>');
+          if (geometry.label) {
+            const labelSize = geometry.label.length > 3 ? 38 : 46;
+            const tx = geometry.subscript ? 38 : 50;
+            parts.push(`<text x="${tx}" y="50" font-size="${labelSize}" font-weight="700" text-anchor="middle" dominant-baseline="middle" font-family="Arial,sans-serif" fill="${color}">${escapeXml(geometry.label)}${geometry.subscript ? `<tspan font-size="28" baseline-shift="sub">${escapeXml(geometry.subscript)}</tspan>` : ''}</text>`);
+          }
+          parts.push('</g>');
         });
       });
     });
