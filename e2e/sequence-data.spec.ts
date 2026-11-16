@@ -2,8 +2,8 @@ import { expect, test } from '@playwright/test';
 
 async function readSavedSequence(page: import('@playwright/test').Page) {
   return page.evaluate(() => {
-    const key = Object.keys(localStorage).find((item) => item.startsWith('points.sequence.'));
-    return key ? localStorage.getItem(key) : null;
+    const tabId = sessionStorage.getItem('points.tab-id');
+    return tabId ? localStorage.getItem('points.sequence.' + tabId) : null;
   });
 }
 
@@ -45,11 +45,14 @@ test('share links require confirmation before replacing saved notation', async (
   expect(savedProgress).not.toBeNull();
   expect(JSON.parse(savedProgress!).notation.length).toBeGreaterThan(0);
 
-  page.once('dialog', (dialog) => {
+  let confirmationCount = 0;
+  page.on('dialog', (dialog) => {
+    confirmationCount += 1;
     expect(dialog.message()).toBe('Replace the current sequence with the imported sequence?');
     void dialog.accept();
   });
   await page.goto(shareUrl);
+  expect(confirmationCount).toBe(1);
   await expect.poll(async () => {
     const saved = await readSavedSequence(page);
     return saved ? JSON.parse(saved).notation.length : -1;
@@ -70,13 +73,18 @@ test('cancelling a share link import preserves saved progress across reloads', a
   expect(savedProgress).not.toBeNull();
   expect(JSON.parse(savedProgress!).notation.length).toBeGreaterThan(0);
 
-  page.once('dialog', (dialog) => dialog.dismiss());
+  let confirmationCount = 0;
+  page.on('dialog', (dialog) => {
+    confirmationCount += 1;
+    void dialog.dismiss();
+  });
   await page.goto(shareUrl);
   await expect.poll(() => readSavedSequence(page)).toBe(savedProgress);
+  expect(confirmationCount).toBe(1);
 
-  page.once('dialog', (dialog) => dialog.dismiss());
   await page.reload();
   await expect.poll(() => readSavedSequence(page)).toBe(savedProgress);
+  expect(confirmationCount).toBe(2);
 });
 
 test('an empty saved sequence does not require confirmation to open a share link', async ({ page, context }) => {
