@@ -530,11 +530,16 @@ export const sequenceCodec: SequenceCodec = {
       if (individualPassingLayout === null) throw new Error('Invalid individual passing layout.');
       let tableLayout: TableLayout;
       if (section.M === 's') tableLayout = { type: 'solo' };
-      else if (/^p-?(?:0|[1-9]\d*)(?:\.\d+)?$/.test(section.M)) {
+      else if (section.M.startsWith('p')) {
         tableLayout = { type: 'polygon', sideCount: parseNumber(section.M.slice(1), 'polygon side count') };
-      } else if (/^r-?(?:0|[1-9]\d*)(?:\.\d+)?\.-?(?:0|[1-9]\d*)(?:\.\d+)?$/.test(section.M)) {
-        const [longSideSeatCount, shortSideSeatCount] = section.M.slice(1).split('.').map((value) => parseNumber(value!, 'rectangle seat count'));
-        tableLayout = { type: 'rectangle', longSideSeatCount: longSideSeatCount!, shortSideSeatCount: shortSideSeatCount! };
+      } else if (section.M.startsWith('r')) {
+        const dimensions = section.M.slice(1).split('_');
+        if (dimensions.length !== 2) throw new Error('Invalid rectangle table layout.');
+        tableLayout = {
+          type: 'rectangle',
+          longSideSeatCount: parseNumber(dimensions[0]!, 'rectangle long side seat count'),
+          shortSideSeatCount: parseNumber(dimensions[1]!, 'rectangle short side seat count'),
+        };
       } else throw new Error('Invalid table layout.');
 
       const seatAssignments: SeatAssignment[] = records(section.C).map((record) => {
