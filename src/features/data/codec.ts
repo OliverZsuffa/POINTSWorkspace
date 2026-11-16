@@ -10,6 +10,8 @@ import {
 } from '../../domain/ids';
 
 const PREFIX = 'P3;';
+const MAX_CODE_LENGTH = 1_000_000;
+const MAX_SEQUENCE_ITEMS = 100_000;
 const SECTION_NAMES = ['S', 'Q', 'T', 'B', 'P', 'X', 'O', 'I', 'D', 'A', 'J', 'M', 'C'] as const;
 type SectionName = (typeof SECTION_NAMES)[number];
 type Sections = Record<SectionName, string>;
@@ -340,7 +342,7 @@ export const sequenceCodec: SequenceCodec = {
       : sequence.individualPassingLayout === 'shared-positions' ? 's' : 'p';
     const tableLayout = sequence.tableLayout.type === 'solo' ? 's'
       : sequence.tableLayout.type === 'polygon' ? `p${numberText(sequence.tableLayout.sideCount)}`
-        : `r${numberText(sequence.tableLayout.longSideSeatCount)}.${numberText(sequence.tableLayout.shortSideSeatCount)}`;
+        : `r${numberText(sequence.tableLayout.longSideSeatCount)}_${numberText(sequence.tableLayout.shortSideSeatCount)}`;
     const seats = sequence.seatAssignments.map((assignment) => assignment.seat.kind === 'polygon-edge'
       ? `${performerIndex(assignment.performerId)}.P.${numberText(assignment.seat.edgeIndex)}`
       : `${performerIndex(assignment.performerId)}.R.${assignment.seat.side}.${numberText(assignment.seat.seatIndex)}`,
@@ -374,6 +376,7 @@ export const sequenceCodec: SequenceCodec = {
     }
 
     try {
+      if (trimmed.length > MAX_CODE_LENGTH) throw new Error('Sequence code exceeds the maximum supported length.');
       const section = sectionMap(trimmed);
       const sequenceType = section.S === 's' ? 'solo'
         : section.S === 'c' ? 'circle-passing'
@@ -388,7 +391,10 @@ export const sequenceCodec: SequenceCodec = {
         beatGrouping: groupingText === '-' ? [] : groupingText!.split('+').map((value) => parseNumber(value, 'beat grouping')),
       };
       const beatCount = parseInteger(section.B, 'beat count');
-      const performers: Performer[] = records(section.P).map((record, index) => {
+      if (beatCount > MAX_SEQUENCE_ITEMS) throw new Error('Beat count exceeds the decoder limit.');
+      const performerRecords = records(section.P);
+      if (performerRecords.length > MAX_SEQUENCE_ITEMS) throw new Error('Performer count exceeds the decoder limit.');
+      const performers: Performer[] = performerRecords.map((record, index) => {
         const [name, identifier] = fields(record, 2, 'performer');
         return {
           id: asPerformerId(`p${index}`),
@@ -425,6 +431,7 @@ export const sequenceCodec: SequenceCodec = {
         throw new Error('Invalid position definition.');
       });
       const ballCount = parseInteger(section.O, 'object count');
+      if (ballCount > MAX_SEQUENCE_ITEMS) throw new Error('Object count exceeds the decoder limit.');
       const balls: Ball[] = Array.from({ length: ballCount }, (_, index) => ({ id: asBallId(`o${index}`) }));
       const placements = records(section.I).map((record) => {
         const parts = record.split('.');
