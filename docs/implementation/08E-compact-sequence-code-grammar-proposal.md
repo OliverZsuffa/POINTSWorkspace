@@ -51,10 +51,10 @@ Uppercase letters are used as terminal digits in the integer encoding. Lowercase
 
 ### 3.2 Compact unsigned integers
 
-Unsigned integers use a self delimiting base 36 representation.
+Unsigned integers use a compact self delimiting representation with a decimal continuation prefix and a base 26 terminal letter.
 
 - Values 0 through 25 are represented by one uppercase letter: `A` is 0, `B` is 1, through `Z` for 25.
-- For values 26 and above, subtract 26, write the quotient in ordinary decimal digits, then write the remainder as an uppercase letter using the same A equals zero mapping.
+- For values 26 and above, subtract 26, divide by 26, write the quotient in ordinary decimal digits, then write the remainder as an uppercase letter using the same A equals zero mapping.
 - The final uppercase letter terminates the integer. The following field can therefore begin immediately.
 
 Examples:
@@ -70,9 +70,9 @@ Examples:
 | 27 | `0B` |
 | 51 | `0Z` |
 | 52 | `1A` |
-| 120 | `3C` |
+| 120 | `3Q` |
 
-The decimal prefix for extended values contains no leading zeroes. The terminal uppercase letter makes the token self delimiting. Decoders must reject noncanonical representations.
+The decimal prefix for extended values contains no leading zeroes. The terminal uppercase letter makes the token self delimiting. This is a custom compact integer code, not standard base 36 notation. Decoders must reject noncanonical representations.
 
 The representation supports the full safe integer range. A decoder must still enforce the documented resource limits before allocating arrays.
 
