@@ -11,6 +11,7 @@ import {
 import type {
   ActionRequirement,
   GeneratorRequest,
+  GeneratedCandidate,
   SequenceFragment,
   Hand,
   NotationAction,
@@ -372,8 +373,11 @@ export default function App() {
   const [generatorForbiddenFragmentCode, setGeneratorForbiddenFragmentCode] = useState('');
   const [generatorResults, setGeneratorResults] = useState<Sequence[]>([]);
   const [generatorRunning, setGeneratorRunning] = useState(false);
+  const [generatorHasMore, setGeneratorHasMore] = useState(false);
   const [generatorError, setGeneratorError] = useState('');
   const generatorAbortRef = useRef<AbortController | null>(null);
+  const generatorIteratorRef = useRef<AsyncGenerator<GeneratedCandidate, void, unknown> | null>(null);
+  const generatorPendingRef = useRef<GeneratedCandidate | null>(null);
 
   useEffect(() => { setBpmInput(String(sequence.bpm)); }, [sequence.bpm]);
 
@@ -921,6 +925,49 @@ export default function App() {
     setShowActionMenu(false);
   };
 
+  const loadGeneratorPage = async () => {
+    if (generatorRunning || !generatorIteratorRef.current) return;
+    const iterator = generatorIteratorRef.current;
+    setGeneratorRunning(true);
+    try {
+      let added = 0;
+      while (added < 20) {
+        let candidate = generatorPendingRef.current;
+        if (candidate) {
+          generatorPendingRef.current = null;
+        } else {
+          const next = await iterator.next();
+          if (next.done) {
+            generatorIteratorRef.current = null;
+            setGeneratorHasMore(false);
+            break;
+          }
+          candidate = next.value;
+        }
+        setGeneratorResults((results) => [...results, candidate.sequence]);
+        added += 1;
+      }
+      if (added === 20 && generatorIteratorRef.current === iterator) {
+        const lookahead = await iterator.next();
+        if (lookahead.done) {
+          generatorIteratorRef.current = null;
+          setGeneratorHasMore(false);
+        } else {
+          generatorPendingRef.current = lookahead.value;
+          setGeneratorHasMore(true);
+        }
+      }
+    } catch (error) {
+      setGeneratorError(error instanceof Error ? error.message : 'Generation failed.');
+      generatorIteratorRef.current = null;
+      generatorPendingRef.current = null;
+      setGeneratorHasMore(false);
+    } finally {
+      setGeneratorRunning(false);
+      if (generatorAbortRef.current?.signal.aborted) generatorAbortRef.current = null;
+    }
+  };
+
   const runGenerator = async () => {
     if (generatorRunning) return;
     const decodeFragment = (code: string): SequenceFragment[] => {
@@ -980,7 +1027,7 @@ export default function App() {
       availablePositions: sequence.positions,
       timeSignature: sequence.timeSignature,
       initialState: sequence.initialState,
-      maxResults: 20,
+      maxResults: 100_000,
       maxSearchNodes: 100_000,
       constraints: {
         looping: generatorLooping,
@@ -994,23 +1041,19 @@ export default function App() {
     };
     const controller = new AbortController();
     generatorAbortRef.current = controller;
+    generatorIteratorRef.current = sequenceGenerator.generate(request, controller.signal);
+    generatorPendingRef.current = null;
     setGeneratorResults([]);
     setGeneratorError('');
-    setGeneratorRunning(true);
-    try {
-      for await (const candidate of sequenceGenerator.generate(request, controller.signal)) {
-        setGeneratorResults((results) => [...results, candidate.sequence]);
-      }
-    } catch (error) {
-      setGeneratorError(error instanceof Error ? error.message : 'Generation failed.');
-    } finally {
-      if (generatorAbortRef.current === controller) generatorAbortRef.current = null;
-      setGeneratorRunning(false);
-    }
+    setGeneratorHasMore(true);
+    await loadGeneratorPage();
   };
 
   const stopGenerator = () => {
     generatorAbortRef.current?.abort();
+    generatorIteratorRef.current = null;
+    generatorPendingRef.current = null;
+    setGeneratorHasMore(false);
   };
 
   const undo = () => {
@@ -2051,6 +2094,7 @@ export default function App() {
               </article>
             ))}
           </div>
+          {generatorHasMore && <button type="button" onClick={() => void loadGeneratorPage()} disabled={generatorRunning}>Load more results</button>}
         </>}
       </section>
       <section className="bottom-panels">
