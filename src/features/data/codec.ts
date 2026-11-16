@@ -99,7 +99,7 @@ function assertPackedSequence(raw: unknown): asserts raw is Packed {
     if (typeof group !== 'number' || !Number.isFinite(group)) throw new Error('Invalid beat grouping');
   });
 
-  if (!isPacked(performerValue) || !performerValue.length) throw new Error('Missing performers');
+  if (!isPacked(performerValue)) throw new Error('Invalid performers');
   const performers = performerValue;
   performers.forEach((item) => {
     const performer = expectTuple(item, 3, 'performer');
@@ -109,7 +109,7 @@ function assertPackedSequence(raw: unknown): asserts raw is Packed {
     if (performer[1] === 0 && performer[2] !== '') throw new Error('Unexpected performer identifier');
   });
 
-  if (!isPacked(positionValue) || !positionValue.length) throw new Error('Missing positions');
+  if (!isPacked(positionValue)) throw new Error('Invalid positions');
   const positions = positionValue;
   positions.forEach((item) => {
     if (!isPacked(item)) throw new Error('Invalid position');
@@ -150,7 +150,6 @@ function assertPackedSequence(raw: unknown): asserts raw is Packed {
     } else throw new Error('Unknown placement location');
   });
 
-  if (!beatValue.length) throw new Error('Missing beats');
   beatValue.forEach((item) => {
     if (!isPacked(item)) throw new Error('Invalid beat');
     item.forEach((sub) => {
@@ -442,7 +441,7 @@ export const sequenceCodec: SequenceCodec = {
         initialState: { placements }, tableLayout, seatAssignments,
         ...(individualLayout === 'p' ? { individualPassingLayout: 'per-performer-positions' as const } : individualLayout === 's' ? { individualPassingLayout: 'shared-positions' as const } : {}),
       };
-      if (!Number.isFinite(sequence.bpm) || !beats.length || !performers.length || !positions.length || typeof ballCount !== 'number' || !Number.isSafeInteger(ballCount) || ballCount < 0) throw new Error('Invalid sequence values');
+      if (!Number.isFinite(sequence.bpm) || typeof ballCount !== 'number' || !Number.isSafeInteger(ballCount) || ballCount < 0) throw new Error('Invalid sequence values');
       return { ok: true, sequence };
     } catch {
       return { ok: false, code: 'malformed', message: 'The sequence code is damaged or incomplete.' };
