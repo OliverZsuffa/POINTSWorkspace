@@ -22,7 +22,9 @@ The implementation is divided into bounded work packages so separate agents can 
 | 07E | Circle orientation, two person layout and notation controls | Correct relative target orientation, support two visual participants, improve BPM editing and render CLAP as a bar | 07D | Implemented in PR #18; formatting, lint, TypeScript, unit tests, production build and Chromium browser tests passed; focused screenshots reviewed |
 | 08 | Integration and quality assurance | Cross package integration, end to end tests and release readiness | 01 to 07 | Awaiting approval |
 
-The normative P3 self contained human readable sequence code specification is in [`08C-self-contained-human-readable-codes.md`](08C-self-contained-human-readable-codes.md). P3 replaces P2 completely, with no legacy decoder.\n\nThe Package 03C requirement by requirement audit is tracked in [`03C-feature-verification.md`](03C-feature-verification.md). Its current statuses distinguish automated evidence from manual visual verification.
+The normative P3 self contained human readable sequence code specification is in [`08C-self-contained-human-readable-codes.md`](08C-self-contained-human-readable-codes.md). P3 replaces P2 completely, with no legacy decoder.
+
+The Package 03C requirement by requirement audit is tracked in [`03C-feature-verification.md`](03C-feature-verification.md). Its current statuses distinguish automated evidence from manual visual verification.
 
 ## Parallel execution strategy
 
