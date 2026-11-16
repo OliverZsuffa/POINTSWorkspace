@@ -1070,7 +1070,7 @@ export default function App() {
     setGeneratorResults([]);
     setGeneratorError('');
     setGeneratorHasMore(true);
-    await loadGeneratorPage();
+    await loadGeneratorPage('structures');
   };
 
   const exploreGeneratorStructure = async (structure: Sequence) => {
