@@ -152,6 +152,16 @@ describe('readable sequence code', () => {
     }
   });
 
+  it('preserves rectangular layouts with no seats on the short sides', () => {
+    const sequence = {
+      ...representativeIndividualPassingSequence,
+      tableLayout: { type: 'rectangle' as const, longSideSeatCount: 1, shortSideSeatCount: 0 },
+    };
+    const decoded = sequenceCodec.decode(sequenceCodec.encode(sequence));
+    expect(decoded.ok).toBe(true);
+    if (decoded.ok) expect(semanticShape(decoded.sequence)).toEqual(semanticShape(sequence));
+  });
+
   it('preserves compound time signatures and beat grouping', () => {
     const sequence = {
       ...representativeSoloSequence,
