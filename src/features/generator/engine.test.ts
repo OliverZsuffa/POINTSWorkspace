@@ -207,7 +207,7 @@ describe('sequence generator', () => {
       ...base,
       initialState: { placements: [] },
       notation: base.beats.flatMap((beat) => base.performers.flatMap((performer) =>
-        (['left', 'right'] as const).map((hand, index) => ({
+        (['left', 'right'] as const).map((hand) => ({
           id: ('hold-' + beat.id + '-' + hand) as typeof base.notation[number]['id'],
           performerId: performer.id,
           hand,
