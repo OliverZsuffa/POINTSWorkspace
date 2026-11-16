@@ -40,7 +40,7 @@ const id = (prefix: string) => prefix + '-' + (++nextId).toString(36);
 const hands: readonly Hand[] = ['left', 'right'];
 const actionNames = ['LIFT', 'HOLD', 'LEAVE', 'BOUNCE', 'TAP', 'EMPTY', 'ZIP', 'SPECIAL'] as const;
 type ActionName = (typeof actionNames)[number];
-const generatorActionNames = ['LIFT', 'HOLD', 'LEAVE', 'BOUNCE', 'TAP', 'EMPTY', 'ZIP'] as const;
+const generatorActionNames = ['LIFT', 'HOLD', 'LEAVE', 'BOUNCE', 'TAP', 'EMPTY', 'ZIP', 'CLAP'] as const;
 type GeneratorActionName = (typeof generatorActionNames)[number];
 type GeneratorActionMode = 'any' | 'required' | 'forbidden' | 'exact';
 type EditorCell = { performerId: string; hand: Hand; beatId: string; offset?: Rational; duration?: Rational };
@@ -368,8 +368,8 @@ export default function App() {
   const [showGenerator, setShowGenerator] = useState(false);
   const [generatorMode, setGeneratorMode] = useState<GeneratorRequest['mode']>('from-scratch');
   const [generatorLooping, setGeneratorLooping] = useState<GeneratorRequest['constraints']['looping']>('either');
-  const [generatorActionModes, setGeneratorActionModes] = useState<Record<GeneratorActionName, GeneratorActionMode>>({ HOLD: 'any', LIFT: 'any', LEAVE: 'any', BOUNCE: 'any', TAP: 'any', EMPTY: 'any', ZIP: 'any' });
-  const [generatorActionCounts, setGeneratorActionCounts] = useState<Record<GeneratorActionName, number>>({ HOLD: 1, LIFT: 1, LEAVE: 1, BOUNCE: 1, TAP: 1, EMPTY: 1, ZIP: 1 });
+  const [generatorActionModes, setGeneratorActionModes] = useState<Record<GeneratorActionName, GeneratorActionMode>>({ HOLD: 'any', LIFT: 'any', LEAVE: 'any', BOUNCE: 'any', TAP: 'any', EMPTY: 'any', ZIP: 'any', CLAP: 'any' });
+  const [generatorActionCounts, setGeneratorActionCounts] = useState<Record<GeneratorActionName, number>>({ HOLD: 1, LIFT: 1, LEAVE: 1, BOUNCE: 1, TAP: 1, EMPTY: 1, ZIP: 1, CLAP: 1 });
   const [generatorPerformerScope, setGeneratorPerformerScope] = useState('all');
   const [generatorRequiredPerformerAction, setGeneratorRequiredPerformerAction] = useState<GeneratorActionName>('LIFT');
   const [generatorRequireEachPerformer, setGeneratorRequireEachPerformer] = useState(false);
@@ -1017,13 +1017,19 @@ export default function App() {
 
     const performerId = generatorPerformerScope === 'all' ? undefined : asPerformerId(generatorPerformerScope);
     const actionRequirements: ActionRequirement[] = [];
-    for (const actionType of generatorActionNames) {
-      const mode = generatorActionModes[actionType];
+    for (const generatorAction of generatorActionNames) {
+      const mode = generatorActionModes[generatorAction];
       if (mode === 'any') continue;
+      const actionType: ActionType = generatorAction === 'CLAP' ? 'SPECIAL' : generatorAction;
       const scope = performerId ? { performerId } : {};
       if (mode === 'required') actionRequirements.push({ actionType, occurrence: 'at-least-once', ...scope });
       else if (mode === 'forbidden') actionRequirements.push({ actionType, occurrence: 'forbidden', ...scope });
-      else actionRequirements.push({ actionType, occurrence: 'exact-count', count: generatorActionCounts[actionType], ...scope });
+      else actionRequirements.push({
+        actionType,
+        occurrence: 'exact-count',
+        count: generatorAction === 'CLAP' ? generatorActionCounts.CLAP * 2 : generatorActionCounts[generatorAction],
+        ...scope,
+      });
     }
 
     const request: GeneratorRequest = {
@@ -1045,7 +1051,9 @@ export default function App() {
         actionRequirements,
         zipTransferCount,
         passCount,
-        requiredActionPerPerformer: generatorRequireEachPerformer ? generatorRequiredPerformerAction : undefined,
+        requiredActionPerPerformer: generatorRequireEachPerformer
+          ? generatorRequiredPerformerAction === 'CLAP' ? 'SPECIAL' : generatorRequiredPerformerAction
+          : undefined,
         requiredFragments,
         forbiddenFragments,
       },
