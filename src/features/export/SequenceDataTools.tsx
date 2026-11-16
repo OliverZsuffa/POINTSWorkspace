@@ -19,9 +19,19 @@ export default function SequenceDataTools({ sequence, onReplace }: Props) {
   const [includeCode, setIncludeCode] = useState(true);
   const [includeObjectState, setIncludeObjectState] = useState(true);
   const presets = useMemo(() => searchPresets(query), [query]);
-  const currentCode = useMemo(() => sequenceCodec.encode(sequence), [sequence]);
+  const currentCode = useMemo(() => {
+    try {
+      return sequenceCodec.encode(sequence);
+    } catch {
+      return null;
+    }
+  }, [sequence]);
 
   const copyCode = async () => {
+    if (!currentCode) {
+      setMessage('The current sequence cannot be encoded until its object references are valid.');
+      return;
+    }
     try {
       await navigator.clipboard.writeText(currentCode);
       setMessage('Sequence code copied.');
@@ -64,7 +74,7 @@ export default function SequenceDataTools({ sequence, onReplace }: Props) {
           <label><input type="checkbox" checked={includeObjectState} onChange={(event) => setIncludeObjectState(event.target.checked)} /> Initial object state</label>
         </div>
         <div className="data-tools-row">
-          <button type="button" onClick={copyCode}>Copy sequence code</button>
+          <button type="button" onClick={copyCode} disabled={!currentCode}>Copy sequence code</button>
           <button type="button" onClick={() => void exportSequencePng(sequence, { includeSettings, includePerformerNames, includeCode, includeObjectState }).catch((error: unknown) => setMessage(error instanceof Error ? error.message : 'Image export failed.'))}>Export PNG</button>
         </div>
         <label>Import sequence code
@@ -72,7 +82,7 @@ export default function SequenceDataTools({ sequence, onReplace }: Props) {
         </label>
         <div className="data-tools-row">
           <button type="button" onClick={importCode} disabled={!code.trim()}>Import</button>
-          <button type="button" onClick={() => setCode(currentCode)}>Show current code</button>
+          <button type="button" onClick={() => setCode(currentCode ?? '')} disabled={!currentCode}>Show current code</button>
         </div>
         <label>Find a preset
           <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search presets" />
