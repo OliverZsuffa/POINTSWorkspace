@@ -285,6 +285,23 @@ function decodeAction(
   }
 }
 
+function compressEmptyCells(cells: string[]): string[] {
+  const result: string[] = [];
+  for (let index = 0; index < cells.length;) {
+    if (cells[index] !== '-') {
+      result.push(cells[index]!);
+      index += 1;
+      continue;
+    }
+    let end = index + 1;
+    while (end < cells.length && cells[end] === '-') end += 1;
+    const count = end - index;
+    result.push(count === 1 ? '-' : `-${count}`);
+    index = end;
+  }
+  return result;
+}
+
 function parseStream(value: string): { hand: 'left' | 'right'; cells: string[] } {
   const separator = value.indexOf(':');
   if (separator !== 1) throw new Error('Invalid action stream.');
@@ -360,7 +377,7 @@ export const sequenceCodec: SequenceCodec = {
           );
           return events.length ? events.join('+') : '-';
         });
-        return `${handCode}:${cells.join('|')}`;
+        return `${handCode}:${compressEmptyCells(cells).join('|')}`;
       }),
     ).join(',');
     const individualLayout = sequence.individualPassingLayout === undefined ? 'n'
@@ -511,10 +528,22 @@ export const sequenceCodec: SequenceCodec = {
       streamRecords.forEach((stream, streamIndex) => {
         const expectedPerformer = Math.floor(streamIndex / 2);
         const expectedHand = streamIndex % 2 === 0 ? 'left' : 'right';
-        if (stream.hand !== expectedHand || stream.cells.length !== beats.length) {
-          throw new Error('Action streams do not match the performer and beat structure.');
+        if (stream.hand !== expectedHand) {
+          throw new Error('Action streams do not match the performer and hand structure.');
         }
-        stream.cells.forEach((cell, beatPosition) => {
+        const cells = stream.cells.flatMap((cell) => {
+          if (cell === '-') return ['-'];
+          const emptyRun = /^-(2|[3-9]\\d*)$/.exec(cell);
+          if (emptyRun) {
+            const count = parseInteger(emptyRun[1]!, 'empty beat run', 2);
+            if (count > MAX_SEQUENCE_ITEMS) throw new Error('Empty beat run exceeds the decoder limit.');
+            return Array.from({ length: count }, () => '-');
+          }
+          if (cell.startsWith('-')) throw new Error('Invalid empty beat run.');
+          return [cell];
+        });
+        if (cells.length !== beats.length) throw new Error('Action stream beat count does not match the sequence.');
+        cells.forEach((cell, beatPosition) => {
           if (cell === '-') return;
           cell.split('+').forEach((event) => {
             const eventParts = event.split('.');
