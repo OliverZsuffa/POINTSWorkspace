@@ -125,10 +125,17 @@ export function preservesBaseSequence(base: Sequence, candidate: Sequence): bool
 
 export function satisfiesActionRequirements(sequence: Sequence, constraints: GeneratorConstraints): boolean {
   for (const requirement of constraints.actionRequirements) {
-    const count = sequence.notation.filter((entry) =>
+    const matchingEntries = sequence.notation.filter((entry) =>
       entry.action.type === requirement.actionType &&
       (requirement.performerId === undefined || entry.performerId === requirement.performerId),
-    ).length;
+    );
+    // ZIP is a paired transfer. Count its shared link once, not its source and
+    // receiver symbols separately, so "exactly two ZIPs" means two transfers.
+    const count = requirement.actionType === 'ZIP'
+      ? new Set(matchingEntries.flatMap((entry) =>
+          entry.action.type === 'ZIP' ? [entry.action.linkId] : [],
+        )).size
+      : matchingEntries.length;
     if (requirement.occurrence === 'forbidden' && count !== 0) return false;
     if (requirement.occurrence === 'at-least-once' && count < 1) return false;
     if (requirement.occurrence === 'exact-count' && count !== requirement.count) return false;
