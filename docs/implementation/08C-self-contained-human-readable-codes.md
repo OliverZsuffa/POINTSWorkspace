@@ -1,297 +1,445 @@
-# Implementation 08C: Self Contained Human Readable Sequence Codes
+# P3 Sequence Code Specification
 
 ## Status
 
-Approved by Oliver on 16 November 2026. Implementation is authorised. This branch contains the approved plan and subsequent implementation work.
+P3 is the only supported sequence code format. It replaces P2 completely. P1, P2 and any other superseded formats are not accepted. There is no legacy decoder or migration path unless Oliver explicitly requests one.
 
-## Goal
+This specification is normative. An independent implementation must be able to decode P3 using this document alone. It must not depend on POINTS source code, application settings, defaults, network services or sidecar data.
 
-Replace the recently implemented P2 tuple code with a substantially more compact, self contained, domain specific sequence language.
+## 1. Design goals
 
-The code must remain technically human readable. Common action characters must retain their recognisable meanings. For example, `H` means HOLD, `L` means LIFT, `V` means LEAVE, `B` means BOUNCE, `T` means TAP, `E` means EMPTY, `Z` means ZIP and `S` means SPECIAL. A person inspecting a code should be able to recognise common actions without first converting the code into another representation.
+P3 is a compact, self contained and technically human readable notation language.
 
-The code must not use Base64, a generic opaque binary payload, JSON, or encryption. It must not lose information. It must contain every value required to reconstruct the complete sequence independently of the POINTS application.
+Common actions retain their visible initials:
 
-An independent developer must be able to implement a decoder using only the published format specification and a code. They must not need access to the POINTS source code, application defaults, an external settings file, a sidecar file, or a server.
+| Token | Action |
+|---|---|
+| `H` | HOLD |
+| `L` | LIFT |
+| `V` | LEAVE |
+| `B` | BOUNCE |
+| `T` | TAP |
+| `E` | EMPTY |
+| `Z` | ZIP |
+| `S` | SPECIAL |
 
-## Non negotiable design principles
+The current domain model does not define CLAP as a separate action type. A CLAP notation must therefore be represented using the existing SPECIAL action until the domain model explicitly adds a CLAP action.
 
-1. **Self contained.** Every property needed to reconstruct the sequence is present in the code. The decoder must not rely on application defaults or external context.
-2. **No implicit defaults.** Values are encoded even when they equal the usual POINTS defaults. This includes the usual BPM, time signature, beat count, performer setup, initial object placement and table layout.
-3. **Human readable action alphabet.** Common action tokens remain recognisable. The format is a notation language, not a binary serialization disguised as text.
-4. **Lossless.** Every semantic field in the sequence model must survive encode and decode. No rounding, omission, normalisation that changes meaning, or lossy compression is allowed.
-5. **Unambiguous grammar.** Every valid code has exactly one parse. Token boundaries, parameter types, lengths, references and escaping rules are specified.
-6. **Compact by design.** Avoid repeating information that can be defined once and referenced. Use compact local references, compact numeric forms and repetition encoding where they produce a real saving.
-7. **Deterministic canonical output.** Equivalent sequence models produce the same canonical code. Ordering rules must be specified.
-8. **One active format version.** The current code format has an explicit version marker and a normative specification. When a new format replaces it, replace the old encoder and decoder. Do not retain old format support unless Oliver explicitly requests it.
-9. **Preserve structurally valid but semantically invalid sequences.** Encoding and decoding must not silently repair a pattern. The application validator remains responsible for reporting notation errors.
-10. **No internal implementation leakage.** Do not encode UUIDs, React state, database keys, editor selection state, caches or other transient implementation details.
+P3 does not use Base64, JSON, encryption or lossy compression. It uses explicit sections, compact local references, grouped performer and hand streams, and reversible text escaping.
 
-## Scope
+## 2. Document structure
 
-This package redesigns the sequence code format and its codec. It does not change POINTS notation semantics, editor behaviour, validation rules, simulation, renderer behaviour, presets, persistence architecture or export appearance.
+A P3 document consists of exactly fourteen semicolon separated parts. The first part is the version marker. The remaining thirteen parts must appear in the exact order shown below.
 
-The encoder and decoder must operate on the shared domain model. UI components must not implement their own encoding rules.
+```text
+P3;S:<type>;Q:<bpm>;T:<signature>;B:<beat-count>;P:<performers>;X:<positions>;O:<object-count>;I:<placements>;D:<subdivisions>;A:<action-streams>;J:<individual-layout>;M:<table-layout>;C:<seats>
+```
 
-## Proposed code architecture
+No whitespace is permitted outside encoded text values. The entire code is one line. A decoder may trim whitespace surrounding the complete pasted code, but must not trim or normalise data inside fields.
 
-The exact grammar must be finalised before implementation. The following structure is the required design direction, not permission to invent ambiguous syntax during coding.
+Every section is mandatory, including sections whose value is empty. Empty lists are represented by an empty section value, such as `I:`. Empty values are not defaults.
 
-### 1. Version and document framing
+Unknown, missing, duplicated or reordered sections make the document malformed.
 
-Every code begins with a recognisable version marker, proposed as `P3`. The grammar defines how the header ends and where each subsequent section begins. The framing must use a small, documented set of printable characters and must not depend on whitespace.
+## 3. Character and separator rules
 
-The framing identifies the format version and the presence and boundaries of all required sections. The decoder must reject truncated documents, unknown mandatory sections, duplicate singleton sections and malformed framing with clear errors.
+The structural separators are:
 
-### 2. Explicit sequence configuration
+| Character | Meaning |
+|---|---|
+| `;` | Separates document sections |
+| `:` | Separates a section name from its value, and separates action stream header fields |
+| `.` | Separates fields within a record |
+| `,` | Separates records within a list |
+| `+` | Separates events within one action stream, and groups within a time signature |
+| `_` | Separates components of circle targets and rectangle dimensions |
+| `~` | Begins an encoded text value |
+| `-` | Represents an absent optional value where explicitly allowed |
 
-The code contains the complete sequence configuration, including values equal to POINTS defaults:
+Text escaping ensures that structural separators never occur literally inside a text atom.
 
-- Sequence type, including solo, circle passing and individual passing modes.
-- Main beat count.
-- BPM.
-- Full time signature, including numerator, denominator and grouping.
-- All subdivision definitions and timing information.
-- Performer count, order, names and optional identifiers.
-- Position definitions, names, types, ownership and associations.
-- Object count and all initial object placements.
-- Hand, position and table configuration.
-- Circle participant and target configuration where applicable.
-- Individual passing layout and recipient information where applicable.
-- Table geometry, sides, seats and assignments.
-- Any other persisted domain field that affects interpretation, editing, validation, simulation or rendering.
+## 4. Primitive values
 
-No decoder may infer any of these values from a POINTS default. A value can be compactly represented, but it must be present and recoverable from the code.
+### 4.1 Numbers
 
-### 3. Action streams
+Numbers use their canonical ECMAScript decimal string representation. Exponents are permitted. Negative values are permitted where the domain type is numeric, even if the value makes the sequence semantically invalid. Negative zero is written as `-0`.
 
-Use compact streams organised around the domain structure. The leading candidate is one stream per performer and hand, with performer and hand ownership declared explicitly in the configuration.
+A decoder must reject NaN, positive infinity and negative infinity.
 
-Common actions use their recognisable action characters. A normal HOLD should not need a verbose tuple containing its performer, hand, beat and action name when those facts are already established by the stream position and structure.
+### 4.2 Integers and references
 
-The stream model must support:
+Indices and counts are zero based where they refer to an item in an ordered collection. They use decimal integers without leading zeroes, except for zero itself. Negative indices are invalid.
 
-- One action per hand per beat in the ordinary case.
-- Multiple events in the same beat.
-- Events at subdivisions or exact rational offsets.
-- Actions that require targets or other parameters.
-- Actions whose meaning depends on linked actions elsewhere in the sequence.
-- Empty or explicitly unoccupied timeline positions.
+### 4.3 Rational numbers
 
-A simple one character per beat model is not sufficient for every valid sequence. Define a compact event extension syntax for exceptional cases without making the common case verbose.
+Rational values use `numerator` when the denominator is one, otherwise `numerator/denominator`. Numerators and denominators are safe integers. The denominator must be positive and nonzero.
 
-### 4. Relationships and references
+The decoder must preserve the exact numerator and denominator supplied. It must not convert a rational to floating point or reduce it as part of decoding.
 
-Relationships must be represented explicitly and unambiguously:
+### 4.4 Text atoms
 
-- ZIP send and receive pairing.
-- Passing sender and recipient relationships.
-- Circle passing relative target direction, position and distance.
-- Individual passing performer and hand targets.
-- SPECIAL links where present.
-- Any other cross event relationship in the domain model.
+Every arbitrary text value is encoded as:
 
-Use short local references assigned deterministically within the code. Never use internal UUIDs. The decoder must validate that every reference resolves, that paired relationships remain paired, and that relationship direction is preserved.
+```text
+~<UTF8 byte length>:<percent encoded text>
+```
 
-### 5. Conditional event parameters
+The byte length is the number of UTF8 bytes in the decoded text. Percent encoding uses UTF8. Structural punctuation that could interfere with P3 parsing, including period and tilde, must be percent escaped. The percent sign itself must be escaped.
 
-Actions with no additional parameters should consist of their action token alone wherever possible. Actions needing a target, position, timing value or other data carry only the required additional information.
+Examples:
 
-The grammar must define parameter presence from explicit syntax, not from assumptions about defaults. For example, a targetless action and an action with a target must be distinguishable without guessing.
+| Original text | P3 atom |
+|---|---|
+| Empty string | `~0:` |
+| `A` | `~1:A` |
+| `Juggler 1` | `~9:Juggler%201` |
+| `A.B` | `~3:A%2EB` |
+| `100%` | `~4:100%25` |
 
-### 6. Text and uncommon values
+The decoder must percent decode the value and verify its UTF8 byte length. It must preserve Unicode exactly. It must distinguish an absent optional value from a present empty string.
 
-Names, performer identifiers and SPECIAL text may contain arbitrary Unicode text. Define a reversible text escaping and length or delimiter rule. It must preserve exact text, including spaces, punctuation, line breaks and Unicode characters. Escaping must not make ordinary action streams ambiguous.
+## 5. Section definitions
 
-Do not use percent encoded JSON or Base64 as a shortcut. A narrowly scoped text escape mechanism is acceptable for actual text fields.
+### S: Sequence type
 
-## Compression strategy
+Exactly one character:
 
-Compression must preserve the human readable character of the code. Apply the following techniques where measurements justify them:
+| Value | Meaning |
+|---|---|
+| `s` | Solo |
+| `c` | Circle passing |
+| `i` | Individual passing |
 
-1. **Define structure once.** Declare performer and hand streams once rather than repeating their identity on every action.
-2. **Local references.** Assign compact deterministic indices to performers, positions, objects and linked events.
-3. **Beat indexing by stream position.** Where a stream is explicitly defined as chronological, its event order determines the beat index. Encode beat count explicitly in the configuration. Do not repeat beat numbers for ordinary events.
-4. **Run length encoding.** Repeated actions may use a compact repetition form, for example a defined representation of six consecutive HOLD actions. The grammar must reserve the repetition syntax and make it impossible to confuse a count with an action parameter or another token.
-5. **Compact numeric grammar.** Define canonical integer and rational representations. Preserve exact rational values. Do not convert fractions to floating point.
-6. **Compact enumerations.** Use documented short tokens for finite domain enumerations while keeping action initials recognisable.
-7. **Avoid redundant relationships.** Store a relationship once when the domain model defines one authoritative link, then reconstruct both ends. If the model contains independent data on both ends, preserve both.
-8. **Measure before adding complexity.** Do not add generic compression, obscure character substitutions or clever encodings without measured benefit across representative patterns.
+### Q: Tempo
 
-The code may look like a compact jumble of letters and numbers, but every token must have a defined semantic role. Readability takes priority over tiny savings that make the grammar fragile or difficult to implement independently.
+One finite number representing BPM. BPM always means quarter notes per minute.
 
-## Required semantic coverage
+### T: Time signature
 
-The codec must preserve every persisted field in the current sequence model. At minimum, tests must cover:
+Three period separated fields:
 
-- Solo, circle passing and individual passing sequence types.
-- BPM, beat count, full time signature and beat grouping, including nonstandard values.
-- Subdivisions, subdivision depth, start and duration values.
-- Performer order, names, optional identifier absent versus explicitly empty.
-- Positions, position kinds, names, ownership and associations.
-- Object count and initial placements in positions, hands, hand backs and table locations.
-- Every action type: HOLD, LIFT, LEAVE, BOUNCE, TAP, EMPTY, ZIP, SPECIAL and CLAP.
-- Every action target type and target parameter.
-- Multiple actions in one beat and multiple events at rational offsets.
-- ZIP source and receiver links.
-- Individual passing sender, recipient, position and hand details.
-- Circle passing target direction, relative position, distance and self targeting.
-- Shared and per performer positions.
-- Table geometry, polygon layouts, rectangular layouts, two participant layouts and seat counts including zero on a side.
-- SPECIAL text containing Unicode, punctuation, whitespace and line breaks, plus optional links.
-- Optional fields, empty collections and absent values.
-- Structurally complete but semantically invalid patterns, so the normal validator can report the original errors after decoding.
+```text
+numerator.denominator.grouping
+```
 
-The implementation must first audit the current domain types and enumerate every persisted field. This list is authoritative only after comparison with the actual model. If a field is added to the domain model later, the format specification and round trip tests must be updated.
+Grouping values are separated by plus signs. An empty grouping list is represented by `-`. Numerator, denominator and grouping values are all explicitly encoded. P3 never assumes the usual time signature.
 
-## Decoder behaviour and validation
+Example: `4.4.1+1+1+1` represents 4/4 grouped into four quarter note beats. `6.8.3+3` represents 6/8 grouped into two dotted quarter note beats.
 
-The decoder must have clearly separated stages:
+### B: Main beat count
 
-1. Validate version and document framing.
-2. Parse sections and tokens according to the formal grammar.
-3. Validate field types, required fields, counts, numeric bounds and text escapes.
-4. Build local symbol tables.
-5. Resolve references and relationships.
-6. Reconstruct the complete domain model.
-7. Run structural integrity checks.
-8. Return the reconstructed sequence without silently applying semantic repairs.
+One nonnegative integer. This is the exact number of main beats in the sequence. Beat indices in other sections refer to this ordered beat collection.
 
-Structural errors include malformed tokens, truncated values, duplicate identifiers, impossible section lengths, invalid numeric syntax and dangling references. These must produce explicit decoding errors.
+### P: Performers
 
-Semantic pattern errors, such as an invalid action transition or an otherwise invalid juggling pattern, must remain in the reconstructed sequence and be reported by the existing validator. The decoder must not reject a sequence merely because its juggling pattern is invalid.
+A comma separated list of performer records. Each record has two period separated fields:
 
-Define reasonable parser limits for code length, nesting, counts, text size and numeric magnitude. These limits prevent accidental or malicious resource exhaustion and must be documented so independent implementations can apply compatible limits.
+```text
+<name text atom>.<identifier>
+```
 
-## Independent decoder specification
+The name is always present, including when empty. The identifier is either `-` when absent or a text atom when present. Therefore, an absent identifier and an explicitly empty identifier are different values.
 
-Publish a normative specification in the repository. It must be sufficient for a developer with no POINTS source access to implement an encoder or decoder.
+Performer indices are assigned by record order, starting at zero.
 
-The specification must include:
+### X: Positions
 
-- Version marker and complete grammar.
-- Character alphabet and reserved characters.
-- Token and section boundary rules.
-- Every field, its type, cardinality and whether it is required.
-- Explicit representation of all defaults and empty values.
-- Action token definitions and action parameter schemas.
-- Stream ordering and event timing rules.
-- Numeric and rational number syntax.
-- Text escaping and Unicode handling.
-- Local reference assignment and resolution.
-- Relationship and pairing rules.
-- Canonical ordering and deterministic encoding rules.
-- Structural error conditions and decoder limits.
-- Complete worked examples, including at least one simple solo pattern and one complex passing pattern.
-- A field by field mapping to the public sequence semantics, not internal TypeScript implementation details.
+A comma separated list of position records.
 
-The specification must not refer readers to implementation code for missing rules. If the code and specification disagree, the specification is the contract and the implementation must be corrected.
+A table position has three fields:
 
-## Format replacement policy
+```text
+T.<name text atom>.<owner>
+```
+
+The owner is `s` for a shared position or `p<performer index>` for a performer owned position.
+
+A hand back position has four fields:
+
+```text
+B.<L or R>.<performer index>.<L or R>
+```
+
+The second field is the displayed hand back position name. The final field is the associated hand. Both values are explicitly encoded.
+
+Position indices are assigned by record order, starting at zero.
+
+### O: Object count
+
+One nonnegative integer. Ball identities are reconstructed as local indices from zero up to this count minus one. The count is explicit even when it is zero.
+
+### I: Initial placements
+
+A comma separated list of placement records. Each record begins with the ball index.
+
+Position placement:
+
+```text
+<ball index>.P.<position index>
+```
+
+Finger held hand placement:
+
+```text
+<ball index>.H.<performer index>.<L or R>
+```
+
+Hand back placement:
+
+```text
+<ball index>.B.<position index>.<performer index>.<L or R>
+```
+
+Every ball may have zero or one placement record in structurally valid data. The codec must preserve structurally complete but semantically invalid placements, including duplicate or missing placements, so the application validator can report them.
+
+### D: Subdivisions
+
+A comma separated list of subdivision records. Each record has four fields:
+
+```text
+<beat index>.<start rational>.<duration rational>.<depth>
+```
+
+Records are ordered first by beat index and then by their original order within that beat. A beat with no subdivisions has no records in this section. The main beat count remains explicit in section B, so empty beats are retained.
+
+Subdivision identifiers are internal implementation identifiers and are regenerated during decoding. Their order and semantic values are preserved.
+
+### A: Action streams
+
+There are exactly two streams per performer, in canonical order: performer zero left hand, performer zero right hand, performer one left hand, performer one right hand, and so on.
+
+Each stream has three colon separated fields:
+
+```text
+<performer index>:<L or R>:<events>
+```
+
+Streams are separated by commas. An empty stream uses `-` for its events field.
+
+Events within a stream are separated by plus signs. Every event has this common prefix:
+
+```text
+<notation ordinal>.<beat index>.<offset rational>.<action token>
+```
+
+The notation ordinal is the zero based index of the entry in the original notation array. It preserves the original order of notation entries across streams. The beat index refers to section B. Offset is a rational position relative to the beginning of that main beat.
+
+Action parameters follow the action token as additional period separated fields:
+
+| Action | Complete event fields after the common prefix |
+|---|---|
+| HOLD | No parameters |
+| EMPTY | No parameters |
+| LIFT | Target, optional link |
+| LEAVE | Target, optional link |
+| BOUNCE | Target |
+| TAP | Target |
+| ZIP | Role, required link |
+| SPECIAL | Text atom, optional link |
+
+For LIFT and LEAVE, an absent link is `-`. For ZIP, a link is mandatory. For SPECIAL, an absent link is `-`.
+
+#### Target tokens
+
+Table position target:
+
+```text
+p<position index>
+```
+
+Circle position target:
+
+```text
+c<position>_<direction>_<distance>
+```
+
+Position is A, B or C. Direction is L, R or `-` when absent. Distance is a number or `-` when absent. The direction and distance are independently optional because the domain model permits either one to be present without the other. Self targeting is represented by both optional values being absent.
+
+Individual passing source target:
+
+```text
+s<performer index>
+```
+
+Individual passing recipient hand target:
+
+```text
+r<performer index>_<L or R>
+```
+
+A target kind must be valid for its action. LIFT accepts position, circle position and pass source targets. LEAVE accepts position, circle position and pass recipient hand targets. BOUNCE and TAP accept position and circle position targets.
+
+#### ZIP role
+
+ZIP uses `S` for source and `R` for receiver, followed by its required local link reference.
+
+#### Link references
+
+Every distinct LinkId is assigned a local link index in order of its first occurrence while traversing the notation array. All occurrences of that LinkId use the same index. Link indices start at zero and are contiguous.
+
+The decoder reconstructs local LinkIds from these indices. It must preserve one sided or otherwise semantically invalid links so the existing validator can report them.
+
+### J: Individual passing layout
+
+Exactly one character:
+
+| Value | Meaning |
+|---|---|
+| `n` | Property absent |
+| `s` | Shared positions |
+| `p` | Per performer positions |
+
+Absence is explicitly represented and is not inferred from sequence type.
+
+### M: Table layout
+
+Solo table:
+
+```text
+s
+```
+
+Polygon table:
+
+```text
+p<side count>
+```
+
+Rectangle table:
+
+```text
+r<long side seat count>_<short side seat count>
+```
+
+All dimensions are explicit, including zero seat counts.
+
+### C: Seat assignments
+
+A comma separated list of seat assignment records.
+
+Polygon edge:
+
+```text
+<performer index>.P.<edge index>
+```
+
+Rectangle side:
+
+```text
+<performer index>.R.<side>.<seat index>
+```
+
+Side is one of `long-a`, `long-b`, `short-a` or `short-b`.
+
+## 6. Internal identifiers
+
+Sequence, performer, position, ball, beat, subdivision, notation entry and link IDs are implementation identities, not portable semantic values.
+
+P3 replaces them with deterministic local indices or local link references. A decoder may generate new internal IDs. It must preserve all relationships and ordering so that the reconstructed sequence is semantically equivalent.
+
+No UUID, database key, React state, editor selection, cache value or other transient application detail is encoded.
+
+## 7. Complete field coverage
+
+The P3 sections encode every persisted field in the current Sequence model:
+
+| Domain field | P3 section |
+|---|---|
+| sequenceType | S |
+| bpm | Q |
+| timeSignature numerator, denominator and beatGrouping | T |
+| beats and beat count | B |
+| performer names and optional identifiers | P |
+| positions, names, ownership and hand associations | X |
+| balls | O |
+| initialState placements | I |
+| beat subdivisions and exact timing | D |
+| notation performer, hand, beat, offset and action | A |
+| action targets and parameters | A |
+| action link relationships | A |
+| individualPassingLayout | J |
+| tableLayout | M |
+| seatAssignments | C |
+
+The sequence ID and entity IDs are intentionally regenerated because they are not semantic sequence content.
+
+If the domain model gains a persisted field, this specification, codec and conformance fixtures must be updated before that field is considered supported by P3.
+
+## 8. Decoder requirements
+
+A conforming decoder must:
+
+1. Identify the P3 marker and reject superseded or unknown versions.
+2. Validate the exact section count and order.
+3. Parse every section using the grammar above.
+4. Validate UTF8 byte lengths and text escapes.
+5. Validate numeric syntax and safe integer references.
+6. Reconstruct performer, position, ball and beat local identities.
+7. Reconstruct exactly two action streams per performer.
+8. Restore notation array order using the notation ordinals.
+9. Resolve all target and link references.
+10. Reconstruct exact rational values without floating point conversion.
+11. Preserve structurally complete but semantically invalid sequences.
+12. Return no partial sequence when decoding fails.
+
+The decoder must not apply POINTS defaults. It must not silently repair a sequence or run semantic notation validation as part of decoding.
+
+Recommended safety limits for the current implementation are a maximum code length of 1,000,000 characters and a maximum of 100,000 main beats, performers or objects. Independent implementations should enforce at least these limits.
+
+## 9. Canonical encoding
+
+The encoder must be deterministic.
+
+- Sections always use the order defined in section 2.
+- Performers, positions, balls, beats, placements, subdivisions, notation entries and seats retain their source array order.
+- Performer streams always use performer order, left then right.
+- Events within each stream retain notation array order.
+- Link indices are assigned by first occurrence in the notation array.
+- Numeric values use canonical decimal text.
+- Rational values use the exact numerator and denominator stored in the model.
+- Text values use the specified UTF8 length and percent encoding.
+- Empty lists and absent optional values use the exact representations specified above.
+
+Encoding a decoded P3 sequence must reproduce the same canonical code.
+
+## 10. Worked solo example
+
+This example represents four beats, one performer, one ball, three table positions, two hand back positions, a 4/4 signature and four notation entries.
+
+```text
+P3;S:s;Q:120;T:4.4.1+1+1+1;B:4;P:~9:Juggler%201.-;X:T.~1:A.p0,T.~1:B.p0,T.~1:C.p0,B.L.0.L,B.R.0.R;O:1;I:0.P.0;D:1.0.1/2.1,1.1/2.1/2.1;A:0:L:3.3.0.T.p2,0:R:0.0.0.L.p0.-+1.1.0.H+2.2.0.V.p1.-;J:n;M:s;C:
+```
+
+The left hand stream contains the TAP on beat four. The right hand stream contains LIFT, HOLD and LEAVE on beats one, two and three. The stream headers establish performer and hand ownership. The event fields establish the original notation order, beat and offset.
+
+## 11. Format replacement policy
 
 There is exactly one supported sequence code format at a time.
 
-- P3 replaces P2 completely when P3 is implemented.
-- The P3 decoder does not import P2 codes. The P2 decoder and P2 format support are removed as part of the replacement.
-- All newly generated, copied and exported sequence codes use P3.
-- Codes from superseded formats are not supported unless Oliver explicitly asks for backward compatibility or a migration tool.
-- A future format revision replaces the then current format in the same way. Do not accumulate legacy decoders or compatibility branches by default.
-- Every code still carries an explicit marker identifying the currently supported format. This is necessary for independent decoders to identify the grammar. It does not imply that older formats remain supported.
-- An unknown or superseded marker produces a clear unsupported format error. Never guess or reinterpret an older code as the current format.
+P3 replaces P2 completely. The P2 encoder and decoder are removed. P2 codes return an unsupported format result and are not migrated automatically.
 
-This policy applies to future sequence code revisions unless Oliver explicitly instructs otherwise.
+A future format revision replaces P3 in the same way unless Oliver explicitly requests backward compatibility or a migration tool. A version marker remains mandatory so independent decoders can identify the active grammar. It does not imply support for older versions.
 
-## Implementation stages
+## 12. Conformance requirements
 
-### Stage A: Domain model audit and format specification
+A conforming implementation must test:
 
-- Inspect the current shared domain model and existing P2 codec.
-- Enumerate every persisted semantic field and every reference relationship.
-- Identify fields not covered by the current P2 codec or not represented independently.
-- Define the complete P3 grammar and canonical form.
-- Define the action alphabet, event stream structure, repetition syntax, parameter syntax, reference rules and text escaping.
-- Decide P2 import and migration policy.
-- Produce worked examples and a conformance fixture format.
-- Review the specification for ambiguity before writing the encoder.
+- Every field in the coverage table.
+- Solo, circle passing and individual passing.
+- Empty collections and explicit default valued settings.
+- All action types and target variants.
+- Multiple events in one beat.
+- Multiple performers and both hand streams.
+- Exact rational offsets and subdivisions.
+- Compound time signatures and grouping.
+- Optional identifier absent versus present and empty.
+- SPECIAL text with Unicode, punctuation, separators and line breaks.
+- ZIP, pass and SPECIAL links.
+- Rectangle and polygon layouts, including zero seat counts.
+- Structurally complete invalid patterns.
+- Malformed framing, missing sections, wrong section order and unsupported versions.
+- Invalid references, invalid escapes, wrong UTF8 byte lengths and truncated records.
+- Deterministic encode and decode canonical stability.
+- Rejection of P1, P2 and unknown format versions.
 
-**Exit criteria:** The specification is complete enough for two independent developers to implement compatible decoders without asking the original author questions.
-
-### Stage B: Encoder and decoder
-
-- Implement a pure domain level P3 encoder and decoder.
-- Keep parsing, validation and reconstruction separate.
-- Implement deterministic local symbol tables and canonical ordering.
-- Implement explicit configuration encoding with no implicit defaults.
-- Implement action streams and exceptional event extensions.
-- Implement exact numeric and text handling.
-- Implement all relationship references and structural checks.
-- Keep the codec independent of React and UI state.
-
-**Exit criteria:** Full round trip tests preserve every audited domain field and all relationships.
-
-### Stage C: Conformance and interoperability tests
-
-- Create a comprehensive shared fixture set with expected canonical codes and decoded semantic models.
-- Test encode then decode and decode then encode canonical stability.
-- Test that every fixture can be decoded using a separately implemented reference decoder or an independently written grammar based test harness.
-- Test malformed, truncated, unsupported version, unknown mandatory section, invalid escape, duplicate reference and dangling reference cases.
-- Test semantically invalid patterns remain intact after round trip.
-- Test that the decoder does not consult application defaults or external state.
-- Document the fixtures so third party implementations can use them.
-
-**Exit criteria:** An independent decoder can reconstruct every conformance fixture and produces equivalent semantic output.
-
-### Stage D: Application integration
-
-- Switch new code generation and copy actions to P3.
-- Integrate P3 import and clear unsupported version errors.
-- Remove P2 encoding and decoding completely. All code generation, copying and importing uses P3 only. Superseded formats return an unsupported format error.
-- Preserve existing persistence, presets and PNG export behaviour.
-- Update relevant UI labels and documentation.
-- Ensure importing a code does not silently overwrite an existing sequence without the existing confirmation workflow.
-
-**Exit criteria:** P3 works through all application import, copy, share and persistence workflows.
-
-### Stage E: Verification and optimisation
-
-- Measure P3 code length against P2 for simple, medium and complex representative patterns.
-- Report raw character counts and percentage changes.
-- Confirm no UUIDs, JSON syntax, Base64 payloads or hidden sidecar data appear in P3 codes.
-- Confirm action initials remain visible and recognisable.
-- Optimise only where measurements show a worthwhile reduction without compromising the specification.
-- Run formatting, lint, strict TypeScript, unit tests, browser tests and production build.
-- Verify GitHub Pages deployment and manually test copy and import in desktop and mobile layouts.
-
-**Exit criteria:** All automated checks pass, interoperability fixtures pass, code length measurements are documented and the deployed application can round trip representative sequences.
-
-## Acceptance criteria
-
-P3 is complete only when all of the following are true:
-
-1. A P3 code contains every value needed to reconstruct the complete sequence.
-2. No value is inferred from POINTS defaults or external state.
-3. Common action tokens are recognisable, with `H` representing HOLD and equivalent direct tokens for the other common actions.
-4. The format does not use Base64, encryption, JSON or lossy compression.
-5. The grammar is unambiguous and fully documented.
-6. Every current persisted domain field and relationship round trips exactly in meaning.
-7. Exact rational timing and arbitrary supported text survive unchanged.
-8. Structurally complete invalid patterns remain available to the validator.
-9. Output is deterministic and canonical.
-10. A third party can implement a decoder from the specification alone.
-11. P2 support is removed, and superseded format markers are rejected clearly.
-12. All application workflows and CI checks pass.
-
-## Explicit non goals
-
-- Changing the meaning of any POINTS action.
-- Changing the editor, renderer, generator or simulator.
-- Encoding transient UI state or internal UUIDs.
-- Encrypting or hiding sequence contents.
-- Using Base64 or an opaque binary payload.
-- Omitting values because they match a default.
-- Lossy compression, rounding or approximate reconstruction.
-- Promising a fixed maximum code length regardless of sequence complexity.
-
-## Review checkpoint
-
-Oliver approved this package on 16 November 2026, including the single active format policy. Implementation may proceed. The detailed grammar must still be completed and checked against the domain model before encoder and decoder implementation.
+A third party decoder must be able to decode the worked example and the shared conformance fixtures without reading the POINTS source code.
