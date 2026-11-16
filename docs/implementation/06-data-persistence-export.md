@@ -2,7 +2,7 @@
 
 ## Status
 
-Base package and P2 sequence code implementation were merged through PR #20. P3 is replacing P2 in PR #22. The P3 decoder is the only supported decoder after merge. Manual visual inspection of exported PNG files remains outstanding.
+P3 replaced P2 and was merged through PR #22. P3 is the only supported sequence code format. Manual visual inspection of exported PNG files remains outstanding.
 
 ## User facing data format
 
