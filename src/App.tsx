@@ -374,12 +374,15 @@ export default function App() {
   const [generatorRequiredFragmentCode, setGeneratorRequiredFragmentCode] = useState('');
   const [generatorForbiddenFragmentCode, setGeneratorForbiddenFragmentCode] = useState('');
   const [generatorResults, setGeneratorResults] = useState<Sequence[]>([]);
+  const [generatorStructureResults, setGeneratorStructureResults] = useState<Sequence[]>([]);
+  const [generatorStage, setGeneratorStage] = useState<'structures' | 'locations'>('structures');
   const [generatorRunning, setGeneratorRunning] = useState(false);
   const [generatorHasMore, setGeneratorHasMore] = useState(false);
   const [generatorError, setGeneratorError] = useState('');
   const generatorAbortRef = useRef<AbortController | null>(null);
   const generatorIteratorRef = useRef<AsyncIterator<GeneratedCandidate> | null>(null);
   const generatorPendingRef = useRef<GeneratedCandidate | null>(null);
+  const generatorRequestRef = useRef<GeneratorRequest | null>(null);
 
   useEffect(() => { setBpmInput(String(sequence.bpm)); }, [sequence.bpm]);
 
@@ -927,7 +930,7 @@ export default function App() {
     setShowActionMenu(false);
   };
 
-  const loadGeneratorPage = async () => {
+  const loadGeneratorPage = async (targetStage: 'structures' | 'locations' = generatorStage) => {
     if (generatorRunning || !generatorIteratorRef.current) return;
     const iterator = generatorIteratorRef.current;
     setGeneratorRunning(true);
@@ -946,7 +949,8 @@ export default function App() {
           }
           candidate = next.value;
         }
-        setGeneratorResults((results) => [...results, candidate.sequence]);
+        if (targetStage === 'structures') setGeneratorStructureResults((results) => [...results, candidate.sequence]);
+        else setGeneratorResults((results) => [...results, candidate.sequence]);
         added += 1;
       }
       if (added === 20 && generatorIteratorRef.current === iterator) {
@@ -1020,6 +1024,7 @@ export default function App() {
 
     const request: GeneratorRequest = {
       mode: generatorMode,
+      locationMode: 'abstract',
       sequenceTypes: [sequence.sequenceType],
       templateSequence: sequence,
       ...(generatorMode === 'complete-base' ? { baseSequence: sequence } : {}),
@@ -1043,6 +1048,9 @@ export default function App() {
     };
     const controller = new AbortController();
     generatorAbortRef.current = controller;
+    generatorRequestRef.current = request;
+    setGeneratorStage('structures');
+    setGeneratorStructureResults([]);
     const generatorSearch = sequenceGenerator.generate(request, controller.signal);
     generatorIteratorRef.current = generatorSearch[Symbol.asyncIterator]();
     generatorPendingRef.current = null;
@@ -1050,6 +1058,21 @@ export default function App() {
     setGeneratorError('');
     setGeneratorHasMore(true);
     await loadGeneratorPage();
+  };
+
+  const exploreGeneratorStructure = async (structure: Sequence) => {
+    if (generatorRunning) return;
+    const request = generatorRequestRef.current;
+    if (!request) return;
+    const controller = new AbortController();
+    generatorAbortRef.current = controller;
+    generatorIteratorRef.current = sequenceGenerator.expandLocations(structure, request, controller.signal)[Symbol.asyncIterator]();
+    generatorPendingRef.current = null;
+    setGeneratorStage('locations');
+    setGeneratorResults([]);
+    setGeneratorError('');
+    setGeneratorHasMore(true);
+    await loadGeneratorPage('locations');
   };
 
   const stopGenerator = () => {
@@ -2072,9 +2095,34 @@ export default function App() {
             </label>
           </details>
           {generatorError && <p role="alert">{generatorError}</p>}
-          {!generatorRunning && generatorResults.length === 0 && !generatorError && <p>No results yet. Choose a mode and start generation.</p>}
+          {generatorStage === 'locations' && <button type="button" onClick={() => { setGeneratorStage('structures'); setGeneratorResults([]); setGeneratorHasMore(false); generatorIteratorRef.current = null; }}>Back to structures</button>}
+          {!generatorRunning && generatorStage === 'structures' && generatorStructureResults.length === 0 && !generatorError && <p>No structures yet. Choose a mode and start generation.</p>}
+          {!generatorRunning && generatorStage === 'locations' && generatorResults.length === 0 && !generatorError && <p>No valid location arrangements found for this structure.</p>}
           <div className="generator-results">
-            {generatorResults.map((result, resultIndex) => (
+            {generatorStage === 'structures' && generatorStructureResults.map((result, resultIndex) => (
+              <article className="generator-result" key={'structure-' + resultIndex}>
+                <div className="panel-heading"><strong>Structure {resultIndex + 1}</strong><span>{result.notation.length} actions</span></div>
+                <p>Action structure only. Concrete positions have not been assigned yet.</p>
+                <div className="generator-preview">
+                  {result.performers.map((performer) => (
+                    <div className="generator-preview-performer" key={performer.id}>
+                      <strong>{performer.name}</strong>
+                      {hands.map((hand) => (
+                        <div className="generator-preview-row" key={hand} style={{ gridTemplateColumns: `24px repeat(${result.beats.length}, 48px)` }}>
+                          <span>{hand === 'left' ? 'L' : 'R'}</span>
+                          {result.beats.map((beat) => {
+                            const entry = result.notation.find((item) => item.performerId === performer.id && item.hand === hand && item.time.beatId === beat.id);
+                            return <div className="generator-preview-cell" key={beat.id}>{entry ? <ActionSymbol action={entry.action} sequence={result} hand={hand} /> : null}</div>;
+                          })}
+                        </div>
+                      ))}
+                    </div>
+                  ))}
+                </div>
+                <button type="button" onClick={() => void exploreGeneratorStructure(result)} disabled={generatorRunning}>Explore locations</button>
+              </article>
+            ))}
+            {generatorStage === 'locations' && generatorResults.map((result, resultIndex) => (
               <article className="generator-result" key={resultIndex}>
                 <div className="panel-heading"><strong>Result {resultIndex + 1}</strong><span>{result.notation.length} actions</span></div>
                 <div className="generator-preview">
