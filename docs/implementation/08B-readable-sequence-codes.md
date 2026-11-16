@@ -17,7 +17,7 @@ The code is a compact representation of the juggling sequence, not a compressed 
 3. **Structure is explicit but economical.** Main beats and simultaneous actions must remain unambiguous. Repeated defaults and derivable values should not be repeated.
 4. **Human readable alphabet.** Prefer letters, digits and a small set of punctuation characters. Avoid Base64, opaque binary payloads and long encoded JSON.
 5. **Lossless semantic round trip.** Decoding must reconstruct every sequence property that affects editing, validation, simulation, rendering or export. Internal IDs may be regenerated, provided all references and relationships remain consistent.
-6. **Invalid but structurally complete sequences remain importable.** The codec must not silently repair notation or reject sequences merely because the validator reports notation errors.
+6. **Invalid but structurally complete sequences remain importable.** The decoder validates tuple structure and reference existence, not pattern validity. It preserves semantic errors such as invalid BPM values, incomplete circle target parameters, mismatched hand back placements and inconsistent beat grouping for the existing validator to report. It must not silently repair notation.
 7. **Experimental format.** Use `P2.` for this redesign. No backward compatibility is required. Existing test codes and saved patterns may be discarded while the app is under development.
 
 ## Proposed code shape
@@ -69,7 +69,7 @@ The current tuple layout stores the sequence settings explicitly. Performer iden
 ## Verification and acceptance criteria
 
 1. Round trip all existing representative fixtures, including solo, individual passing and structurally complete invalid notation.
-2. Add fixtures or generated cases covering circle passing, per-performer and shared positions, two and three sided polygon layouts, rectangular tables, subdivisions, compound meter, fractional offsets, ZIP, SPECIAL, hand-back placements and all target variants.
+2. Add fixtures or generated cases covering circle passing, per-performer and shared positions, two sided polygon layouts, rectangular tables with zero seats on one side, empty collections, subdivisions, compound meter, fractional offsets, ZIP, SPECIAL, hand-back placements and all target variants.
 3. Verify all decoded IDs and references are internally consistent and all semantic fields are preserved.
 4. Verify P1 is not treated as a supported format.
 5. Verify malformed and unsupported versions are distinguished.
