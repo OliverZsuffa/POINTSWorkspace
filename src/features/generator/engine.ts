@@ -488,20 +488,18 @@ export const sequenceGenerator = {
           )) {
           requiredActionTypes.add(request.constraints.requiredActionPerPerformer);
         }
-        const choices = buildChoices(template, cell, cells, occupied, request.locationMode === 'abstract');
-        const canSatisfyRequirementHere = choices.some((choice) =>
-          choice.entries.some((entry) => requiredActionTypes.has(entry.action.type)),
-        );
         const performerHasAction = currentEntries.some((entry) =>
           entry.performerId === cell.performerId && entry.time.beatId === cell.beatId && entry.action.type !== 'EMPTY');
         const hasLaterFreeHand = cells.slice(index + 1).some((later) =>
           later.performerId === cell.performerId && later.beatId === cell.beatId && !occupied.has(cellKey(later)));
         const mustUseThisPerformerBeat = !performerHasAction && !hasLaterFreeHand;
-        if (!zipStillNeeded && !mustUseThisPerformerBeat && !canSatisfyRequirementHere) {
+        if (!zipStillNeeded && !clapStillNeeded && !mustUseThisPerformerBeat) {
           occupied.add(key);
           yield* visit(index + 1, entries);
           occupied.delete(key);
         }
+
+        const choices = buildChoices(template, cell, cells, occupied, request.locationMode === 'abstract');
         const choicePriority = (choice: Choice): number => {
           let score = 0;
           if (zipStillNeeded && choice.entries.some((entry) => entry.action.type === 'ZIP')) score += 1000;
