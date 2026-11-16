@@ -3,6 +3,7 @@ import type {
   SequenceDecodeResult, SeatAssignment, TableLayout,
 } from '../../domain/model';
 import type { SequenceCodec } from '../../contracts';
+import type { LinkId } from '../../domain/ids';
 import {
   asActionEntryId, asBallId, asBeatId, asLinkId, asPerformerId, asPositionId,
   asSequenceId, asSubdivisionId,
@@ -42,7 +43,7 @@ function encodeTarget(target: Extract<NotationAction, { type: 'LIFT' | 'LEAVE' |
   if (target.kind === 'pass-source') return ['S', indexOf(sequence.performers, target.performerId)];
   return ['R', indexOf(sequence.performers, target.performerId), target.hand === 'left' ? 'L' : 'R'];
 }
-function encodeAction(action: NotationAction, sequence: Sequence, linkIndex: (id: string) => number): Packed {
+function encodeAction(action: NotationAction, sequence: Sequence, linkIndex: (id: LinkId) => number): Packed {
   const code = ACTION_TO_CODE[action.type];
   switch (action.type) {
     case 'HOLD': case 'EMPTY': return [code];
@@ -119,11 +120,11 @@ function decodeTarget(value: unknown, positions: PositionDefinition[], performer
   if (value[0] === 'R') return { kind: 'pass-recipient-hand' as const, performerId: performers[Number(value[1])]!.id, hand: value[2] === 'L' ? 'left' as const : 'right' as const };
   throw new Error('Unknown target kind');
 }
-function decodeAction(value: unknown, positions: PositionDefinition[], performers: Performer[], links: string[]): NotationAction {
+function decodeAction(value: unknown, positions: PositionDefinition[], performers: Performer[], links: LinkId[]): NotationAction {
   if (!isPacked(value) || typeof value[0] !== 'string') throw new Error('Invalid action');
   const type = CODE_TO_ACTION[value[0]];
   if (!type) throw new Error('Unknown action code');
-  const link = (index: unknown) => {
+  const link = (index: unknown): LinkId | undefined => {
     if (index === -1) return undefined;
     if (typeof index !== 'number' || !Number.isSafeInteger(index) || index < 0 || !links[index]) {
       throw new Error('Invalid link reference');
@@ -152,7 +153,7 @@ export const sequenceCodec: SequenceCodec = {
     const ball = (id: string) => indexOf(sequence.balls, id);
     const beat = (id: string) => indexOf(sequence.beats, id);
     const links = [...new Set(sequence.notation.flatMap((entry) => 'linkId' in entry.action && entry.action.linkId ? [entry.action.linkId] : []))];
-    const linkIndex = (id: string) => {
+    const linkIndex = (id: LinkId) => {
       const index = links.indexOf(id);
       if (index < 0) throw new Error('Unknown link');
       return index;
