@@ -17,7 +17,7 @@ function semanticShape(sequence: Sequence) {
   const ballIndex = (id: string) => sequence.balls.findIndex((item) => item.id === id);
   const beatIndex = (id: string) => sequence.beats.findIndex((item) => item.id === id);
   const links = [...new Set(sequence.notation.flatMap(({ action }) => 'linkId' in action && action.linkId ? [action.linkId] : []))];
-  const linkIndex = (id: string | undefined) => id === undefined ? undefined : links.indexOf(id);
+  const linkIndex = (id: (typeof links)[number] | undefined) => id === undefined ? undefined : links.indexOf(id);
   const target = (value: LiftActionTarget | LeaveActionTarget | TableActionTarget) => {
     if (value.kind === 'position') return { kind: value.kind, position: positionIndex(value.positionId as string) };
     if (value.kind === 'circle-position') return { ...value };
