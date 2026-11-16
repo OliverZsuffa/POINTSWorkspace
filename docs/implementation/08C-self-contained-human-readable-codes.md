@@ -2,7 +2,7 @@
 
 ## Status
 
-Plan written for review. No implementation is included in this branch. Implementation requires Oliver's explicit approval.
+Approved by Oliver on 16 November 2026. Implementation is authorised. This branch contains the approved plan and subsequent implementation work.
 
 ## Goal
 
@@ -23,7 +23,7 @@ An independent developer must be able to implement a decoder using only the publ
 5. **Unambiguous grammar.** Every valid code has exactly one parse. Token boundaries, parameter types, lengths, references and escaping rules are specified.
 6. **Compact by design.** Avoid repeating information that can be defined once and referenced. Use compact local references, compact numeric forms and repetition encoding where they produce a real saving.
 7. **Deterministic canonical output.** Equivalent sequence models produce the same canonical code. Ordering rules must be specified.
-8. **Versioned and independently implementable.** The format specification is normative. The implementation and tests must not be the only source of truth.
+8. **One active format version.** The current code format has an explicit version marker and a normative specification. When a new format replaces it, replace the old encoder and decoder. Do not retain old format support unless Oliver explicitly requests it.
 9. **Preserve structurally valid but semantically invalid sequences.** Encoding and decoding must not silently repair a pattern. The application validator remains responsible for reporting notation errors.
 10. **No internal implementation leakage.** Do not encode UUIDs, React state, database keys, editor selection state, caches or other transient implementation details.
 
@@ -187,16 +187,19 @@ The specification must include:
 
 The specification must not refer readers to implementation code for missing rules. If the code and specification disagree, the specification is the contract and the implementation must be corrected.
 
-## Compatibility and migration
+## Format replacement policy
 
-P3 is a new format version. The implementation plan must explicitly settle how existing P2 codes are handled before implementation:
+There is exactly one supported sequence code format at a time.
 
-- Whether P2 import remains supported as a legacy input format.
-- Whether all newly generated and copied codes use P3.
-- Whether P2 codes can be converted to P3 through the normal import and copy workflow.
-- Whether P2 support can be removed later and under what condition.
+- P3 replaces P2 completely when P3 is implemented.
+- The P3 decoder does not import P2 codes. The P2 decoder and P2 format support are removed as part of the replacement.
+- All newly generated, copied and exported sequence codes use P3.
+- Codes from superseded formats are not supported unless Oliver explicitly asks for backward compatibility or a migration tool.
+- A future format revision replaces the then current format in the same way. Do not accumulate legacy decoders or compatibility branches by default.
+- Every code still carries an explicit marker identifying the currently supported format. This is necessary for independent decoders to identify the grammar. It does not imply that older formats remain supported.
+- An unknown or superseded marker produces a clear unsupported format error. Never guess or reinterpret an older code as the current format.
 
-Do not silently reinterpret a P2 code as P3. Unknown versions must produce an unsupported version error. No compatibility behaviour should be introduced without tests and documentation.
+This policy applies to future sequence code revisions unless Oliver explicitly instructs otherwise.
 
 ## Implementation stages
 
@@ -242,7 +245,7 @@ Do not silently reinterpret a P2 code as P3. Unknown versions must produce an un
 
 - Switch new code generation and copy actions to P3.
 - Integrate P3 import and clear unsupported version errors.
-- Implement the approved P2 compatibility and migration policy.
+- Remove P2 encoding and decoding completely. All code generation, copying and importing uses P3 only. Superseded formats return an unsupported format error.
 - Preserve existing persistence, presets and PNG export behaviour.
 - Update relevant UI labels and documentation.
 - Ensure importing a code does not silently overwrite an existing sequence without the existing confirmation workflow.
@@ -275,7 +278,7 @@ P3 is complete only when all of the following are true:
 8. Structurally complete invalid patterns remain available to the validator.
 9. Output is deterministic and canonical.
 10. A third party can implement a decoder from the specification alone.
-11. P2 compatibility behaviour is explicitly decided and tested.
+11. P2 support is removed, and superseded format markers are rejected clearly.
 12. All application workflows and CI checks pass.
 
 ## Explicit non goals
@@ -291,4 +294,4 @@ P3 is complete only when all of the following are true:
 
 ## Review checkpoint
 
-This package is a design proposal only. Oliver must approve the grammar direction, complete specification, compatibility policy and acceptance criteria before implementation begins.
+Oliver approved this package on 16 November 2026, including the single active format policy. Implementation may proceed. The detailed grammar must still be completed and checked against the domain model before encoder and decoder implementation.
