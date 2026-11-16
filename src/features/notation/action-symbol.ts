@@ -17,9 +17,11 @@ function circleSubscript(target: Extract<NotationAction, { type: 'LIFT' }>['targ
 function positionReference(sequence: Sequence, positionId: string): string {
   const position = sequence.positions.find((item) => item.id === positionId);
   if (!position) return '?';
-  if (position.kind !== 'table' || position.owner.kind !== 'performer') return position.name;
-  const identifier = sequence.performers.find((person) => person.id === position.owner.performerId)?.identifier;
-  return identifier ? position.name + '(' + identifier + ')' : position.name;
+  if (position.kind === 'table' && position.owner.kind === 'performer') {
+    const identifier = sequence.performers.find((person) => person.id === position.owner.performerId)?.identifier;
+    return identifier ? position.name + '(' + identifier + ')' : position.name;
+  }
+  return position.name;
 }
 
 /** Shared, renderer independent action geometry for editor, previews, and export. */
@@ -43,7 +45,7 @@ export function getActionSymbolGeometry(
       path = 'M0 0H100 M0 0V100 M0 100H100';
       if (action.target.kind === 'position') label = positionReference(sequence, action.target.positionId);
       else if (action.target.kind === 'circle-position') { label = action.target.position; subscript = circleSubscript(action.target); }
-      else if ('performerId' in action.target) {
+      else if (action.target.kind === 'pass-source') {
         label = 'X';
         subscript = sequence.performers.find((person) => person.id === action.target.performerId)?.identifier ?? '?';
       }
@@ -52,7 +54,7 @@ export function getActionSymbolGeometry(
       path = 'M0 0H100 M100 0V100 M0 100H100';
       if (action.target.kind === 'position') label = positionReference(sequence, action.target.positionId);
       else if (action.target.kind === 'circle-position') { label = action.target.position; subscript = circleSubscript(action.target); }
-      else if ('hand' in action.target) {
+      else if (action.target.kind === 'pass-recipient-hand') {
         label = action.target.hand === 'left' ? 'L' : 'R';
         circledTarget = true;
         subscript = sequence.performers.find((person) => person.id === action.target.performerId)?.identifier ?? '?';
