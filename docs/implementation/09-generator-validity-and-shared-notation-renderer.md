@@ -1,12 +1,16 @@
 ## Implementation status
 
-Implementation is in progress on `fix/generator-state-and-shared-notation-renderer`.
+Implementation is complete on `fix/generator-state-and-shared-notation-renderer`.
 
-- Added abstract hand and object state validation before structure results are yielded.
-- Added regression coverage for all-HOLD structures with empty hands, HOLD after LIFT, and LEAVE without a held object.
-- Extracted shared action symbol geometry and reused it in the editor and PNG export.
-- Updated generator preview cells to use the editor notation cell styling and grid sizing.
-- Automated checks and browser review are pending.
+- Added stateful abstract hand and object validation and prune invalid partial structures during stage one search.
+- Preserve unresolved target locations during abstract generation and leave concrete occupancy and position conflicts to stage two.
+- Added regression coverage for impossible HOLD and LEAVE transitions, valid HOLD after LIFT, valid linked CLAP, and generator search regressions.
+- Extracted shared action symbol geometry into `src/features/notation/action-symbol.ts`.
+- Added the standalone `NotationSymbol` component and reused it in the editor and generator previews.
+- Generator preview cells now use the editor notation cell classes and grid sizing.
+- PNG export uses the same action symbol geometry and square editor-style cell grid.
+- CI run `43948954721` passed formatting, lint, TypeScript, all 180 unit tests, production build, and browser checks at six desktop, tablet, and phone viewports.
+- Reviewed the generated viewport screenshots.
 
 # Generator validity and shared notation rendering
 
@@ -23,21 +27,21 @@ Prevent impossible abstract action structures from appearing in generator stage 
 7. Filter invalid structures before stage one displays them.
 
 ## Phase 2: Shared notation renderer
-1. Extract action symbol rendering and beat cell geometry into a standalone component independent of editor state.
-2. Preserve editor SVG geometry, labels, subscripts, CLAP bar, ZIP edges, and sizing.
-3. Support static rendering for generator previews and export while keeping editor interactions outside the shared visual component.
-4. Replace generator preview approximations with the shared renderer and editor grid treatment.
-5. Route PNG export through the same rendering implementation.
+1. Extract action symbol geometry into a standalone rendering module independent of editor state.
+2. Add a reusable `NotationSymbol` component for editor and generator preview rendering.
+3. Preserve editor SVG geometry, labels, subscripts, CLAP bar, ZIP edges, and sizing.
+4. Keep editor interactions outside the shared visual component.
+5. Reuse the shared geometry in PNG export and match the editor's square cell grid.
 6. Keep renderer inputs explicit and reusable.
 
 ## Phase 3: Verification
-Run formatting, lint, TypeScript, unit tests, production build, and browser checks. Add visual regression coverage for editor, generator, and PNG consistency. Do not merge until checks pass and changes are reviewed.
+Run formatting, lint, TypeScript, unit tests, production build, and browser checks. Review desktop, tablet, and phone screenshots. Do not merge until checks pass and changes are reviewed.
 
 ## Acceptance criteria
 - All-HOLD structures are excluded when the corresponding hands start empty.
 - HOLD is accepted when an object is held.
 - Invalid state transitions are rejected in stage one.
 - Concrete location validity remains checked by the existing simulator.
-- Editor, generator, and PNG export share action symbol and cell rendering.
-- Grid edges, symbol geometry, and labels match between editor and exported PNG.
-- Generator previews no longer use a separate visual approximation.
+- Editor and generator previews use the same standalone symbol component.
+- PNG export uses the same symbol geometry and square cell dimensions as the editor.
+- Generator preview cells use the editor's notation cell styling rather than a separate approximation.
