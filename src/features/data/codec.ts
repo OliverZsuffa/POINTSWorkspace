@@ -101,9 +101,11 @@ function assertPackedSequence(raw: unknown): asserts raw is Packed {
   if (!isPacked(performerValue) || !performerValue.length) throw new Error('Missing performers');
   const performers = performerValue;
   performers.forEach((item) => {
-    const performer = expectTuple(item, 2, 'performer');
+    const performer = expectTuple(item, 3, 'performer');
     expectText(performer[0], 'performer name');
-    expectText(performer[1], 'performer identifier');
+    if (performer[1] !== 0 && performer[1] !== 1) throw new Error('Invalid performer identifier flag');
+    expectText(performer[2], 'performer identifier');
+    if (performer[1] === 0 && performer[2] !== '') throw new Error('Unexpected performer identifier');
   });
 
   if (!isPacked(positionValue) || !positionValue.length) throw new Error('Missing positions');
@@ -339,7 +341,7 @@ export const sequenceCodec: SequenceCodec = {
       if (index < 0) throw new Error('Unknown link');
       return index;
     };
-    const performers: Packed = sequence.performers.map((item) => [item.name, item.identifier ?? '']);
+    const performers: Packed = sequence.performers.map((item) => [item.name, item.identifier === undefined ? 0 : 1, item.identifier ?? '']);
     const positions: Packed = sequence.positions.map((item) => item.kind === 'table'
       ? ['T', item.name, item.owner.kind === 'shared' ? 'S' : 'P', item.owner.kind === 'shared' ? -1 : performer(item.owner.performerId)]
       : ['B', item.name, performer(item.performerId), item.hand === 'left' ? 'L' : 'R']);
@@ -380,7 +382,7 @@ export const sequenceCodec: SequenceCodec = {
       if (!isPacked(rawPerformers) || !isPacked(rawPositions) || !isPacked(rawPlacements) || !isPacked(rawBeats) || !isPacked(rawNotation) || !isPacked(rawLayout) || !isPacked(rawSeats) || !isPacked(signature)) throw new Error('Invalid sections');
       const performers: Performer[] = rawPerformers.map((item, index) => {
         if (!isPacked(item)) throw new Error('Invalid performer');
-        return { id: asPerformerId(`p${index}`), name: String(item[0]), ...(item[1] ? { identifier: String(item[1]) } : {}) };
+        return { id: asPerformerId(`p${index}`), name: String(item[0]), ...(item[1] === 1 ? { identifier: String(item[2]) } : {}) };
       });
       const positions: PositionDefinition[] = rawPositions.map((item, index) => {
         if (!isPacked(item)) throw new Error('Invalid position');
