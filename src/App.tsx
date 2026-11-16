@@ -2074,7 +2074,9 @@ export default function App() {
             </label>
             <button type="button" onClick={runGenerator} disabled={generatorRunning || !sequence.beats.length || !sequence.performers.length}>Generate</button>
             {generatorRunning && <button type="button" onClick={stopGenerator}>Stop</button>}
-            <span>{generatorRunning ? 'Searching… ' + generatorResults.length + ' found' : generatorResults.length + ' results'}</span>
+            <span>{generatorRunning
+              ? 'Searching… ' + (generatorStage === 'structures' ? generatorStructureResults.length : generatorResults.length) + ' found'
+              : (generatorStage === 'structures' ? generatorStructureResults.length : generatorResults.length) + ' results'}</span>
           </div>
           <details className="generator-advanced">
             <summary>Constraints</summary>
