@@ -13,7 +13,7 @@ The preferred candidate is a compact, mostly alphanumeric stream with one struct
 A representative code should look like this:
 
 ```text
-P4StD120EEEBBBBEBtJJuggler~2011aFTAPATBPATCPABLALBRARCCAPABPCEAAAANSA.BA0LpA0BB0HBC0HBD0VpA0eE
+P4StD12044E1111EBtJJuggler~2011aFTAPATBPATCPABLALBRARCCAPABPCEAAAANSA.BA0LpA0BB0HBC0HBD0VpA0eE
 ```
 
 This is a complete encoding of the existing two ball, four beat solo example. It is 94 characters long.
@@ -123,7 +123,7 @@ Optional text uses an explicit presence marker. `0` means absent. `1` followed b
 
 ### 3.5 Numeric decimals
 
-BPM and numeric values that are not integers are represented using their canonical decimal text inside the text encoding. This avoids rounding and preserves the exact ECMAScript number representation used by the current domain model.
+Every persisted JavaScript number is represented using its canonical decimal text inside the text encoding, whether it is an integer or a fraction. This includes BPM, time signature values, grouping values, subdivision depth, circle distance and layout or seat dimensions. Collection counts and local indices use the compact integer encoding. This distinction is necessary because the current domain model can contain structurally complete but semantically invalid fractional values in several numeric fields. This avoids rounding and preserves the exact ECMAScript number representation used by the current domain model.
 
 For example, BPM 120 is `tD120`. A decimal distance of 2.5 is `tC2~2E5`.
 
@@ -161,8 +161,8 @@ The actual code contains no line breaks. The one period after the final header f
 
 Write numerator, denominator, grouping count, then every grouping value.
 
-For example, 4/4 grouped as four quarter note beats is `EEEBBBB`.
-6/8 grouped as two dotted quarter note beats is `GICDD`.
+For example, 4/4 grouped as four quarter note beats is `44E1111`.
+6/8 grouped as two dotted quarter note beats is `68C33`.
 
 The main beat count is stored separately. No default time signature or grouping is assumed.
 
@@ -215,7 +215,7 @@ For each main beat, write the subdivision count followed by its subdivision reco
 Each subdivision contains:
 - Exact start rational.
 - Exact duration rational.
-- Depth integer.
+- Depth numeric text.
 
 There is one subdivision count for every main beat, including zero. This preserves empty beats and the exact beat association without repeating beat indices.
 
@@ -228,12 +228,12 @@ Individual passing layout:
 
 Table layout:
 - `S`: solo table.
-- `P` followed by side count: polygon.
-- `R` followed by long side seat count and short side seat count: rectangle.
+- `P` followed by numeric side count: polygon.
+- `R` followed by numeric long side seat count and numeric short side seat count: rectangle.
 
 Then write seat assignment count and each assignment:
 - Performer index.
-- `P` plus polygon edge index, or `R` plus rectangle side code and seat index.
+- `P` plus numeric polygon edge index, or `R` plus rectangle side code and numeric seat index.
 - Rectangle side codes are 0 long-a, 1 long-b, 2 short-a and 3 short-b.
 
 ## 5. Action stream grammar
@@ -328,7 +328,7 @@ This example contains two performers, shared A/B/C positions, one ball held in p
 P4 candidate:
 
 ```text
-P4ItD120EEEBBBBBCtJJuggler~2011atJJuggler~2021bDTASTBSTCSBBAHARBASRBBCARAABRBA.ABA0VrBLABB0LsAAA
+P4ItD12044E1111BCtJJuggler~2011atJJuggler~2021bDTASTBSTCSBBAHARBASR11CARA0ABRB0.ABA0VrBLABB0LsAAA
 ```
 
 <text color="secondary" size="sm">96 characters</text>
@@ -344,9 +344,9 @@ These fragments illustrate the remaining variable length constructs. They are no
 | Circle target A, right, distance 2.5 | `cA21tC2~2E5` |
 | SPECIAL text `Clap, Ω`, no link | `StIClap~2C~20~CE~A90` |
 | Offset 1/2 | `pBC` |
-| Subdivision start 1/2, duration 1/2, depth 1 | `pBCpBCB` |
-| Polygon table with 5 sides | `PF` |
-| Rectangle with 2 long side seats and 1 short side seat | `R C B` without spaces: `RCB` |
+| Subdivision start 1/2, duration 1/2, depth 1 | `pBCpBC1` |
+| Polygon table with 5 sides | `P5` |
+| Rectangle with 2 long side seats and 1 short side seat | `R21` |
 | ZIP source with link index 0 | `ZSA` |
 | ZIP receiver with link index 0 | `ZRA` |
 
