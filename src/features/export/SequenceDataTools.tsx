@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { Sequence } from '../../domain/model';
 import { sequenceCodec } from '../data/codec';
+import { confirmSequenceImport } from '../data/import-confirmation';
 import { createSequenceShareUrl } from '../data/share-link';
 import { searchPresets } from '../presets/presets';
 import { exportSequencePng } from './png';
@@ -69,7 +70,7 @@ export default function SequenceDataTools({ sequence, onReplace }: Props) {
       setMessage(result.message);
       return;
     }
-    if (!window.confirm('Replace the current sequence with the imported sequence?')) return;
+    if (!confirmSequenceImport()) return;
     onReplace(result.sequence);
     setCode('');
     setMessage('Sequence imported.');
