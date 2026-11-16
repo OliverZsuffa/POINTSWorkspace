@@ -426,7 +426,19 @@ P3 replaces P2 completely. The P2 encoder and decoder are removed. P2 codes retu
 
 A future format revision replaces P3 in the same way unless Oliver explicitly requests backward compatibility or a migration tool. A version marker remains mandatory so independent decoders can identify the active grammar. It does not imply support for older versions.
 
-## 12. Conformance requirements
+## 12. Compression comparison
+
+The reviewed two ball, four beat solo example has been encoded in both the earlier P2 grammar and P3 with identical semantic content.
+
+| Format | Character count |
+|---|---:|
+| P2 tuple code | 226 |
+| P3 beat sliced code | 149 |
+| Reduction | 34% |
+
+The reduction comes from removing tuple punctuation and repeated field labels, defining performer and hand streams once, using beat cell positions instead of repeating beat indices, and run length encoding consecutive empty cells. All sequence values remain explicitly represented.
+
+## 13. Conformance requirements
 
 A conforming implementation must test:
 
