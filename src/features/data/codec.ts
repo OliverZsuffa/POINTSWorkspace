@@ -61,7 +61,7 @@ function encodePacked(value: unknown): string {
   if (Array.isArray(value)) return `(${value.map(encodePacked).join(',')})`;
   if (typeof value === 'string') {
     if (/^[A-Za-z]$/.test(value)) return value;
-    return `~${encodeURIComponent(value).replace(/~/g, '%7E')}`;
+    return `~${encodeURIComponent(value).replace(/[()~]/g, (character) => ({ '(': '%28', ')': '%29', '~': '%7E' })[character]!)}`;
   }
   if (typeof value === 'number' && Number.isFinite(value)) return String(value);
   throw new Error('Unsupported packed value');
@@ -100,7 +100,7 @@ function decodePacked(source: string): unknown {
     const start = cursor;
     while (cursor < source.length && source[cursor] !== ',' && source[cursor] !== ')') cursor += 1;
     const token = source.slice(start, cursor);
-    if (!/^-?(?:0|[1-9]\d*)(?:\\.\d+)?(?:[eE][+-]?\d+)?$/.test(token)) {
+    if (!/^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?$/.test(token)) {
       throw new Error('Invalid numeric value');
     }
     const number = Number(token);
