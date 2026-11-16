@@ -162,6 +162,39 @@ describe('readable sequence code', () => {
     if (decoded.ok) expect(semanticShape(decoded.sequence)).toEqual(semanticShape(sequence));
   });
 
+  it('preserves inconsistent but fully referenced hand back placements', () => {
+    const position = representativeSoloSequence.positions.find((item) => item.kind === 'hand-back');
+    if (!position || position.kind !== 'hand-back') throw new Error('Missing hand back fixture position');
+    const sequence = {
+      ...representativeSoloSequence,
+      initialState: {
+        placements: [{
+          ballId: representativeSoloSequence.balls[0]!.id,
+          location: {
+            kind: 'hand-back' as const,
+            positionId: position.id,
+            performerId: position.performerId,
+            hand: position.hand === 'left' ? 'right' as const : 'left' as const,
+          },
+        }],
+      },
+    };
+    const decoded = sequenceCodec.decode(sequenceCodec.encode(sequence));
+    expect(decoded.ok).toBe(true);
+    if (decoded.ok) expect(semanticShape(decoded.sequence)).toEqual(semanticShape(sequence));
+  });
+
+  it('preserves structurally complete but invalid timing values', () => {
+    const sequence = {
+      ...representativeSoloSequence,
+      bpm: -120,
+      timeSignature: { numerator: 6, denominator: 8 as const, beatGrouping: [2, 2] },
+    };
+    const decoded = sequenceCodec.decode(sequenceCodec.encode(sequence));
+    expect(decoded.ok).toBe(true);
+    if (decoded.ok) expect(semanticShape(decoded.sequence)).toEqual(semanticShape(sequence));
+  });
+
   it('preserves compound time signatures and beat grouping', () => {
     const sequence = {
       ...representativeSoloSequence,
