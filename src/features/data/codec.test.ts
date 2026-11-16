@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { sequenceCodec } from './codec';
 import { rational } from '../../domain/time/rational';
+import { asActionEntryId, asBallId } from '../../domain/ids';
 import { createTimeSignature } from '../../domain/time/time-signature';
 import type { LeaveActionTarget, LiftActionTarget, Sequence, TableActionTarget } from '../../domain/model';
 import {
@@ -118,6 +119,63 @@ describe('readable sequence code', () => {
     expect(sequenceCodec.encode(representativeSoloSequence)).toBe(
       'P3;s;120;4.4.1+1+1+1;4;~9:Juggler%201.-;T.~1:A.p0,T.~1:B.p0,T.~1:C.p0,B.L.0.L,B.R.0.R;1;0.P.0;1.0.1/2.1,1.1/2.1/2.1;L:-3|3.0.T.p2,R:0.0.L.p0.-|1.0.H|2.0.V.p1.-|-;n;s;',
     );
+  });
+
+
+  it('compresses the equivalent two ball four beat example', () => {
+    const performer = representativeSoloSequence.performers[0]!;
+    const firstPosition = representativeSoloSequence.positions[0]!;
+    const lastPosition = representativeSoloSequence.positions[2]!;
+    const sequence: Sequence = {
+      ...representativeSoloSequence,
+      performers: [{ ...performer, identifier: 'a' }],
+      balls: [{ id: asBallId('ball-one') }, { id: asBallId('ball-two') }],
+      initialState: {
+        placements: [
+          { ballId: asBallId('ball-one'), location: { kind: 'position', positionId: firstPosition.id } },
+          { ballId: asBallId('ball-two'), location: { kind: 'position', positionId: lastPosition.id } },
+        ],
+      },
+      beats: representativeSoloSequence.beats.map((beat) => ({ ...beat, subdivisions: [] })),
+      notation: [
+        {
+          id: asActionEntryId('p3-lift'),
+          performerId: performer.id,
+          hand: 'left',
+          time: { beatId: representativeSoloSequence.beats[0]!.id, offset: rational(0) },
+          action: { type: 'LIFT', target: { kind: 'position', positionId: firstPosition.id } },
+        },
+        {
+          id: asActionEntryId('p3-hold-one'),
+          performerId: performer.id,
+          hand: 'left',
+          time: { beatId: representativeSoloSequence.beats[1]!.id, offset: rational(0) },
+          action: { type: 'HOLD' },
+        },
+        {
+          id: asActionEntryId('p3-hold-two'),
+          performerId: performer.id,
+          hand: 'left',
+          time: { beatId: representativeSoloSequence.beats[2]!.id, offset: rational(0) },
+          action: { type: 'HOLD' },
+        },
+        {
+          id: asActionEntryId('p3-leave'),
+          performerId: performer.id,
+          hand: 'left',
+          time: { beatId: representativeSoloSequence.beats[3]!.id, offset: rational(0) },
+          action: { type: 'LEAVE', target: { kind: 'position', positionId: firstPosition.id } },
+        },
+      ],
+    };
+    const code = sequenceCodec.encode(sequence);
+    expect(code).toBe(
+      'P3;s;120;4.4.1+1+1+1;4;~9:Juggler%201.~1:a;T.~1:A.p0,T.~1:B.p0,T.~1:C.p0,B.L.0.L,B.R.0.R;2;0.P.0,1.P.2;;L:0.0.L.p0.-|1.0.H|2.0.H|3.0.V.p0.-,R:-4;n;s;',
+    );
+    expect(code).toHaveLength(149);
+    const decoded = sequenceCodec.decode(code);
+    expect(decoded.ok).toBe(true);
+    if (decoded.ok) expect(semanticShape(decoded.sequence)).toEqual(semanticShape(sequence));
   });
 
   it('keeps action initials visible in the code', () => {
