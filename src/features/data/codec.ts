@@ -52,9 +52,6 @@ function encodeAction(action: NotationAction, sequence: Sequence, linkIndex: (id
     case 'SPECIAL': return [code, action.text, action.linkId ? linkIndex(action.linkId) : -1];
   }
 }
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return !!value && typeof value === 'object' && !Array.isArray(value);
-}
 function isPacked(value: unknown): value is Packed {
   return Array.isArray(value);
 }
@@ -159,7 +156,6 @@ export const sequenceCodec: SequenceCodec = {
         }) };
       });
       const links = [...new Set(rawNotation.flatMap((entry) => isPacked(entry) && isPacked(entry[4]) && typeof entry[4][2] === 'number' && entry[4][2] >= 0 ? [Number(entry[4][2])] : isPacked(entry) && isPacked(entry[4]) && entry[4][0] === 'Z' ? [Number(entry[4][2])] : []))].sort((a, b) => a - b).map((index) => asLinkId(`l${index}`));
-      const linkId = (index: unknown) => typeof index === 'number' && index >= 0 ? asLinkId(`l${index}`) : undefined;
       const notation: NotationEntry[] = rawNotation.map((entry, index) => {
         if (!isPacked(entry) || !isPacked(entry[4])) throw new Error('Invalid notation entry');
         const actionRaw = entry[4];
