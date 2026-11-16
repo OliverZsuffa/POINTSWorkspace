@@ -2,7 +2,7 @@
 
 ## Status
 
-Implementation complete in PR #20. Formatting, lint, strict TypeScript, all 152 unit tests, production build and all 16 Playwright browser tests passed. Awaiting merge.
+Implementation and review corrections are complete in PR #20. The decoder now validates the full tuple structure and every reference before constructing a sequence. Full semantic round trip tests cover all sequence fields, including optional empty performer identifiers, compound meter and two participant polygon layouts. Final CI verification is running.
 
 ## Goal
 
@@ -22,9 +22,9 @@ The code is a compact representation of the juggling sequence, not a compressed 
 
 ## Proposed code shape
 
-Use a compact version prefix followed by nested tuples. Tuples use parentheses and comma separators. Single letter tokens are unquoted, so action initials appear directly as `H`, `L`, `V`, `B`, `T`, `E`, `Z` or `S`. Other strings use a `~` marker followed by percent escaped text. Numbers remain unquoted. There are no JSON brackets, quoted strings, field names, Base64 payloads or UUIDs. For example, action tuples begin with `~L`, `~H`, `~V`, `~B`, `~T`, `~E`, `~Z` or `~S`. The rest of each tuple contains only the references and parameters needed by that action.
+Use a compact version prefix followed by nested tuples. Tuples use parentheses and comma separators. Single letter tokens are unquoted, so action initials appear directly as `H`, `L`, `V`, `B`, `T`, `E`, `Z` or `S`. Other strings use a `~` marker followed by percent escaped text. Numbers remain unquoted. There are no JSON brackets, quoted strings, field names, Base64 payloads or UUIDs. Action tuples begin directly with their action token, for example `(L,...)` or `(H)`. The rest of each tuple contains only the references and parameters needed by that action.
 
-The encoder should omit values only when they can be reconstructed without ambiguity. Examples include default solo layout, default time signature, default performer identifiers where derivable, and internal entity IDs. Names, non-default settings, subdivisions, custom SPECIAL text, unusual table geometry and initial object placements must be preserved when present.
+The current tuple layout stores the sequence settings explicitly. Performer identifier presence is encoded separately from its value, so an absent identifier remains distinct from an explicitly empty identifier. Internal entity IDs are omitted and rebuilt as local references. Names, settings, subdivisions, custom SPECIAL text, table geometry and initial object placements are preserved.
 
 ## Data that must round trip
 
@@ -69,7 +69,7 @@ The encoder should omit values only when they can be reconstructed without ambig
 ## Verification and acceptance criteria
 
 1. Round trip all existing representative fixtures, including solo, individual passing and structurally complete invalid notation.
-2. Add fixtures or generated cases covering circle passing, per-performer and shared positions, custom table layouts, subdivisions, fractional offsets, ZIP, SPECIAL, hand-back placements and all target variants.
+2. Add fixtures or generated cases covering circle passing, per-performer and shared positions, two and three sided polygon layouts, rectangular tables, subdivisions, compound meter, fractional offsets, ZIP, SPECIAL, hand-back placements and all target variants.
 3. Verify all decoded IDs and references are internally consistent and all semantic fields are preserved.
 4. Verify P1 is not treated as a supported format.
 5. Verify malformed and unsupported versions are distinguished.
@@ -88,4 +88,4 @@ The encoder should omit values only when they can be reconstructed without ambig
 
 ## Review checkpoint
 
-The P2 grammar and implementation are complete in PR #20. Automated verification passed. Review the resulting codes in the pull request before merging. No backward compatibility is included.
+The P2 grammar and implementation are complete in PR #20. Final automated verification is running after the decoder audit. No backward compatibility is included.
