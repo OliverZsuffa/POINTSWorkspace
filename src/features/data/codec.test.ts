@@ -196,13 +196,13 @@ describe('readable sequence code', () => {
         ? {
             ...entry,
             action: {
-              type: 'LIFT',
-              target: { kind: 'circle-position', position: 'A', direction: 'right', distance: 2.5 },
+              type: 'LIFT' as const,
+              target: { kind: 'circle-position' as const, position: 'A' as const, direction: 'right' as const, distance: 2.5 },
             },
           }
         : entry),
       seatAssignments: [
-        { performerId: performer.id, seat: { kind: 'polygon-edge', edgeIndex: 1.5 } },
+        { performerId: performer.id, seat: { kind: 'polygon-edge' as const, edgeIndex: 1.5 } },
       ],
     };
     const code = sequenceCodec.encode(sequence);
