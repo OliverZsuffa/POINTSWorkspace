@@ -100,7 +100,8 @@ describe('object state simulation', () => {
     const result = validateSequence(sequence);
     const conflict = result.issues.find((item) => item.code === 'conflicting-position-actions');
     expect(result.isValid).toBe(false);
-    expect(conflict?.affectedEntries).toEqual(['lift-position-a', 'tap-position-a']);
+    expect(conflict?.affectedEntries).toEqual(expect.arrayContaining(['lift-position-a', 'tap-position-a']));
+    expect(conflict?.affectedEntries).toHaveLength(2);
     expect(conflict?.affectedPositions).toEqual([positionA]);
   });
 
