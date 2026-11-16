@@ -533,7 +533,7 @@ export const sequenceCodec: SequenceCodec = {
         }
         const cells = stream.cells.flatMap((cell) => {
           if (cell === '-') return ['-'];
-          const emptyRun = /^-(2|[3-9]\\d*)$/.exec(cell);
+          const emptyRun = /^-(2|[3-9]\d*)$/.exec(cell);
           if (emptyRun) {
             const count = parseInteger(emptyRun[1]!, 'empty beat run', 2);
             if (count > MAX_SEQUENCE_ITEMS) throw new Error('Empty beat run exceeds the decoder limit.');
