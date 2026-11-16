@@ -126,6 +126,16 @@ describe('readable sequence code', () => {
     }
   });
 
+  it('preserves an explicitly empty performer identifier', () => {
+    const sequence = {
+      ...representativeSoloSequence,
+      performers: [{ ...representativeSoloSequence.performers[0]!, identifier: '' }],
+    };
+    const decoded = sequenceCodec.decode(sequenceCodec.encode(sequence));
+    expect(decoded.ok).toBe(true);
+    if (decoded.ok) expect(decoded.sequence.performers[0]).toHaveProperty('identifier', '');
+  });
+
   it('escapes delimiters and reserved characters in user supplied text', () => {
     const sequence = {
       ...representativeSoloSequence,
