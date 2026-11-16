@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
+import { asActionEntryId, asLinkId } from '../../domain/ids';
 import type { GeneratorRequest } from '../../domain/model';
 import { representativeSoloSequence } from '../../fixtures/sequences';
-import { candidateKey, sequenceGenerator } from './engine';
+import { candidateKey, isAbstractStateValid, sequenceGenerator } from './engine';
 
 function request(mode: GeneratorRequest['mode']): GeneratorRequest {
   const sequence = representativeSoloSequence;
@@ -199,6 +200,94 @@ describe('sequence generator', () => {
         entry.action.type === 'TAP' || entry.action.type === 'BOUNCE') &&
       entry.action.target.kind === 'position',
     )).toBe(true);
+  });
+
+  it('accepts a linked CLAP with otherwise valid empty-hand actions', () => {
+    const base = representativeSoloSequence;
+    const performer = base.performers[0]!;
+    const clapLink = asLinkId('abstract-clap');
+    const notation = [
+      ...(['left', 'right'] as const).map((hand) => ({
+        id: asActionEntryId('abstract-clap-' + hand),
+        performerId: performer.id,
+        hand,
+        time: { beatId: base.beats[0]!.id, offset: { numerator: 0, denominator: 1 } },
+        action: { type: 'SPECIAL' as const, text: 'Clap', linkId: clapLink },
+      })),
+      ...base.beats.slice(1).map((beat, index) => ({
+        id: asActionEntryId('abstract-tap-' + index),
+        performerId: performer.id,
+        hand: 'left' as const,
+        time: { beatId: beat.id, offset: { numerator: 0, denominator: 1 } },
+        action: { type: 'TAP' as const, target: { kind: 'position' as const, positionId: base.positions[0]!.id } },
+      })),
+    ];
+    expect(isAbstractStateValid({ ...base, notation })).toBe(true);
+  });
+
+  it('rejects an abstract structure made entirely of HOLD when hands start empty', () => {
+    const base = representativeSoloSequence;
+    const sequence = {
+      ...base,
+      initialState: { placements: [] },
+      notation: base.beats.flatMap((beat) => base.performers.flatMap((performer) =>
+        (['left', 'right'] as const).map((hand) => ({
+          id: ('hold-' + beat.id + '-' + hand) as typeof base.notation[number]['id'],
+          performerId: performer.id,
+          hand,
+          time: { beatId: beat.id, offset: { numerator: 0, denominator: 1 } },
+          action: { type: 'HOLD' as const },
+        })),
+      )),
+    };
+    expect(isAbstractStateValid(sequence)).toBe(false);
+  });
+
+  it('accepts HOLD after an abstract LIFT has picked up an available object', () => {
+    const base = representativeSoloSequence;
+    const firstBeat = base.beats[0]!;
+    const secondBeat = base.beats[1]!;
+    const performer = base.performers[0]!;
+    const position = base.positions.find((item) => item.kind === 'table')!;
+    const sequence = {
+      ...base,
+      beats: [firstBeat, secondBeat],
+      notation: [
+        {
+          id: 'abstract-lift' as typeof base.notation[number]['id'],
+          performerId: performer.id,
+          hand: 'left' as const,
+          time: { beatId: firstBeat.id, offset: { numerator: 0, denominator: 1 } },
+          action: { type: 'LIFT' as const, target: { kind: 'position' as const, positionId: position.id } },
+        },
+        {
+          id: 'abstract-hold' as typeof base.notation[number]['id'],
+          performerId: performer.id,
+          hand: 'left' as const,
+          time: { beatId: secondBeat.id, offset: { numerator: 0, denominator: 1 } },
+          action: { type: 'HOLD' as const },
+        },
+      ],
+    };
+    expect(isAbstractStateValid(sequence)).toBe(true);
+  });
+
+  it('rejects abstract LEAVE when the hand does not hold an object', () => {
+    const base = representativeSoloSequence;
+    const beat = base.beats[0]!;
+    const performer = base.performers[0]!;
+    const position = base.positions.find((item) => item.kind === 'table')!;
+    const sequence = {
+      ...base,
+      notation: [{
+        id: 'abstract-leave' as typeof base.notation[number]['id'],
+        performerId: performer.id,
+        hand: 'left' as const,
+        time: { beatId: beat.id, offset: { numerator: 0, denominator: 1 } },
+        action: { type: 'LEAVE' as const, target: { kind: 'position' as const, positionId: position.id } },
+      }],
+    };
+    expect(isAbstractStateValid(sequence)).toBe(false);
   });
 
 });

@@ -195,12 +195,138 @@ function isAccepted(
   return true;
 }
 
+/**
+ * Validates hand state without binding abstract location actions to one
+ * placeholder position. Concrete position occupancy and collisions remain
+ * the responsibility of the full simulator during location expansion.
+ */
+export function isAbstractStateValid(sequence: Sequence): boolean {
+  const held = new Map<string, boolean>();
+  for (const performer of sequence.performers) {
+    held.set(String(performer.id) + ':left', false);
+    held.set(String(performer.id) + ':right', false);
+  }
+  let tableObjects = 0;
+  let backObjects = 0;
+  const positionById = new Map(sequence.positions.map((position) => [String(position.id), position]));
+  for (const placement of sequence.initialState.placements) {
+    if (placement.location.kind === 'hand-held') {
+      held.set(String(placement.location.performerId) + ':' + placement.location.hand, true);
+    } else if (placement.location.kind === 'position') {
+      tableObjects += 1;
+    } else if (placement.location.kind === 'hand-back') {
+      backObjects += 1;
+    }
+  }
+  const handKey = (entry: NotationEntry) => String(entry.performerId) + ':' + entry.hand;
+  const beats = sequence.beats;
+  for (const beat of beats) {
+    const entries = sequence.notation.filter((entry) => entry.time.beatId === beat.id);
+    const links = new Map<string, NotationEntry[]>();
+    for (const entry of entries) {
+      if ('linkId' in entry.action && entry.action.linkId) {
+        const group = links.get(entry.action.linkId) ?? [];
+        group.push(entry);
+        links.set(entry.action.linkId, group);
+      }
+    }
+    const linked = new Set<string>();
+    const nextHeld = new Map(held);
+    let tableDelta = 0;
+    let backDelta = 0;
+    let tableLifts = 0;
+    let backLifts = 0;
+    for (const [linkId, group] of links) {
+      const zips = group.filter((entry) => entry.action.type === 'ZIP');
+      const passes = group.filter((entry) =>
+        (entry.action.type === 'LEAVE' && entry.action.target.kind === 'pass-recipient-hand') ||
+        (entry.action.type === 'LIFT' && entry.action.target.kind === 'pass-source'));
+      const specials = group.filter((entry) => entry.action.type === 'SPECIAL');
+      if (zips.length === 2 && zips.length === group.length) {
+        const source = zips.find((entry) => entry.action.type === 'ZIP' && entry.action.role === 'source');
+        const receiver = zips.find((entry) => entry.action.type === 'ZIP' && entry.action.role === 'receiver');
+        if (!source || !receiver || source.performerId !== receiver.performerId ||
+          source.hand === receiver.hand || !held.get(handKey(source)) || held.get(handKey(receiver))) return false;
+        nextHeld.set(handKey(source), false);
+        nextHeld.set(handKey(receiver), true);
+      } else if (passes.length === 2 && passes.length === group.length) {
+        const sender = passes.find((entry) => entry.action.type === 'LEAVE' && entry.action.target.kind === 'pass-recipient-hand');
+        const receiver = passes.find((entry) => entry.action.type === 'LIFT' && entry.action.target.kind === 'pass-source');
+        const senderTarget = sender?.action.type === 'LEAVE' ? sender.action.target : undefined;
+        const receiverTarget = receiver?.action.type === 'LIFT' ? receiver.action.target : undefined;
+        if (!sender || !receiver || sender.performerId === receiver.performerId ||
+          senderTarget?.kind !== 'pass-recipient-hand' || receiverTarget?.kind !== 'pass-source' ||
+          senderTarget.performerId !== receiver.performerId || senderTarget.hand !== receiver.hand ||
+          receiverTarget.performerId !== sender.performerId ||
+          !held.get(handKey(sender)) || held.get(handKey(receiver))) return false;
+        nextHeld.set(handKey(sender), false);
+        nextHeld.set(handKey(receiver), true);
+      } else if (specials.length === 2 && specials.length === group.length) {
+        const [first, second] = specials;
+        if (!first || !second || first.performerId !== second.performerId || first.hand === second.hand ||
+          first.action.type !== 'SPECIAL' || second.action.type !== 'SPECIAL' ||
+          first.action.text !== second.action.text || held.get(handKey(first)) || held.get(handKey(second))) return false;
+      } else {
+        return false;
+      }
+      group.forEach((entry) => linked.add(String(entry.id)));
+      void linkId;
+    }
+    for (const entry of entries) {
+      if (linked.has(String(entry.id))) continue;
+      const isHeld = Boolean(held.get(handKey(entry)));
+      switch (entry.action.type) {
+        case 'HOLD':
+        case 'BOUNCE':
+          if (!isHeld) return false;
+          break;
+        case 'EMPTY':
+        case 'TAP':
+        case 'SPECIAL':
+          if (isHeld) return false;
+          break;
+        case 'LIFT': {
+          if (entry.action.target.kind === 'pass-source' || isHeld) return false;
+          const target = entry.action.target.kind === 'position' ? positionById.get(String(entry.action.target.positionId)) : undefined;
+          if (target?.kind === 'hand-back') {
+            if (backObjects - backLifts <= 0) return false;
+            backLifts += 1;
+            backDelta -= 1;
+          } else {
+            if (tableObjects - tableLifts <= 0) return false;
+            tableLifts += 1;
+            tableDelta -= 1;
+          }
+          nextHeld.set(handKey(entry), true);
+          break;
+        }
+        case 'LEAVE': {
+          if (entry.action.target.kind === 'pass-recipient-hand' || !isHeld) return false;
+          const target = entry.action.target.kind === 'position' ? positionById.get(String(entry.action.target.positionId)) : undefined;
+          if (target?.kind === 'hand-back') backDelta += 1;
+          else tableDelta += 1;
+          nextHeld.set(handKey(entry), false);
+          break;
+        }
+        case 'ZIP':
+          return false;
+      }
+    }
+    held.clear();
+    nextHeld.forEach((value, key) => held.set(key, value));
+    tableObjects += tableDelta;
+    backObjects += backDelta;
+  }
+  return true;
+}
+
 function isStructurallyAccepted(
   request: GeneratorRequest,
   sequence: Sequence,
   base: Sequence | undefined,
 ): boolean {
   if (base && !preservesBaseSequence(base, sequence)) return false;
+  if (!isAbstractStateValid(sequence)) return false;
   return satisfiesActionRequirements(sequence, {
     ...request.constraints,
     looping: 'either',
@@ -344,18 +470,6 @@ export const sequenceGenerator = {
 
         const zipStillNeeded = exactZipTarget !== undefined &&
           currentZipLinks.size < exactZipTarget;
-        const performerHasAction = [...template.notation, ...entries].some((entry) =>
-          entry.performerId === cell.performerId && entry.time.beatId === cell.beatId && entry.action.type !== 'EMPTY');
-        const hasLaterFreeHand = cells.slice(index + 1).some((later) =>
-          later.performerId === cell.performerId && later.beatId === cell.beatId && !occupied.has(cellKey(later)));
-        const mustUseThisPerformerBeat = !performerHasAction && !hasLaterFreeHand;
-        if (!zipStillNeeded && !mustUseThisPerformerBeat) {
-          occupied.add(key);
-          yield* visit(index + 1, entries);
-          occupied.delete(key);
-        }
-
-        const choices = buildChoices(template, cell, cells, occupied, request.locationMode === 'abstract');
         const currentEntries = [...template.notation, ...entries];
         const currentSpecialCount = currentEntries.filter((entry) => entry.action.type === 'SPECIAL').length;
         const clapStillNeeded = exactSpecialTarget !== undefined && currentSpecialCount < exactSpecialTarget;
@@ -374,6 +488,18 @@ export const sequenceGenerator = {
           )) {
           requiredActionTypes.add(request.constraints.requiredActionPerPerformer);
         }
+        const performerHasAction = currentEntries.some((entry) =>
+          entry.performerId === cell.performerId && entry.time.beatId === cell.beatId && entry.action.type !== 'EMPTY');
+        const hasLaterFreeHand = cells.slice(index + 1).some((later) =>
+          later.performerId === cell.performerId && later.beatId === cell.beatId && !occupied.has(cellKey(later)));
+        const mustUseThisPerformerBeat = !performerHasAction && !hasLaterFreeHand;
+        if (!zipStillNeeded && !clapStillNeeded && !mustUseThisPerformerBeat) {
+          occupied.add(key);
+          yield* visit(index + 1, entries);
+          occupied.delete(key);
+        }
+
+        const choices = buildChoices(template, cell, cells, occupied, request.locationMode === 'abstract');
         const choicePriority = (choice: Choice): number => {
           let score = 0;
           if (zipStillNeeded && choice.entries.some((entry) => entry.action.type === 'ZIP')) score += 1000;
@@ -398,7 +524,11 @@ export const sequenceGenerator = {
           const newlyCovered = choice.coveredCells.filter((covered) => !occupied.has(covered));
           if (newlyCovered.length !== choice.coveredCells.length) continue;
           newlyCovered.forEach((covered) => occupied.add(covered));
-          yield* visit(index + 1, [...entries, ...choice.entries]);
+          const nextEntries = [...entries, ...choice.entries];
+          const partialSequence = { ...template, notation: [...template.notation, ...nextEntries] };
+          if (request.locationMode !== 'abstract' || isAbstractStateValid(partialSequence)) {
+            yield* visit(index + 1, nextEntries);
+          }
           newlyCovered.forEach((covered) => occupied.delete(covered));
         }
         if (zipStillNeeded || mustUseThisPerformerBeat) {
