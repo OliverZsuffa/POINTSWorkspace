@@ -27,6 +27,8 @@ import { getTimelineSlots, splitSubdivision, type TimelineSlot } from './feature
 import SequenceRenderer from './features/renderer/SequenceRenderer';
 import SequenceDataTools from './features/export/SequenceDataTools';
 import { restoreSequence, saveSequence } from './features/data/persistence';
+import { sequenceCodec } from './features/data/codec';
+import { getSequenceCodeFromUrl } from './features/data/share-link';
 
 let nextId = 1;
 const id = (prefix: string) => prefix + '-' + (++nextId).toString(36);
@@ -303,20 +305,30 @@ function NotationMark({ action, sequence, hand }: { action: NotationAction; sequ
 export default function App() {
   const [sequence, setSequence] = useState<Sequence>(makeSequence);
   const [persistenceReady, setPersistenceReady] = useState(false);
+  const [shareLinkError, setShareLinkError] = useState('');
 
   useEffect(() => {
-    if (import.meta.env.MODE === 'test') {
-      setPersistenceReady(true);
-      return;
+    const sharedCode = getSequenceCodeFromUrl(window.location.href);
+    if (sharedCode !== null) {
+      const decoded = sequenceCodec.decode(sharedCode);
+      if (decoded.ok) setSequence(decoded.sequence);
+      else {
+        setShareLinkError(decoded.message);
+        if (import.meta.env.MODE !== 'test') {
+          const restored = restoreSequence();
+          if (restored) setSequence(restored);
+        }
+      }
+    } else if (import.meta.env.MODE !== 'test') {
+      const restored = restoreSequence();
+      if (restored) setSequence(restored);
     }
-    const restored = restoreSequence();
-    if (restored) setSequence(restored);
     setPersistenceReady(true);
   }, []);
 
   useEffect(() => {
-    if (persistenceReady) saveSequence(sequence);
-  }, [sequence, persistenceReady]);
+    if (persistenceReady && !shareLinkError) saveSequence(sequence);
+  }, [sequence, persistenceReady, shareLinkError]);
   const [selected, setSelected] = useState<EditorCell | null>(null);
   const [selectedCells, setSelectedCells] = useState<EditorCell[]>([]);
   const [clipboard, setClipboard] = useState<ClipboardItem[]>([]);
@@ -1503,6 +1515,9 @@ export default function App() {
         {showRenderer && <button type="button" className={activeWorkspaceTab === 'renderer' ? 'active' : ''} aria-pressed={activeWorkspaceTab === 'renderer'} onClick={() => setActiveWorkspaceTab('renderer')}>Renderer</button>}
       </nav>
 
+      {shareLinkError && <div className="update-banner" role="alert">
+        The sequence in this share link could not be loaded: {shareLinkError}
+      </div>}
       <SequenceDataTools sequence={sequence} onReplace={commit} />
 
       {showSettings && (

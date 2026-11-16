@@ -1,6 +1,7 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import type { Sequence } from '../../domain/model';
 import { sequenceCodec } from '../data/codec';
+import { createSequenceShareUrl } from '../data/share-link';
 import { searchPresets } from '../presets/presets';
 import { exportSequencePng } from './png';
 
@@ -12,6 +13,7 @@ interface Props {
 export default function SequenceDataTools({ sequence, onReplace }: Props) {
   const [code, setCode] = useState('');
   const [message, setMessage] = useState('');
+  const [shareLink, setShareLink] = useState('');
   const [query, setQuery] = useState('');
   const [open, setOpen] = useState(false);
   const [includeSettings, setIncludeSettings] = useState(true);
@@ -27,6 +29,10 @@ export default function SequenceDataTools({ sequence, onReplace }: Props) {
     }
   }, [sequence]);
 
+  useEffect(() => {
+    setShareLink('');
+  }, [currentCode]);
+
   const copyCode = async () => {
     if (!currentCode) {
       setMessage('The current sequence cannot be encoded until its object references are valid.');
@@ -38,6 +44,22 @@ export default function SequenceDataTools({ sequence, onReplace }: Props) {
     } catch {
       setCode(currentCode);
       setMessage('Select and copy the code below.');
+    }
+  };
+
+  const copyShareLink = async () => {
+    if (!currentCode) {
+      setMessage('The current sequence cannot be shared until its object references are valid.');
+      return;
+    }
+    const url = createSequenceShareUrl(window.location.href, currentCode);
+    try {
+      await navigator.clipboard.writeText(url);
+      setShareLink('');
+      setMessage('Share link copied.');
+    } catch {
+      setShareLink(url);
+      setMessage('Select and copy the share link below.');
     }
   };
 
@@ -75,8 +97,12 @@ export default function SequenceDataTools({ sequence, onReplace }: Props) {
         </div>
         <div className="data-tools-row">
           <button type="button" onClick={copyCode} disabled={!currentCode}>Copy sequence code</button>
+          <button type="button" onClick={copyShareLink} disabled={!currentCode}>Copy share link</button>
           <button type="button" onClick={() => void exportSequencePng(sequence, { includeSettings, includePerformerNames, includeCode, includeObjectState }).catch((error: unknown) => setMessage(error instanceof Error ? error.message : 'Image export failed.'))}>Export PNG</button>
         </div>
+        {shareLink && <label>Share link
+          <input type="url" readOnly value={shareLink} onFocus={(event) => event.currentTarget.select()} />
+        </label>}
         <label>Import sequence code
           <textarea value={code} onChange={(event) => setCode(event.target.value)} rows={3} spellCheck={false} placeholder="Paste a POINTS sequence code" />
         </label>

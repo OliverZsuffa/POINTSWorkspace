@@ -23,6 +23,53 @@ test('sequence code can be shown, imported and undone', async ({ page }) => {
   await expect(codeField).not.toHaveValue('');
 });
 
+test('share links copy the current P4 sequence and load it ahead of local persistence', async ({ page, context }) => {
+  await context.grantPermissions(['clipboard-read', 'clipboard-write']);
+  await page.goto('./');
+  await page.getByRole('button', { name: 'Settings' }).click();
+  const bpm = page.getByRole('region', { name: 'Sequence settings' }).getByLabel('BPM');
+  await bpm.fill('85');
+  await bpm.press('Enter');
+
+  await page.getByRole('button', { name: /Code, presets and export/ }).click();
+  await page.getByRole('button', { name: 'Copy share link' }).click();
+  const shareUrl = await page.evaluate(() => navigator.clipboard.readText());
+  expect(shareUrl).toContain('#code=P4');
+
+  await bpm.fill('95');
+  await bpm.press('Enter');
+  await page.goto(shareUrl);
+  await page.reload();
+  const sharedCode = await page.evaluate(() => new URLSearchParams(window.location.hash.slice(1)).get('code'));
+  expect(sharedCode).toBeTruthy();
+  await page.getByRole('button', { name: /Code, presets and export/ }).click();
+  const codeField = page.getByLabel('Import sequence code');
+  await page.getByRole('button', { name: 'Show current code' }).click();
+  await expect(codeField).toHaveValue(sharedCode!);
+});
+
+test('invalid share links show an error and preserve the locally saved sequence', async ({ page }) => {
+  await page.goto('./');
+  await page.getByRole('button', { name: 'Settings' }).click();
+  const bpm = page.getByRole('region', { name: 'Sequence settings' }).getByLabel('BPM');
+  await bpm.fill('95');
+  await bpm.press('Enter');
+
+  await page.getByRole('button', { name: /Code, presets and export/ }).click();
+  await page.getByRole('button', { name: 'Show current code' }).click();
+  const savedCode = await page.getByLabel('Import sequence code').inputValue();
+
+  const invalidUrl = new URL(page.url());
+  invalidUrl.hash = 'code=P4invalid';
+  await page.goto(invalidUrl.toString());
+  await page.reload();
+  await expect(page.locator('.update-banner[role="alert"]')).toContainText('could not be loaded');
+  await page.getByRole('button', { name: /Code, presets and export/ }).click();
+  const codeField = page.getByLabel('Import sequence code');
+  await page.getByRole('button', { name: 'Show current code' }).click();
+  await expect(codeField).toHaveValue(savedCode);
+});
+
 test('sequence changes persist across a reload in the same tab', async ({ page }) => {
   await page.goto('./');
   await page.getByRole('button', { name: 'Settings' }).click();
