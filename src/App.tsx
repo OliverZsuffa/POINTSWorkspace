@@ -26,7 +26,7 @@ import type {
 import { compareRational, rational, type Rational } from './domain/time/rational';
 import { DEFAULT_TIME_SIGNATURE } from './domain/time/time-signature';
 import { simulateSequence } from './domain/state';
-import { getActionSymbolGeometry } from './features/notation/action-symbol';
+import { NotationSymbol } from './features/notation/NotationSymbol';
 import { getBallRectangleEntries } from './features/editor/rectangles';
 import { getTimelineSlots, type TimelineSlot } from './features/editor/timeline';
 import SequenceRenderer from './features/renderer/SequenceRenderer';
@@ -222,29 +222,11 @@ function circleSubscript(target: Extract<TableActionTarget, { kind: 'circle-posi
 }
 
 function ActionSymbol({ action, sequence, hand, abstractTargets = false }: { action: NotationAction; sequence: Sequence; hand: Hand; abstractTargets?: boolean }) {
-  const geometry = getActionSymbolGeometry(action, sequence, hand, abstractTargets);
-  if (!geometry) return null;
-  if (geometry.specialText) return <span className={'special-symbol' + (geometry.clap ? ' clap-symbol' : '')} aria-label={geometry.clap ? 'Clap' : undefined}>{geometry.clap ? <span className="clap-bar" /> : geometry.specialText}{'linkId' in action && action.linkId && !geometry.clap && <span className="special-link-indicator" aria-label="Linked SPECIAL">↔</span>}</span>;
-  return (
-    <svg className="notation-symbol" viewBox="0 0 100 100" aria-hidden="true">
-      <path d={geometry.path} fill="none" stroke="#172033" strokeWidth="5.5" strokeLinecap="square" strokeLinejoin="miter" />
-      {geometry.circledTarget && <circle cx="36" cy="50" r="13" fill="none" stroke="#263238" strokeWidth="1.8" />}
-      {geometry.label && <text x={geometry.subscript ? 38 : 50} y="50" textAnchor="middle" dominantBaseline="middle" fontFamily="Arial,sans-serif" fontSize={geometry.label.length > 3 ? 38 : 46} fontWeight="700" fill="#172033">{geometry.label}{geometry.subscript && <tspan fontSize="28" baselineShift="sub">{geometry.subscript}</tspan>}</text>}
-    </svg>
-  );
+  return <NotationSymbol action={action} sequence={sequence} hand={hand} abstractTargets={abstractTargets} className="notation-symbol" />;
 }
 
 function NotationMark({ action, sequence, hand }: { action: NotationAction; sequence: Sequence; hand: Hand }) {
-  const geometry = getActionSymbolGeometry(action, sequence, hand);
-  if (!geometry) return null;
-  if (geometry.specialText) return <span className={'special-symbol' + (geometry.clap ? ' clap-symbol' : '')} aria-label={geometry.clap ? 'Clap' : undefined}>{geometry.clap ? <span className="clap-bar" /> : geometry.specialText}{'linkId' in action && action.linkId && <span className="special-link-indicator" aria-label="Linked SPECIAL">↔</span>}</span>;
-  return (
-    <svg className="ball-segment" viewBox="0 0 100 100" aria-hidden="true">
-      <path d={geometry.path} fill="none" stroke="#172033" strokeWidth="5.5" strokeLinecap="square" strokeLinejoin="miter" />
-      {geometry.circledTarget && <circle cx="36" cy="50" r="13" fill="none" stroke="#263238" strokeWidth="1.8" />}
-      {geometry.label && <text x={geometry.subscript ? 38 : 50} y="50" textAnchor="middle" dominantBaseline="middle" fontFamily="Arial,sans-serif" fontSize={geometry.label.length > 3 ? 38 : 46} fontWeight="700" fill="#172033">{geometry.label}{geometry.subscript && <tspan fontSize="28" baselineShift="sub">{geometry.subscript}</tspan>}</text>}
-    </svg>
-  );
+  return <NotationSymbol action={action} sequence={sequence} hand={hand} className="ball-segment" />;
 }
 
 export default function App() {
