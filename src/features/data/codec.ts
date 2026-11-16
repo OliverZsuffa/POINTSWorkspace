@@ -462,9 +462,7 @@ export const sequenceCodec: SequenceCodec = {
         time: { beatId: beats[event.beat]!.id, offset: event.offset },
         action: event.action,
       }));
-      return {
-        ok: true,
-        sequence: {
+      const sequence: Sequence = {
           id: asSequenceId('sequence-imported'),
           sequenceType,
           timeSignature: { numerator, denominator, beatGrouping },
@@ -478,8 +476,9 @@ export const sequenceCodec: SequenceCodec = {
           ...(individualPassingLayout === undefined ? {} : { individualPassingLayout }),
           tableLayout,
           seatAssignments,
-        },
       };
+      if (sequenceCodec.encode(sequence) !== code) throw new Error('Sequence code is not canonical.');
+      return { ok: true, sequence };
     } catch (error) {
       return { ok: false, code: 'invalid-data', message: error instanceof Error ? error.message : 'Invalid sequence code.' };
     }
