@@ -63,15 +63,17 @@ function buildChoices(
   cell: Cell,
   cells: readonly Cell[],
   occupied: ReadonlySet<string>,
+  abstractLocations = false,
 ): Choice[] {
   const choices: Choice[] = [];
   const targetFor = (position: Extract<Sequence['positions'][number], { kind: 'table' }>) => sequence.sequenceType === 'circle-passing'
     ? { kind: 'circle-position' as const, position: position.name as 'A' | 'B' | 'C' }
     : { kind: 'position' as const, positionId: position.id };
 
+  const targetPositions = abstractLocations ? sequence.positions.slice(0, 1) : sequence.positions;
   const singles: NotationAction[] = [
     { type: 'HOLD' },
-    ...sequence.positions.flatMap((position) => {
+    ...targetPositions.flatMap((position) => {
       const target = position.kind === 'table' ? targetFor(position) : { kind: 'position' as const, positionId: position.id };
       return [
         { type: 'LIFT' as const, target },
@@ -190,6 +192,34 @@ function isAccepted(
   return true;
 }
 
+function isStructurallyAccepted(
+  request: GeneratorRequest,
+  sequence: Sequence,
+  base: Sequence | undefined,
+): boolean {
+  if (base && !preservesBaseSequence(base, sequence)) return false;
+  return satisfiesActionRequirements(sequence, {
+    ...request.constraints,
+    looping: 'either',
+    requiredFragments: [],
+    forbiddenFragments: [],
+  });
+}
+
+function isLocationAction(action: NotationAction): action is Extract<NotationAction, { type: 'LIFT' | 'LEAVE' | 'TAP' | 'BOUNCE' }> {
+  return (action.type === 'LIFT' || action.type === 'LEAVE' || action.type === 'TAP' || action.type === 'BOUNCE') &&
+    (action.target.kind === 'position' || action.target.kind === 'circle-position');
+}
+
+function locationTarget(sequence: Sequence, position: Sequence['positions'][number]): NotationAction extends never ? never :
+  { kind: 'position'; positionId: Sequence['positions'][number]['id'] } |
+  { kind: 'circle-position'; position: 'A' | 'B' | 'C' } {
+  if (sequence.sequenceType === 'circle-passing' && position.kind === 'table') {
+    return { kind: 'circle-position', position: position.name as 'A' | 'B' | 'C' };
+  }
+  return { kind: 'position', positionId: position.id };
+}
+
 export function candidateKey(sequence: Sequence, canonicalizeRotation = false): string {
   const beatIndex = new Map(sequence.beats.map((beat, index) => [beat.id, index]));
   const performerIndex = new Map(sequence.performers.map((performer, index) => [performer.id, index]));
@@ -275,7 +305,9 @@ export const sequenceGenerator = {
         if (index >= cells.length) {
           if (entries.length === 0) return;
           const candidate = { ...template, notation: [...template.notation, ...entries] };
-          if (allBeatsUsed(candidate) && isAccepted(request, candidate, base)) yield candidate;
+          if (allBeatsUsed(candidate) && (request.locationMode === 'abstract'
+            ? isStructurallyAccepted(request, candidate, base)
+            : isAccepted(request, candidate, base))) yield candidate;
           return;
         }
 
@@ -309,13 +341,18 @@ export const sequenceGenerator = {
 
         const zipStillNeeded = exactZipTarget !== undefined &&
           currentZipLinks.size < exactZipTarget;
-        if (!zipStillNeeded) {
+        const performerHasAction = [...template.notation, ...entries].some((entry) =>
+          entry.performerId === cell.performerId && entry.time.beatId === cell.beatId && entry.action.type !== 'EMPTY');
+        const hasLaterFreeHand = cells.slice(index + 1).some((later) =>
+          later.performerId === cell.performerId && later.beatId === cell.beatId && !occupied.has(cellKey(later)));
+        const mustUseThisPerformerBeat = !performerHasAction && !hasLaterFreeHand;
+        if (!zipStillNeeded && !mustUseThisPerformerBeat) {
           occupied.add(key);
           yield* visit(index + 1, entries);
           occupied.delete(key);
         }
 
-        const choices = buildChoices(template, cell, cells, occupied);
+        const choices = buildChoices(template, cell, cells, occupied, request.locationMode === 'abstract');
         if (exactZipTarget !== undefined && exactZipTarget > 0) {
           choices.sort((left, right) =>
             Number(right.entries.some((entry) => entry.action.type === 'ZIP')) -
@@ -334,6 +371,7 @@ export const sequenceGenerator = {
         }
         for (const choice of choices) {
           if (signal?.aborted || visited >= maxSearchNodes || yielded >= maxResults) return;
+          if (mustUseThisPerformerBeat && choice.entries.every((entry) => entry.action.type === 'EMPTY')) continue;
           if (exactZipTarget !== undefined &&
             currentZipLinks.size >= exactZipTarget &&
             choice.entries.some((entry) => entry.action.type === 'ZIP')) continue;
@@ -343,10 +381,12 @@ export const sequenceGenerator = {
           yield* visit(index + 1, [...entries, ...choice.entries]);
           newlyCovered.forEach((covered) => occupied.delete(covered));
         }
-        if (zipStillNeeded) {
-          occupied.add(key);
-          yield* visit(index + 1, entries);
-          occupied.delete(key);
+        if (zipStillNeeded || mustUseThisPerformerBeat) {
+          if (zipStillNeeded && !mustUseThisPerformerBeat) {
+            occupied.add(key);
+            yield* visit(index + 1, entries);
+            occupied.delete(key);
+          }
         }
       }
 
@@ -359,6 +399,66 @@ export const sequenceGenerator = {
         yield { sequence: candidate };
         if (yielded >= maxResults) return;
       }
+    }
+  },
+
+  async *expandLocations(
+    structure: Sequence,
+    request: GeneratorRequest,
+    signal?: AbortSignal,
+  ): AsyncIterable<GeneratedCandidate> {
+    const base = request.mode === 'complete-base' ? request.baseSequence : undefined;
+    const immutableIds = new Set(base?.notation.map((entry) => entry.id) ?? []);
+    const expandable = structure.notation.filter((entry) =>
+      !immutableIds.has(entry.id) && isLocationAction(entry.action),
+    );
+    const targetOptions = expandable.map((entry) => {
+      const positions = structure.positions.filter((position) =>
+        (entry.action.type === 'TAP' || entry.action.type === 'BOUNCE') ? position.kind === 'table' : true,
+      );
+      return positions.map((position) => ({
+        entryId: entry.id,
+        target: locationTarget(structure, position),
+      }));
+    });
+    const maxResults = Math.max(1, Math.floor(request.maxResults ?? 100));
+    const maxSearchNodes = Math.max(1, Math.floor(request.maxSearchNodes ?? 100_000));
+    let visited = 0;
+    let yielded = 0;
+    const seen = new Set<string>();
+    const selected = new Map<string, ReturnType<typeof locationTarget>>();
+
+    async function* visit(index: number): AsyncGenerator<Sequence> {
+      if (signal?.aborted || visited >= maxSearchNodes || yielded >= maxResults) return;
+      visited += 1;
+      if (visited % 256 === 0) await new Promise<void>((resolve) => setTimeout(resolve, 0));
+      if (index >= expandable.length) {
+        const notation = structure.notation.map((entry) => {
+          const target = selected.get(entry.id);
+          if (!target || !isLocationAction(entry.action)) return entry;
+          return { ...entry, action: { ...entry.action, target } } as NotationEntry;
+        });
+        const candidate = { ...structure, notation };
+        if (allBeatsUsed(candidate) && isAccepted(request, candidate, base)) yield candidate;
+        return;
+      }
+      const entry = expandable[index]!;
+      const options = targetOptions[index] ?? [];
+      for (const option of options) {
+        selected.set(entry.id, option.target);
+        yield* visit(index + 1);
+        selected.delete(entry.id);
+        if (signal?.aborted || visited >= maxSearchNodes || yielded >= maxResults) return;
+      }
+    }
+
+    for await (const candidate of visit(0)) {
+      if (signal?.aborted) return;
+      const key = candidateKey(candidate, request.constraints.looping === 'must-loop');
+      if (seen.has(key)) continue;
+      seen.add(key);
+      yielded += 1;
+      yield { sequence: candidate };
     }
   },
 };
