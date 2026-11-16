@@ -77,6 +77,24 @@ describe('readable sequence code', () => {
     }
   });
 
+  it('escapes delimiters and reserved characters in user supplied text', () => {
+    const sequence = {
+      ...representativeSoloSequence,
+      performers: [{ ...representativeSoloSequence.performers[0]!, name: 'A, (B) ~ 100%' }],
+      notation: [{
+        ...representativeSoloSequence.notation[0]!,
+        action: { type: 'SPECIAL' as const, text: 'Clap, (turn) ~ 100%' },
+      }],
+    };
+    const code = sequenceCodec.encode(sequence);
+    const decoded = sequenceCodec.decode(code);
+    expect(decoded.ok).toBe(true);
+    if (decoded.ok) {
+      expect(decoded.sequence.performers[0]?.name).toBe('A, (B) ~ 100%');
+      expect(decoded.sequence.notation[0]?.action).toEqual({ type: 'SPECIAL', text: 'Clap, (turn) ~ 100%' });
+    }
+  });
+
   it('rejects damaged codes without producing partial sequences', () => {
     expect(sequenceCodec.decode('P2.not-valid').ok).toBe(false);
     expect(sequenceCodec.decode('not a code')).toMatchObject({ ok: false, code: 'malformed' });
