@@ -1041,7 +1041,8 @@ export default function App() {
     };
     const controller = new AbortController();
     generatorAbortRef.current = controller;
-    generatorIteratorRef.current = sequenceGenerator.generate(request, controller.signal)[Symbol.asyncIterator]();
+    const generatorSearch = sequenceGenerator.generate(request, controller.signal);
+    generatorIteratorRef.current = generatorSearch[Symbol.asyncIterator]();
     generatorPendingRef.current = null;
     setGeneratorResults([]);
     setGeneratorError('');
