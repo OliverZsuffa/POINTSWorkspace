@@ -79,12 +79,12 @@ test('cancelling a share link import preserves saved progress across reloads', a
     void dialog.dismiss();
   });
   await page.goto(shareUrl);
+  await expect.poll(() => confirmationCount).toBe(1);
   await expect.poll(() => readSavedSequence(page)).toBe(savedProgress);
-  expect(confirmationCount).toBe(1);
 
   await page.reload();
+  await expect.poll(() => confirmationCount).toBe(2);
   await expect.poll(() => readSavedSequence(page)).toBe(savedProgress);
-  expect(confirmationCount).toBe(2);
 });
 
 test('an empty saved sequence does not require confirmation to open a share link', async ({ page, context }) => {
