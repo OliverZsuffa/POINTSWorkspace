@@ -12,9 +12,21 @@ import {
 const PREFIX = 'P3;';
 const MAX_CODE_LENGTH = 1_000_000;
 const MAX_SEQUENCE_ITEMS = 100_000;
-const SECTION_NAMES = ['S', 'Q', 'T', 'B', 'P', 'X', 'O', 'I', 'D', 'A', 'J', 'M', 'C'] as const;
-type SectionName = (typeof SECTION_NAMES)[number];
-type Sections = Record<SectionName, string>;
+type Sections = {
+  sequenceType: string;
+  bpm: string;
+  timeSignature: string;
+  beatCount: string;
+  performers: string;
+  positions: string;
+  ballCount: string;
+  placements: string;
+  subdivisions: string;
+  actionStreams: string;
+  individualPassingLayout: string;
+  tableLayout: string;
+  seats: string;
+};
 
 const ACTION_CODES: Record<NotationAction['type'], string> = {
   HOLD: 'H',
@@ -108,17 +120,25 @@ function fields(value: string, count: number, label: string): string[] {
 
 function sectionMap(code: string): Sections {
   const parts = code.split(';');
-  if (parts[0] !== 'P3' || parts.length !== SECTION_NAMES.length + 1) {
+  if (parts[0] !== 'P3' || parts.length !== 14) {
     throw new Error('Invalid P3 document framing.');
   }
-  const result = {} as Sections;
-  SECTION_NAMES.forEach((name, index) => {
-    const part = parts[index + 1]!;
-    const separator = part.indexOf(':');
-    if (separator !== 1 || part[0] !== name) throw new Error(`Missing or misplaced ${name} section.`);
-    result[name] = part.slice(separator + 1);
-  });
-  return result;
+  const values = parts.slice(1);
+  return {
+    sequenceType: values[0]!,
+    bpm: values[1]!,
+    timeSignature: values[2]!,
+    beatCount: values[3]!,
+    performers: values[4]!,
+    positions: values[5]!,
+    ballCount: values[6]!,
+    placements: values[7]!,
+    subdivisions: values[8]!,
+    actionStreams: values[9]!,
+    individualPassingLayout: values[10]!,
+    tableLayout: values[11]!,
+    seats: values[12]!,
+  };
 }
 
 function encodeTarget(
@@ -265,15 +285,13 @@ function decodeAction(
   }
 }
 
-function parseStream(value: string): { performer: number; hand: 'left' | 'right'; events: string[] } {
-  const first = value.indexOf(':');
-  const second = value.indexOf(':', first + 1);
-  if (first < 1 || second < 0) throw new Error('Invalid action stream.');
-  const performer = parseInteger(value.slice(0, first), 'stream performer');
-  const handCode = value.slice(first + 1, second);
+function parseStream(value: string): { hand: 'left' | 'right'; events: string[] } {
+  const separator = value.indexOf(':');
+  if (separator !== 1) throw new Error('Invalid action stream.');
+  const handCode = value[0];
   if (handCode !== 'L' && handCode !== 'R') throw new Error('Invalid stream hand.');
-  const eventText = value.slice(second + 1);
-  return { performer, hand: handCode === 'L' ? 'left' : 'right', events: eventText === '-' ? [] : eventText.split('+') };
+  const eventText = value.slice(separator + 1);
+  return { hand: handCode === 'L' ? 'left' : 'right', events: eventText === '-' ? [] : eventText.split('+') };
 }
 
 export const sequenceCodec: SequenceCodec = {
@@ -322,7 +340,7 @@ export const sequenceCodec: SequenceCodec = {
         numberText(subdivision.depth),
       ].join('.')),
     ).join(',');
-    const streams = sequence.performers.flatMap((performer, performerPosition) =>
+    const streams = sequence.performers.flatMap((performer) =>
       (['left', 'right'] as const).map((hand) => {
         const handCode = hand === 'left' ? 'L' : 'R';
         const events = sequence.notation.flatMap((entry, ordinal) =>
@@ -335,7 +353,7 @@ export const sequenceCodec: SequenceCodec = {
               ].join('.')]
             : [],
         );
-        return `${performerPosition}:${handCode}:${events.length ? events.join('+') : '-'}`;
+        return `${handCode}:${events.length ? events.join('+') : '-'}`;
       }),
     ).join(',');
     const individualLayout = sequence.individualPassingLayout === undefined ? 'n'
@@ -350,19 +368,19 @@ export const sequenceCodec: SequenceCodec = {
 
     return [
       'P3',
-      `S:${sequenceType}`,
-      `Q:${numberText(sequence.bpm)}`,
-      `T:${timeSignature}`,
-      `B:${sequence.beats.length}`,
-      `P:${performers}`,
-      `X:${positions}`,
-      `O:${sequence.balls.length}`,
-      `I:${placements}`,
-      `D:${subdivisions}`,
-      `A:${streams}`,
-      `J:${individualLayout}`,
-      `M:${tableLayout}`,
-      `C:${seats}`,
+      sequenceType,
+      numberText(sequence.bpm),
+      timeSignature,
+      String(sequence.beats.length),
+      performers,
+      positions,
+      String(sequence.balls.length),
+      placements,
+      subdivisions,
+      streams,
+      individualLayout,
+      tableLayout,
+      seats,
     ].join(';');
   },
 
@@ -378,21 +396,21 @@ export const sequenceCodec: SequenceCodec = {
     try {
       if (trimmed.length > MAX_CODE_LENGTH) throw new Error('Sequence code exceeds the maximum supported length.');
       const section = sectionMap(trimmed);
-      const sequenceType = section.S === 's' ? 'solo'
-        : section.S === 'c' ? 'circle-passing'
-          : section.S === 'i' ? 'individual-passing' : null;
+      const sequenceType = section.sequenceType === 's' ? 'solo'
+        : section.sequenceType === 'c' ? 'circle-passing'
+          : section.sequenceType === 'i' ? 'individual-passing' : null;
       if (!sequenceType) throw new Error('Invalid sequence type.');
 
-      const bpm = parseNumber(section.Q, 'BPM');
-      const [numeratorText, denominatorText, groupingText] = fields(section.T, 3, 'time signature');
+      const bpm = parseNumber(section.bpm, 'BPM');
+      const [numeratorText, denominatorText, groupingText] = fields(section.timeSignature, 3, 'time signature');
       const timeSignature = {
         numerator: parseNumber(numeratorText!, 'time signature numerator'),
         denominator: parseNumber(denominatorText!, 'time signature denominator') as Sequence['timeSignature']['denominator'],
         beatGrouping: groupingText === '-' ? [] : groupingText!.split('+').map((value) => parseNumber(value, 'beat grouping')),
       };
-      const beatCount = parseInteger(section.B, 'beat count');
+      const beatCount = parseInteger(section.beatCount, 'beat count');
       if (beatCount > MAX_SEQUENCE_ITEMS) throw new Error('Beat count exceeds the decoder limit.');
-      const performerRecords = records(section.P);
+      const performerRecords = records(section.performers);
       if (performerRecords.length > MAX_SEQUENCE_ITEMS) throw new Error('Performer count exceeds the decoder limit.');
       const performers: Performer[] = performerRecords.map((record, index) => {
         const [name, identifier] = fields(record, 2, 'performer');
@@ -402,7 +420,7 @@ export const sequenceCodec: SequenceCodec = {
           ...(identifier === '-' ? {} : { identifier: decodeText(identifier!) }),
         };
       });
-      const positions: PositionDefinition[] = records(section.X).map((record, index) => {
+      const positions: PositionDefinition[] = records(section.positions).map((record, index) => {
         const parts = record.split('.');
         if (parts[0] === 'T' && parts.length === 3) {
           const owner = parts[2]!;
@@ -430,10 +448,10 @@ export const sequenceCodec: SequenceCodec = {
         }
         throw new Error('Invalid position definition.');
       });
-      const ballCount = parseInteger(section.O, 'object count');
+      const ballCount = parseInteger(section.ballCount, 'object count');
       if (ballCount > MAX_SEQUENCE_ITEMS) throw new Error('Object count exceeds the decoder limit.');
       const balls: Ball[] = Array.from({ length: ballCount }, (_, index) => ({ id: asBallId(`o${index}`) }));
-      const placements = records(section.I).map((record) => {
+      const placements = records(section.placements).map((record) => {
         const parts = record.split('.');
         const ball = balls[parseInteger(parts[0]!, 'placement object')];
         if (!ball) throw new Error('Unknown placement object.');
@@ -460,7 +478,7 @@ export const sequenceCodec: SequenceCodec = {
       const beats: Beat[] = Array.from({ length: beatCount }, (_, index) => ({
         id: asBeatId(`b${index}`), subdivisions: [],
       }));
-      records(section.D).forEach((record) => {
+      records(section.subdivisions).forEach((record) => {
         const [beatText, startText, durationText, depthText] = fields(record, 4, 'subdivision');
         const beat = beats[parseInteger(beatText!, 'subdivision beat')];
         if (!beat) throw new Error('Unknown subdivision beat.');
@@ -473,13 +491,13 @@ export const sequenceCodec: SequenceCodec = {
         });
       });
 
-      const streamRecords = records(section.A).map(parseStream);
+      const streamRecords = records(section.actionStreams).map(parseStream);
       if (streamRecords.length !== performers.length * 2) throw new Error('Action stream count does not match performers.');
       const rawEvents: { ordinal: number; performer: number; hand: 'left' | 'right'; parts: string[] }[] = [];
       streamRecords.forEach((stream, streamIndex) => {
         const expectedPerformer = Math.floor(streamIndex / 2);
         const expectedHand = streamIndex % 2 === 0 ? 'left' : 'right';
-        if (stream.performer !== expectedPerformer || stream.hand !== expectedHand) {
+        if (stream.hand !== expectedHand) {
           throw new Error('Action streams are not in canonical order.');
         }
         stream.events.forEach((event) => {
@@ -487,7 +505,7 @@ export const sequenceCodec: SequenceCodec = {
           if (eventParts.length < 4) throw new Error('Invalid action event.');
           rawEvents.push({
             ordinal: parseInteger(eventParts[0]!, 'event order'),
-            performer: stream.performer,
+            performer: expectedPerformer,
             hand: stream.hand,
             parts: eventParts.slice(1),
           });
@@ -524,16 +542,16 @@ export const sequenceCodec: SequenceCodec = {
         };
       });
 
-      const individualPassingLayout = section.J === 'n' ? undefined
-        : section.J === 's' ? 'shared-positions'
-          : section.J === 'p' ? 'per-performer-positions' : null;
+      const individualPassingLayout = section.individualPassingLayout === 'n' ? undefined
+        : section.individualPassingLayout === 's' ? 'shared-positions'
+          : section.individualPassingLayout === 'p' ? 'per-performer-positions' : null;
       if (individualPassingLayout === null) throw new Error('Invalid individual passing layout.');
       let tableLayout: TableLayout;
-      if (section.M === 's') tableLayout = { type: 'solo' };
-      else if (section.M.startsWith('p')) {
-        tableLayout = { type: 'polygon', sideCount: parseNumber(section.M.slice(1), 'polygon side count') };
-      } else if (section.M.startsWith('r')) {
-        const dimensions = section.M.slice(1).split('_');
+      if (section.tableLayout === 's') tableLayout = { type: 'solo' };
+      else if (section.tableLayout.startsWith('p')) {
+        tableLayout = { type: 'polygon', sideCount: parseNumber(section.tableLayout.slice(1), 'polygon side count') };
+      } else if (section.tableLayout.startsWith('r')) {
+        const dimensions = section.tableLayout.slice(1).split('_');
         if (dimensions.length !== 2) throw new Error('Invalid rectangle table layout.');
         tableLayout = {
           type: 'rectangle',
@@ -542,7 +560,7 @@ export const sequenceCodec: SequenceCodec = {
         };
       } else throw new Error('Invalid table layout.');
 
-      const seatAssignments: SeatAssignment[] = records(section.C).map((record) => {
+      const seatAssignments: SeatAssignment[] = records(section.seats).map((record) => {
         const parts = record.split('.');
         const performer = performers[parseInteger(parts[0]!, 'seat performer')];
         if (!performer) throw new Error('Unknown seat performer.');
