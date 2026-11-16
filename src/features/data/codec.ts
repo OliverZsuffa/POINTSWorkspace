@@ -279,6 +279,10 @@ export const sequenceCodec: SequenceCodec = {
     const performerIndex = (id: string) => indexOf(sequence.performers, id);
     const ballIndex = (id: string) => indexOf(sequence.balls, id);
     const beatIndex = (id: string) => indexOf(sequence.beats, id);
+    sequence.notation.forEach((entry) => {
+      performerIndex(entry.performerId);
+      beatIndex(entry.time.beatId);
+    });
     const linkIds = [...new Set(sequence.notation.flatMap(({ action }) =>
       'linkId' in action && action.linkId !== undefined ? [action.linkId] : [],
     ))];
