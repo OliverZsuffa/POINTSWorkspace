@@ -124,4 +124,40 @@ describe('sequence generator', () => {
     expect(new Set(clapEntries.map((entry) => entry.action.type === 'SPECIAL' ? entry.action.linkId : undefined)).size).toBe(1);
   });
 
+  it('finds two ZIP transfers when the second one must reverse direction', async () => {
+    const base = representativeSoloSequence;
+    const performerId = base.performers[0]!.id;
+    const initialState = {
+      placements: [{
+        ballId: base.balls[0]!.id,
+        location: { kind: 'hand-held' as const, performerId, hand: 'left' as const },
+      }],
+    };
+    const zipRequest: GeneratorRequest = {
+      ...request('from-scratch'),
+      templateSequence: { ...base, notation: [], initialState },
+      initialState,
+      constraints: {
+        looping: 'either',
+        actionRequirements: [],
+        zipTransferCount: 2,
+        requiredFragments: [],
+        forbiddenFragments: [],
+      },
+      maxSearchNodes: 100_000,
+    };
+    const candidates = [];
+    for await (const candidate of sequenceGenerator.generate(zipRequest)) {
+      candidates.push(candidate.sequence);
+    }
+    expect(candidates).toHaveLength(1);
+    const result = candidates[0]!;
+    const zipSources = result.notation
+      .filter((entry) => entry.action.type === 'ZIP' && entry.action.role === 'source')
+      .sort((left, right) => base.beats.findIndex((beat) => beat.id === left.time.beatId) -
+        base.beats.findIndex((beat) => beat.id === right.time.beatId));
+    expect(zipSources).toHaveLength(2);
+    expect(zipSources.map((entry) => entry.hand)).toEqual(['left', 'right']);
+  });
+
 });
