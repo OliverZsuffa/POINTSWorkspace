@@ -56,13 +56,7 @@ describe('sequence generator', () => {
     const rotated = {
       ...sequence,
       beats: [...sequence.beats.slice(1), sequence.beats[0]!],
-      notation: sequence.notation.map((entry) => {
-        const index = sequence.beats.findIndex((beat) => beat.id === entry.time.beatId);
-        return {
-          ...entry,
-          time: { ...entry.time, beatId: sequence.beats[(index + 1) % sequence.beats.length]!.id },
-        };
-      }),
+      notation: sequence.notation,
     };
     expect(candidateKey(sequence, true)).toBe(candidateKey(rotated, true));
     expect(candidateKey(sequence, false)).not.toBe(candidateKey(rotated, false));
