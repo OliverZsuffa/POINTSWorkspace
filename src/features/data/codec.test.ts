@@ -1,12 +1,69 @@
 import { describe, expect, it } from 'vitest';
 import { sequenceCodec } from './codec';
 import { rational } from '../../domain/time/rational';
+import type { Sequence } from '../../domain/model';
 import {
   invalidInitialStateSequence,
   representativeIndividualPassingSequence,
   representativeNotationExamples,
   representativeSoloSequence,
 } from '../../fixtures/sequences';
+
+
+function semanticShape(sequence: Sequence) {
+  const performerIndex = (id: string) => sequence.performers.findIndex((item) => item.id === id);
+  const positionIndex = (id: string) => sequence.positions.findIndex((item) => item.id === id);
+  const ballIndex = (id: string) => sequence.balls.findIndex((item) => item.id === id);
+  const beatIndex = (id: string) => sequence.beats.findIndex((item) => item.id === id);
+  const links = [...new Set(sequence.notation.flatMap(({ action }) => 'linkId' in action && action.linkId ? [action.linkId] : []))];
+  const linkIndex = (id: string | undefined) => id === undefined ? undefined : links.indexOf(id);
+  const target = (value: { kind: string; [key: string]: unknown }) => {
+    if (value.kind === 'position') return { kind: value.kind, position: positionIndex(value.positionId as string) };
+    if (value.kind === 'circle-position') return { ...value };
+    if (value.kind === 'pass-source') return { kind: value.kind, performer: performerIndex(value.performerId as string) };
+    return { kind: value.kind, performer: performerIndex(value.performerId as string), hand: value.hand };
+  };
+  const action = (value: Sequence['notation'][number]['action']) => {
+    switch (value.type) {
+      case 'HOLD':
+      case 'EMPTY':
+        return { type: value.type };
+      case 'LIFT':
+      case 'LEAVE':
+        return { type: value.type, target: target(value.target), link: linkIndex(value.linkId) };
+      case 'BOUNCE':
+      case 'TAP':
+        return { type: value.type, target: target(value.target) };
+      case 'ZIP':
+        return { type: value.type, role: value.role, link: linkIndex(value.linkId) };
+      case 'SPECIAL':
+        return { type: value.type, text: value.text, link: linkIndex(value.linkId) };
+    }
+  };
+  const location = (value: Sequence['initialState']['placements'][number]['location']) => {
+    if (value.kind === 'position') return { kind: value.kind, position: positionIndex(value.positionId) };
+    if (value.kind === 'hand-held') return { kind: value.kind, performer: performerIndex(value.performerId), hand: value.hand };
+    return { kind: value.kind, position: positionIndex(value.positionId), performer: performerIndex(value.performerId), hand: value.hand };
+  };
+  return {
+    sequenceType: sequence.sequenceType,
+    timeSignature: sequence.timeSignature,
+    bpm: sequence.bpm,
+    performers: sequence.performers.map(({ name, identifier }) => ({ name, identifier })),
+    positions: sequence.positions.map((value) => value.kind === 'table'
+      ? { kind: value.kind, name: value.name, owner: value.owner.kind === 'shared' ? { kind: 'shared' } : { kind: 'performer', performer: performerIndex(value.owner.performerId) } }
+      : { kind: value.kind, name: value.name, performer: performerIndex(value.performerId), hand: value.hand }),
+    ballCount: sequence.balls.length,
+    initialState: sequence.initialState.placements.map(({ ballId, location: value }) => ({ ball: ballIndex(ballId), location: location(value) })),
+    beats: sequence.beats.map(({ subdivisions }) => subdivisions.map(({ start, duration, depth }) => ({ start, duration, depth }))),
+    notation: sequence.notation.map(({ performerId, hand, time, action: value }) => ({
+      performer: performerIndex(performerId), hand, beat: beatIndex(time.beatId), offset: time.offset, action: action(value),
+    })),
+    individualPassingLayout: sequence.individualPassingLayout,
+    tableLayout: sequence.tableLayout,
+    seatAssignments: sequence.seatAssignments.map(({ performerId, seat }) => ({ performer: performerIndex(performerId), seat })),
+  };
+}
 
 describe('readable sequence code', () => {
   it.each([representativeSoloSequence, representativeIndividualPassingSequence, invalidInitialStateSequence])(
@@ -22,6 +79,7 @@ describe('readable sequence code', () => {
       const result = sequenceCodec.decode(code);
       expect(result.ok).toBe(true);
       if (result.ok) {
+        expect(semanticShape(result.sequence)).toEqual(semanticShape(sequence));
         expect(result.sequence.sequenceType).toBe(sequence.sequenceType);
         expect(result.sequence.bpm).toBe(sequence.bpm);
         expect(result.sequence.timeSignature).toEqual(sequence.timeSignature);
