@@ -85,7 +85,7 @@ The shared contracts define the interfaces consumed by downstream packages:
 
 The generator request includes the allowed sequence types, beat count, performer and object counts, available positions, time signature, initial state and constraints. Exact count action requirements require an explicit count at the type level.
 
-The user facing sequence representation is a compact, versioned POINTS code. Users copy and paste this code and never need to inspect JSON or another structured data format. The current first version uses the `P1.` prefix and a URL safe encoded compressed payload. The canonical model remains the internal source of truth. The codec must preserve every sequence property and must distinguish malformed input from unsupported versions. A structurally readable sequence with invalid notation remains importable so the shared validator can report its issues.
+The user facing sequence representation is a compact, versioned POINTS code. Users copy and paste this code and never need to inspect JSON or another structured data format. The current experimental format uses the `P2.` prefix and a readable domain specific tuple grammar. Action initials remain visible in the code. Internal IDs are replaced by compact local references and regenerated during decoding. The canonical model remains the internal source of truth. The codec must preserve every sequence property and distinguish malformed input from unsupported versions. A structurally readable sequence with invalid notation remains importable so the shared validator can report its issues. No compatibility with earlier experimental formats is required before public release.
 
 ## Deliberately unresolved
 
