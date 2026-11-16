@@ -26,7 +26,7 @@ function fraction(value: { numerator: number; denominator: number }): string {
   return value.denominator === 1 ? String(value.numerator) : `${value.numerator}/${value.denominator}`;
 }
 function parseFraction(value: string): { numerator: number; denominator: number } {
-  if (!/^-?(?:0|[1-9]\\d*)(?:\\/[1-9]\\d*)?$/.test(value)) throw new Error('Invalid fraction');
+  if (!/^-?(?:0|[1-9]\d*)(?:\/[1-9]\d*)?$/.test(value)) throw new Error('Invalid fraction');
   const [n, d] = value.split('/');
   const numerator = Number(n);
   const denominator = d === undefined ? 1 : Number(d);
