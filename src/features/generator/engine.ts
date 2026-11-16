@@ -281,10 +281,11 @@ export const sequenceGenerator = {
 
         const cell = cells[index]!;
         const key = cellKey(cell);
+        const exactZipRequirement = request.constraints.actionRequirements.find((requirement) =>
+          requirement.actionType === 'ZIP' && requirement.occurrence === 'exact-count',
+        );
         const exactZipTarget = request.constraints.zipTransferCount ??
-          request.constraints.actionRequirements.find((requirement) =>
-            requirement.actionType === 'ZIP' && requirement.occurrence === 'exact-count',
-          )?.count;
+          (exactZipRequirement && 'count' in exactZipRequirement ? exactZipRequirement.count : undefined);
         if (exactZipTarget !== undefined) {
           const currentZipLinks = new Set([
             ...template.notation,
