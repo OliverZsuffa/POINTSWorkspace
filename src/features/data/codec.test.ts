@@ -116,7 +116,7 @@ describe('readable sequence code', () => {
 
   it('matches the published canonical solo example', () => {
     expect(sequenceCodec.encode(representativeSoloSequence)).toBe(
-      'P3;s;120;4.4.1+1+1+1;4;~9:Juggler%201.-;T.~1:A.p0,T.~1:B.p0,T.~1:C.p0,B.L.0.L,B.R.0.R;1;0.P.0;1.0.1/2.1,1.1/2.1/2.1;L:3.3.0.T.p2,R:0.0.0.L.p0.-+1.1.0.H+2.2.0.V.p1.-;n;s;',
+      'P3;s;120;4.4.1+1+1+1;4;~9:Juggler%201.-;T.~1:A.p0,T.~1:B.p0,T.~1:C.p0,B.L.0.L,B.R.0.R;1;0.P.0;1.0.1/2.1,1.1/2.1/2.1;L:-|-|-|3.0.T.p2,R:0.0.L.p0.-|1.0.H|2.0.V.p1.-|-;n;s;',
     );
   });
 
