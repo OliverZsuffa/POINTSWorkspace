@@ -228,8 +228,8 @@ function assertPackedSequence(raw: unknown): asserts raw is Packed {
     expectInt(layout[1], 'polygon side count', 2);
   } else if (layoutValue[0] === 'R') {
     const layout = expectTuple(layoutValue, 3, 'rectangle table layout');
-    expectInt(layout[1], 'long side seat count', 1);
-    expectInt(layout[2], 'short side seat count', 1);
+    expectInt(layout[1], 'long side seat count');
+    expectInt(layout[2], 'short side seat count');
   } else throw new Error('Unknown table layout');
 
   seatValue.forEach((item) => {
