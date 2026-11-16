@@ -51,7 +51,7 @@ function numberText(value: number): string {
 }
 
 function numberField(value: number): string {
-  return numberText(value).replace(/\\./g, '%2E').replace(/\\+/g, '%2B');
+  return numberText(value).split('.').join('%2E').split('+').join('%2B');
 }
 
 function integerText(value: number): string {
@@ -60,14 +60,14 @@ function integerText(value: number): string {
 }
 
 function parseNumber(value: string, label: string): number {
-  if (!/^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?$/.test(value)) {
-    throw new Error(`Invalid ${label}.`);
+  const decoded = value.split('%2E').join('.').split('%2e').join('.').split('%2B').join('+').split('%2b').join('+');
+  if (!/^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?$/.test(decoded)) {
+    throw new Error(\`Invalid \${label}.\`);
   }
   const parsed = Number(decoded);
-  if (!Number.isFinite(parsed)) throw new Error(`Invalid ${label}.`);
+  if (!Number.isFinite(parsed)) throw new Error(\`Invalid \${label}.\`);
   return parsed;
 }
-
 function parseInteger(value: string, label: string, minimum = 0): number {
   if (!/^(?:0|[1-9]\d*)$/.test(value)) throw new Error(`Invalid ${label}.`);
   const parsed = Number(value);
