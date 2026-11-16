@@ -135,7 +135,7 @@ export const sequenceCodec: SequenceCodec = {
     if (!trimmed.startsWith(PREFIX)) return { ok: false, code: 'unsupported-version', message: 'This sequence code uses an unsupported format version.' };
     try {
       const raw: unknown = JSON.parse(trimmed.slice(PREFIX.length));
-      if (!isPacked(raw) || raw.length !== 13) throw new Error('Invalid sequence tuple');
+      if (!isPacked(raw) || raw.length !== 12) throw new Error('Invalid sequence tuple');
       const [kind, bpm, signature, rawPerformers, rawPositions, ballCount, rawPlacements, rawBeats, rawNotation, individualLayout, rawLayout, rawSeats] = raw;
       if (!isPacked(rawPerformers) || !isPacked(rawPositions) || !isPacked(rawPlacements) || !isPacked(rawBeats) || !isPacked(rawNotation) || !isPacked(rawLayout) || !isPacked(rawSeats) || !isPacked(signature)) throw new Error('Invalid sections');
       const performers: Performer[] = rawPerformers.map((item, index) => {
