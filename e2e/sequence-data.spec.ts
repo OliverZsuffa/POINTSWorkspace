@@ -39,6 +39,7 @@ test('share links copy the current P4 sequence and load it ahead of local persis
   await bpm.fill('95');
   await bpm.press('Enter');
   await page.goto(shareUrl);
+  await page.reload();
   const sharedCode = await page.evaluate(() => new URLSearchParams(window.location.hash.slice(1)).get('code'));
   expect(sharedCode).toBeTruthy();
   await page.getByRole('button', { name: /Code, presets and export/ }).click();
@@ -61,6 +62,7 @@ test('invalid share links show an error and preserve the locally saved sequence'
   const invalidUrl = new URL(page.url());
   invalidUrl.hash = 'code=P4invalid';
   await page.goto(invalidUrl.toString());
+  await page.reload();
   await expect(page.locator('.update-banner[role="alert"]')).toContainText('could not be loaded');
   await page.getByRole('button', { name: /Code, presets and export/ }).click();
   const codeField = page.getByLabel('Import sequence code');
