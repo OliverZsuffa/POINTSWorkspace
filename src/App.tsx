@@ -2125,7 +2125,7 @@ export default function App() {
                           <span>{hand === 'left' ? 'L' : 'R'}</span>
                           {result.beats.map((beat) => {
                             const entry = result.notation.find((item) => item.performerId === performer.id && item.hand === hand && item.time.beatId === beat.id);
-                            return <div className="generator-preview-cell" key={beat.id}>{entry ? <ActionSymbol action={entry.action} sequence={result} hand={hand} abstractTargets /> : null}</div>;
+                            return <div className="generator-preview-cell" key={beat.id}>{entry ? <ActionSymbol action={entry.action} sequence={result} hand={hand} abstractTargets={!generatorRequestRef.current?.baseSequence?.notation.some((baseEntry) => baseEntry.id === entry.id)} /> : null}</div>;
                           })}
                         </div>
                       ))}
