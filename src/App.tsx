@@ -219,7 +219,7 @@ function circleSubscript(target: Extract<TableActionTarget, { kind: 'circle-posi
   return (target.distance > 1 ? String(target.distance) : '') + (target.direction === 'left' ? 'L' : 'R');
 }
 
-function ActionSymbol({ action, sequence, hand }: { action: NotationAction; sequence: Sequence; hand: Hand }) {
+function ActionSymbol({ action, sequence, hand, abstractTargets = false }: { action: NotationAction; sequence: Sequence; hand: Hand; abstractTargets?: boolean }) {
   if (action.type === 'EMPTY') return null;
   if (action.type === 'SPECIAL') return <span className={'special-symbol' + (action.text === 'Clap' ? ' clap-symbol' : '')} aria-label={action.text === 'Clap' ? 'Clap' : undefined}>{action.text === 'Clap' ? <span className="clap-bar" /> : action.text || 'SPECIAL'}{action.linkId && action.text !== 'Clap' && <span className="special-link-indicator" aria-label="Linked SPECIAL">↔</span>}</span>;
   let path = '';
@@ -254,6 +254,10 @@ function ActionSymbol({ action, sequence, hand }: { action: NotationAction; sequ
         ? hand === 'left' ? 'M7 9H41 M41 9V39' : 'M7 39H41 M41 9V39'
         : hand === 'left' ? 'M7 9H41 M7 9V39' : 'M7 39H41 M7 9V39';
       break;
+  }
+  if (abstractTargets && 'target' in action && (action.target.kind === 'position' || action.target.kind === 'circle-position')) {
+    target = '';
+    subscript = '';
   }
   return (
     <svg className="notation-symbol" viewBox="0 0 48 48" aria-hidden="true">
@@ -2112,7 +2116,7 @@ export default function App() {
                           <span>{hand === 'left' ? 'L' : 'R'}</span>
                           {result.beats.map((beat) => {
                             const entry = result.notation.find((item) => item.performerId === performer.id && item.hand === hand && item.time.beatId === beat.id);
-                            return <div className="generator-preview-cell" key={beat.id}>{entry ? <ActionSymbol action={entry.action} sequence={result} hand={hand} /> : null}</div>;
+                            return <div className="generator-preview-cell" key={beat.id}>{entry ? <ActionSymbol action={entry.action} sequence={result} hand={hand} abstractTargets /> : null}</div>;
                           })}
                         </div>
                       ))}
