@@ -221,7 +221,7 @@ export function candidateKey(sequence: Sequence, canonicalizeRotation = false): 
     return JSON.stringify({
       sequenceType: sequence.sequenceType,
       timeSignature: sequence.timeSignature,
-      beats: sequence.beats.map((beat, index) => sequence.beats[(index + rotation) % count]?.durationKind ?? 'regular'),
+      beats: sequence.beats.map((_beat, index) => sequence.beats[(index + rotation) % count]?.durationKind ?? 'regular'),
       performers: sequence.performers,
       positions: sequence.positions,
       balls: sequence.balls.length,

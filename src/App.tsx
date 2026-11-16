@@ -376,7 +376,7 @@ export default function App() {
   const [generatorHasMore, setGeneratorHasMore] = useState(false);
   const [generatorError, setGeneratorError] = useState('');
   const generatorAbortRef = useRef<AbortController | null>(null);
-  const generatorIteratorRef = useRef<AsyncGenerator<GeneratedCandidate, void, unknown> | null>(null);
+  const generatorIteratorRef = useRef<AsyncIterator<GeneratedCandidate> | null>(null);
   const generatorPendingRef = useRef<GeneratedCandidate | null>(null);
 
   useEffect(() => { setBpmInput(String(sequence.bpm)); }, [sequence.bpm]);
