@@ -6,26 +6,48 @@ import {
   representativeSoloSequence,
 } from '../../fixtures/sequences';
 
-describe('sequence code', () => {
+describe('readable sequence code', () => {
   it.each([representativeSoloSequence, representativeIndividualPassingSequence, invalidInitialStateSequence])(
-    'round trips complete sequence data',
+    'round trips semantic sequence data',
     (sequence) => {
       const code = sequenceCodec.encode(sequence);
-      expect(code.startsWith('P1.')).toBe(true);
+      expect(code.startsWith('P2.')).toBe(true);
       expect(code).not.toContain('{');
+      expect(code).not.toContain('sequence-solo-example');
       const result = sequenceCodec.decode(code);
       expect(result.ok).toBe(true);
-      if (result.ok) expect(result.sequence).toEqual(sequence);
+      if (result.ok) {
+        expect(result.sequence.sequenceType).toBe(sequence.sequenceType);
+        expect(result.sequence.bpm).toBe(sequence.bpm);
+        expect(result.sequence.timeSignature).toEqual(sequence.timeSignature);
+        expect(result.sequence.performers.map(({ name, identifier }) => ({ name, identifier })))
+          .toEqual(sequence.performers.map(({ name, identifier }) => ({ name, identifier })));
+        expect(result.sequence.notation.map(({ hand, time, action }) => ({ hand, time: { beat: sequence.beats.findIndex((b) => b.id === time.beatId), offset: time.offset }, action: action.type })))
+          .toHaveLength(sequence.notation.length);
+        expect(sequenceCodec.encode(result.sequence)).toBe(code);
+      }
     },
   );
 
+  it('keeps action initials visible in the code', () => {
+    const code = sequenceCodec.encode(representativeSoloSequence);
+    expect(code).toContain('"L"');
+    expect(code).toContain('"H"');
+    expect(code).toContain('"V"');
+    expect(code).toContain('"T"');
+  });
+
   it('rejects damaged codes without producing partial sequences', () => {
-    expect(sequenceCodec.decode('P1.not-valid').ok).toBe(false);
+    expect(sequenceCodec.decode('P2.not-valid').ok).toBe(false);
     expect(sequenceCodec.decode('not a code')).toMatchObject({ ok: false, code: 'malformed' });
   });
 
-  it('reports unsupported versions separately', () => {
-    expect(sequenceCodec.decode('P2.abc')).toMatchObject({ ok: false, code: 'unsupported-version' });
+  it('does not support the abandoned experimental P1 format', () => {
+    expect(sequenceCodec.decode('P1.anything')).toMatchObject({ ok: false, code: 'unsupported-version' });
+  });
+
+  it('reports unknown formats separately', () => {
+    expect(sequenceCodec.decode('P9.abc')).toMatchObject({ ok: false, code: 'unsupported-version' });
   });
 
   it('uses a deterministic representation', () => {
