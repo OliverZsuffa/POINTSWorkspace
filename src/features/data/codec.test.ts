@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { sequenceCodec } from './codec';
 import { rational } from '../../domain/time/rational';
-import type { Sequence } from '../../domain/model';
+import type { LeaveActionTarget, LiftActionTarget, Sequence, TableActionTarget } from '../../domain/model';
 import {
   invalidInitialStateSequence,
   representativeIndividualPassingSequence,
@@ -17,11 +17,12 @@ function semanticShape(sequence: Sequence) {
   const beatIndex = (id: string) => sequence.beats.findIndex((item) => item.id === id);
   const links = [...new Set(sequence.notation.flatMap(({ action }) => 'linkId' in action && action.linkId ? [action.linkId] : []))];
   const linkIndex = (id: string | undefined) => id === undefined ? undefined : links.indexOf(id);
-  const target = (value: { kind: string; [key: string]: unknown }) => {
+  const target = (value: LiftActionTarget | LeaveActionTarget | TableActionTarget) => {
     if (value.kind === 'position') return { kind: value.kind, position: positionIndex(value.positionId as string) };
     if (value.kind === 'circle-position') return { ...value };
     if (value.kind === 'pass-source') return { kind: value.kind, performer: performerIndex(value.performerId as string) };
-    return { kind: value.kind, performer: performerIndex(value.performerId as string), hand: value.hand };
+    if (value.kind === 'pass-recipient-hand') return { kind: value.kind, performer: performerIndex(value.performerId), hand: value.hand };
+    throw new Error('Unknown target kind');
   };
   const action = (value: Sequence['notation'][number]['action']) => {
     switch (value.type) {
