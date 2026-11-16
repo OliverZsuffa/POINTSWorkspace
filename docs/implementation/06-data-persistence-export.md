@@ -8,7 +8,7 @@ Implemented and merged through PR #19 on 13 November 2026. CI and GitHub Pages d
 
 The only sequence representation exposed to users is a compact POINTS code. Users do not need to see or edit JSON.
 
-The current experimental format uses the version prefix `P2.` followed by a compact tuple grammar. Tuples use parentheses and comma separators. Strings use a `~` marker and percent escaped text. Numbers are unquoted. Action initials remain visible, for example `~H`, `~L`, `~V`, `~B`, `~T`, `~E`, `~Z` and `~S`. The code contains no JSON syntax, Base64 payload, UUIDs or internal object keys.
+The current experimental format uses the version prefix `P2.` followed by a compact tuple grammar. Tuples use parentheses and comma separators. Single letter tokens, including action initials, are unquoted. Other strings use a `~` marker and percent escaped text. Numbers are unquoted. Action initials remain visible as `H`, `L`, `V`, `B`, `T`, `E`, `Z` and `S`. The code contains no JSON syntax, Base64 payload, UUIDs or internal object keys.
 
 The codec is deterministic. The same sequence produces the same code. Decoding distinguishes malformed input, unsupported format versions and structurally invalid data. The codec does not run notation validation during decoding. Structurally readable but notation invalid sequences are imported and reported by the existing validator.
 
