@@ -10,6 +10,7 @@ import {
 } from './domain/ids';
 import type {
   ActionRequirement,
+  ActionType,
   GeneratorRequest,
   GeneratedCandidate,
   SequenceFragment,
