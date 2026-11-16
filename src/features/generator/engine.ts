@@ -278,7 +278,7 @@ export const sequenceGenerator = {
             candidate.beats.every((beat) => {
               const left = candidate.notation.find((entry) => entry.performerId === performer.id && entry.hand === 'left' && entry.time.beatId === beat.id);
               const right = candidate.notation.find((entry) => entry.performerId === performer.id && entry.hand === 'right' && entry.time.beatId === beat.id);
-              return left?.action.type !== 'EMPTY' || right?.action.type !== 'EMPTY';
+              return (left !== undefined && left.action.type !== 'EMPTY') || (right !== undefined && right.action.type !== 'EMPTY');
             }),
           );
           if (everyBeatUsed && isAccepted(request, candidate, base)) yield candidate;
