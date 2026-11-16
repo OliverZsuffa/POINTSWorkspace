@@ -12,6 +12,7 @@ import type {
 import { rational } from '../../domain/time/rational';
 import { simulateSequence } from '../../domain/state';
 import {
+  allBeatsUsed,
   isLoopClosed,
   preservesBaseSequence,
   satisfiesActionRequirements,
@@ -274,24 +275,43 @@ export const sequenceGenerator = {
         if (index >= cells.length) {
           if (entries.length === 0) return;
           const candidate = { ...template, notation: [...template.notation, ...entries] };
-          const everyBeatUsed = candidate.performers.every((performer) =>
-            candidate.beats.every((beat) => {
-              const left = candidate.notation.find((entry) => entry.performerId === performer.id && entry.hand === 'left' && entry.time.beatId === beat.id);
-              const right = candidate.notation.find((entry) => entry.performerId === performer.id && entry.hand === 'right' && entry.time.beatId === beat.id);
-              return (left !== undefined && left.action.type !== 'EMPTY') || (right !== undefined && right.action.type !== 'EMPTY');
-            }),
-          );
-          if (everyBeatUsed && isAccepted(request, candidate, base)) yield candidate;
+          if (allBeatsUsed(candidate) && isAccepted(request, candidate, base)) yield candidate;
           return;
         }
 
         const cell = cells[index]!;
         const key = cellKey(cell);
+        const exactZipTarget = request.constraints.zipTransferCount ??
+          request.constraints.actionRequirements.find((requirement) =>
+            requirement.actionType === 'ZIP' && requirement.occurrence === 'exact-count',
+          )?.count;
+        if (exactZipTarget !== undefined) {
+          const currentZipLinks = new Set([
+            ...template.notation,
+            ...entries,
+          ].flatMap((entry) => entry.action.type === 'ZIP' ? [entry.action.linkId] : []));
+          const remainingZipPairs = template.beats.reduce((total, beat) =>
+            total + template.performers.filter((performer) => {
+              const leftKey = String(performer.id) + ':left:' + String(beat.id);
+              const rightKey = String(performer.id) + ':right:' + String(beat.id);
+              return !occupied.has(leftKey) && !occupied.has(rightKey);
+            }).length, 0);
+          if (currentZipLinks.size > exactZipTarget ||
+            currentZipLinks.size + remainingZipPairs < exactZipTarget) return;
+        }
+
         occupied.add(key);
         yield* visit(index + 1, entries);
         occupied.delete(key);
 
-        for (const choice of buildChoices(template, cell, cells, occupied)) {
+        const choices = buildChoices(template, cell, cells, occupied);
+        if (exactZipTarget !== undefined && exactZipTarget > 0) {
+          choices.sort((left, right) =>
+            Number(right.entries.some((entry) => entry.action.type === 'ZIP')) -
+            Number(left.entries.some((entry) => entry.action.type === 'ZIP')),
+          );
+        }
+        for (const choice of choices) {
           if (signal?.aborted || visited >= maxSearchNodes || yielded >= maxResults) return;
           const newlyCovered = choice.coveredCells.filter((covered) => !occupied.has(covered));
           if (newlyCovered.length !== choice.coveredCells.length) continue;
