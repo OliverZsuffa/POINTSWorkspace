@@ -155,6 +155,16 @@ test('curated presets can be searched and loaded', async ({ page }) => {
   await expect(page.locator('button[title="Undo"]')).toBeEnabled();
 });
 
+test('generator loads additional results without restarting its search', async ({ page }) => {
+  await page.goto('./');
+  const generator = page.getByRole('region', { name: 'Sequence generator' });
+  await generator.getByRole('button', { name: 'Show' }).click();
+  await generator.getByRole('button', { name: 'Generate' }).click();
+  await expect(generator.locator('.generator-result')).toHaveCount(20, { timeout: 30000 });
+  await generator.getByRole('button', { name: 'Load more results' }).click();
+  await expect(generator.locator('.generator-result')).toHaveCount(40, { timeout: 30000 });
+});
+
 test('sequence can be exported as a PNG', async ({ page }) => {
   await page.goto('./');
   await page.getByRole('button', { name: /Code, presets and export/ }).click();
