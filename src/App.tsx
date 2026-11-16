@@ -1079,7 +1079,8 @@ export default function App() {
     if (!request) return;
     const controller = new AbortController();
     generatorAbortRef.current = controller;
-    generatorIteratorRef.current = sequenceGenerator.expandLocations(structure, request, controller.signal)[Symbol.asyncIterator]();
+    const locationSearch = sequenceGenerator.expandLocations(structure, request, controller.signal);
+    generatorIteratorRef.current = locationSearch[Symbol.asyncIterator]();
     generatorPendingRef.current = null;
     setGeneratorStage('locations');
     setGeneratorResults([]);
