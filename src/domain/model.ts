@@ -284,6 +284,8 @@ export interface GeneratorConstraints {
 
 export interface GeneratorRequest {
   readonly mode: 'from-scratch' | 'complete-base';
+  /** Abstract generation defers concrete target permutations until a structure is selected. */
+  readonly locationMode?: 'abstract' | 'concrete';
   readonly sequenceTypes: readonly SequenceType[];
   /** Supplies performer identities, beat identities, table layout and other structural metadata. */
   readonly templateSequence: Sequence;

@@ -17,7 +17,7 @@ function request(mode: GeneratorRequest['mode']): GeneratorRequest {
     timeSignature: sequence.timeSignature,
     initialState: sequence.initialState,
     maxResults: 1,
-    maxSearchNodes: 5000,
+    maxSearchNodes: 100_000,
     constraints: {
       looping: 'either',
       actionRequirements: mode === 'from-scratch'
@@ -87,7 +87,7 @@ describe('sequence generator', () => {
       timeSignature: sequence.timeSignature,
       initialState: sequence.initialState,
       maxResults: 1,
-      maxSearchNodes: 5000,
+      maxSearchNodes: 100_000,
       constraints: {
         looping: 'either',
         actionRequirements: [{ actionType: 'EMPTY', occurrence: 'at-least-once' }],
@@ -98,6 +98,107 @@ describe('sequence generator', () => {
     const candidates = [];
     for await (const candidate of sequenceGenerator.generate(baseRequest)) candidates.push(candidate.sequence);
     expect(candidates).toHaveLength(1);
-    expect(candidates[0]?.notation).toHaveLength(2);
+    expect(candidates[0]?.notation.length).toBeGreaterThan(2);
+    expect(candidates[0]?.notation.some((entry) => entry.action.type === 'EMPTY')).toBe(true);
   });
+  it('generates CLAP as exactly two linked SPECIAL entries and no standalone SPECIAL', async () => {
+    const base = representativeSoloSequence;
+    const candidates = [];
+    const clapRequest: GeneratorRequest = {
+      ...request('from-scratch'),
+      templateSequence: { ...base, notation: [] },
+      locationMode: 'abstract',
+      constraints: {
+        looping: 'either',
+        actionRequirements: [{ actionType: 'SPECIAL', occurrence: 'exact-count', count: 2 }],
+        requiredFragments: [],
+        forbiddenFragments: [],
+      },
+      maxSearchNodes: 100_000,
+    };
+    for await (const candidate of sequenceGenerator.generate(clapRequest)) {
+      candidates.push(candidate.sequence);
+    }
+    expect(candidates).toHaveLength(1);
+    const clapEntries = candidates[0]!.notation.filter((entry) => entry.action.type === 'SPECIAL');
+    expect(clapEntries).toHaveLength(2);
+    expect(clapEntries.every((entry) => entry.action.type === 'SPECIAL' && entry.action.text === 'Clap')).toBe(true);
+    expect(new Set(clapEntries.map((entry) => entry.action.type === 'SPECIAL' ? entry.action.linkId : undefined)).size).toBe(1);
+  });
+
+  it('finds two ZIP transfers when the second one must reverse direction', async () => {
+    const base = representativeSoloSequence;
+    const performerId = base.performers[0]!.id;
+    const initialState = {
+      placements: [{
+        ballId: base.balls[0]!.id,
+        location: { kind: 'hand-held' as const, performerId, hand: 'left' as const },
+      }],
+    };
+    const zipRequest: GeneratorRequest = {
+      ...request('from-scratch'),
+      templateSequence: { ...base, beats: base.beats.slice(0, 2), notation: [], initialState },
+      beatCount: 2,
+      initialState,
+      constraints: {
+        looping: 'either',
+        actionRequirements: [],
+        zipTransferCount: 2,
+        requiredFragments: [],
+        forbiddenFragments: [],
+      },
+      maxSearchNodes: 20_000,
+    };
+    const candidates = [];
+    for await (const candidate of sequenceGenerator.generate(zipRequest)) {
+      candidates.push(candidate.sequence);
+    }
+    expect(candidates).toHaveLength(1);
+    const result = candidates[0]!;
+    const zipSources = result.notation
+      .filter((entry) => entry.action.type === 'ZIP' && entry.action.role === 'source')
+      .sort((left, right) => base.beats.findIndex((beat) => beat.id === left.time.beatId) -
+        base.beats.findIndex((beat) => beat.id === right.time.beatId));
+    expect(zipSources).toHaveLength(2);
+    expect(zipSources.map((entry) => entry.hand)).toEqual(['left', 'right']);
+  });
+
+  it('generates abstract structures before expanding concrete position choices', async () => {
+    const base = representativeSoloSequence;
+    const generationRequest: GeneratorRequest = {
+      ...request('from-scratch'),
+      templateSequence: { ...base, notation: [] },
+      locationMode: 'abstract',
+      maxResults: 1,
+      maxSearchNodes: 100_000,
+    };
+    const structures = [];
+    for await (const candidate of sequenceGenerator.generate(generationRequest)) {
+      structures.push(candidate.sequence);
+    }
+    expect(structures).toHaveLength(1);
+    const abstractTargets = structures[0]!.notation.filter((entry) =>
+      entry.action.type === 'LIFT' || entry.action.type === 'LEAVE' ||
+      entry.action.type === 'TAP' || entry.action.type === 'BOUNCE',
+    );
+    expect(abstractTargets.length).toBeGreaterThan(0);
+    expect(abstractTargets.every((entry) =>
+      entry.action.type === 'LIFT' || entry.action.type === 'LEAVE' ||
+      entry.action.type === 'TAP' || entry.action.type === 'BOUNCE'
+        ? entry.action.target.kind === 'position' && entry.action.target.positionId === base.positions[0]!.id
+        : true,
+    )).toBe(true);
+
+    const concrete = [];
+    for await (const candidate of sequenceGenerator.expandLocations(base, generationRequest)) {
+      concrete.push(candidate.sequence);
+    }
+    expect(concrete).toHaveLength(1);
+    expect(concrete[0]!.notation.some((entry) =>
+      (entry.action.type === 'LIFT' || entry.action.type === 'LEAVE' ||
+        entry.action.type === 'TAP' || entry.action.type === 'BOUNCE') &&
+      entry.action.target.kind === 'position',
+    )).toBe(true);
+  });
+
 });

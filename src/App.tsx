@@ -10,6 +10,7 @@ import {
 } from './domain/ids';
 import type {
   ActionRequirement,
+  ActionType,
   GeneratorRequest,
   GeneratedCandidate,
   SequenceFragment,
@@ -40,6 +41,8 @@ const id = (prefix: string) => prefix + '-' + (++nextId).toString(36);
 const hands: readonly Hand[] = ['left', 'right'];
 const actionNames = ['LIFT', 'HOLD', 'LEAVE', 'BOUNCE', 'TAP', 'EMPTY', 'ZIP', 'SPECIAL'] as const;
 type ActionName = (typeof actionNames)[number];
+const generatorActionNames = ['LIFT', 'HOLD', 'LEAVE', 'BOUNCE', 'TAP', 'EMPTY', 'ZIP', 'CLAP'] as const;
+type GeneratorActionName = (typeof generatorActionNames)[number];
 type GeneratorActionMode = 'any' | 'required' | 'forbidden' | 'exact';
 type EditorCell = { performerId: string; hand: Hand; beatId: string; offset?: Rational; duration?: Rational };
 type ClipboardItem = { entry: NotationEntry; rowOffset: number; beatOffset: number };
@@ -217,7 +220,7 @@ function circleSubscript(target: Extract<TableActionTarget, { kind: 'circle-posi
   return (target.distance > 1 ? String(target.distance) : '') + (target.direction === 'left' ? 'L' : 'R');
 }
 
-function ActionSymbol({ action, sequence, hand }: { action: NotationAction; sequence: Sequence; hand: Hand }) {
+function ActionSymbol({ action, sequence, hand, abstractTargets = false }: { action: NotationAction; sequence: Sequence; hand: Hand; abstractTargets?: boolean }) {
   if (action.type === 'EMPTY') return null;
   if (action.type === 'SPECIAL') return <span className={'special-symbol' + (action.text === 'Clap' ? ' clap-symbol' : '')} aria-label={action.text === 'Clap' ? 'Clap' : undefined}>{action.text === 'Clap' ? <span className="clap-bar" /> : action.text || 'SPECIAL'}{action.linkId && action.text !== 'Clap' && <span className="special-link-indicator" aria-label="Linked SPECIAL">↔</span>}</span>;
   let path = '';
@@ -252,6 +255,10 @@ function ActionSymbol({ action, sequence, hand }: { action: NotationAction; sequ
         ? hand === 'left' ? 'M7 9H41 M41 9V39' : 'M7 39H41 M41 9V39'
         : hand === 'left' ? 'M7 9H41 M7 9V39' : 'M7 39H41 M7 9V39';
       break;
+  }
+  if (abstractTargets && 'target' in action && (action.target.kind === 'position' || action.target.kind === 'circle-position')) {
+    target = '';
+    subscript = '';
   }
   return (
     <svg className="notation-symbol" viewBox="0 0 48 48" aria-hidden="true">
@@ -362,22 +369,25 @@ export default function App() {
   const [showGenerator, setShowGenerator] = useState(false);
   const [generatorMode, setGeneratorMode] = useState<GeneratorRequest['mode']>('from-scratch');
   const [generatorLooping, setGeneratorLooping] = useState<GeneratorRequest['constraints']['looping']>('either');
-  const [generatorActionModes, setGeneratorActionModes] = useState<Record<ActionName, GeneratorActionMode>>({ HOLD: 'any', LIFT: 'any', LEAVE: 'any', BOUNCE: 'any', TAP: 'any', EMPTY: 'any', ZIP: 'any', SPECIAL: 'any' });
-  const [generatorActionCounts, setGeneratorActionCounts] = useState<Record<ActionName, number>>({ HOLD: 1, LIFT: 1, LEAVE: 1, BOUNCE: 1, TAP: 1, EMPTY: 1, ZIP: 1, SPECIAL: 1 });
+  const [generatorActionModes, setGeneratorActionModes] = useState<Record<GeneratorActionName, GeneratorActionMode>>({ HOLD: 'any', LIFT: 'any', LEAVE: 'any', BOUNCE: 'any', TAP: 'any', EMPTY: 'any', ZIP: 'any', CLAP: 'any' });
+  const [generatorActionCounts, setGeneratorActionCounts] = useState<Record<GeneratorActionName, number>>({ HOLD: 1, LIFT: 1, LEAVE: 1, BOUNCE: 1, TAP: 1, EMPTY: 1, ZIP: 1, CLAP: 1 });
   const [generatorPerformerScope, setGeneratorPerformerScope] = useState('all');
-  const [generatorRequiredPerformerAction, setGeneratorRequiredPerformerAction] = useState<ActionName>('LIFT');
+  const [generatorRequiredPerformerAction, setGeneratorRequiredPerformerAction] = useState<GeneratorActionName>('LIFT');
   const [generatorRequireEachPerformer, setGeneratorRequireEachPerformer] = useState(false);
   const [generatorZipCount, setGeneratorZipCount] = useState('');
   const [generatorPassCount, setGeneratorPassCount] = useState('');
   const [generatorRequiredFragmentCode, setGeneratorRequiredFragmentCode] = useState('');
   const [generatorForbiddenFragmentCode, setGeneratorForbiddenFragmentCode] = useState('');
   const [generatorResults, setGeneratorResults] = useState<Sequence[]>([]);
+  const [generatorStructureResults, setGeneratorStructureResults] = useState<Sequence[]>([]);
+  const [generatorStage, setGeneratorStage] = useState<'structures' | 'locations'>('structures');
   const [generatorRunning, setGeneratorRunning] = useState(false);
   const [generatorHasMore, setGeneratorHasMore] = useState(false);
   const [generatorError, setGeneratorError] = useState('');
   const generatorAbortRef = useRef<AbortController | null>(null);
   const generatorIteratorRef = useRef<AsyncIterator<GeneratedCandidate> | null>(null);
   const generatorPendingRef = useRef<GeneratedCandidate | null>(null);
+  const generatorRequestRef = useRef<GeneratorRequest | null>(null);
 
   useEffect(() => { setBpmInput(String(sequence.bpm)); }, [sequence.bpm]);
 
@@ -925,7 +935,7 @@ export default function App() {
     setShowActionMenu(false);
   };
 
-  const loadGeneratorPage = async () => {
+  const loadGeneratorPage = async (targetStage: 'structures' | 'locations' = generatorStage) => {
     if (generatorRunning || !generatorIteratorRef.current) return;
     const iterator = generatorIteratorRef.current;
     setGeneratorRunning(true);
@@ -944,7 +954,8 @@ export default function App() {
           }
           candidate = next.value;
         }
-        setGeneratorResults((results) => [...results, candidate.sequence]);
+        if (targetStage === 'structures') setGeneratorStructureResults((results) => [...results, candidate.sequence]);
+        else setGeneratorResults((results) => [...results, candidate.sequence]);
         added += 1;
       }
       if (added === 20 && generatorIteratorRef.current === iterator) {
@@ -1007,17 +1018,24 @@ export default function App() {
 
     const performerId = generatorPerformerScope === 'all' ? undefined : asPerformerId(generatorPerformerScope);
     const actionRequirements: ActionRequirement[] = [];
-    for (const actionType of actionNames) {
-      const mode = generatorActionModes[actionType];
+    for (const generatorAction of generatorActionNames) {
+      const mode = generatorActionModes[generatorAction];
       if (mode === 'any') continue;
+      const actionType: ActionType = generatorAction === 'CLAP' ? 'SPECIAL' : generatorAction;
       const scope = performerId ? { performerId } : {};
       if (mode === 'required') actionRequirements.push({ actionType, occurrence: 'at-least-once', ...scope });
       else if (mode === 'forbidden') actionRequirements.push({ actionType, occurrence: 'forbidden', ...scope });
-      else actionRequirements.push({ actionType, occurrence: 'exact-count', count: generatorActionCounts[actionType], ...scope });
+      else actionRequirements.push({
+        actionType,
+        occurrence: 'exact-count',
+        count: generatorAction === 'CLAP' ? generatorActionCounts.CLAP * 2 : generatorActionCounts[generatorAction],
+        ...scope,
+      });
     }
 
     const request: GeneratorRequest = {
       mode: generatorMode,
+      locationMode: 'abstract',
       sequenceTypes: [sequence.sequenceType],
       templateSequence: sequence,
       ...(generatorMode === 'complete-base' ? { baseSequence: sequence } : {}),
@@ -1034,20 +1052,41 @@ export default function App() {
         actionRequirements,
         zipTransferCount,
         passCount,
-        requiredActionPerPerformer: generatorRequireEachPerformer ? generatorRequiredPerformerAction : undefined,
+        requiredActionPerPerformer: generatorRequireEachPerformer
+          ? generatorRequiredPerformerAction === 'CLAP' ? 'SPECIAL' : generatorRequiredPerformerAction
+          : undefined,
         requiredFragments,
         forbiddenFragments,
       },
     };
     const controller = new AbortController();
     generatorAbortRef.current = controller;
+    generatorRequestRef.current = request;
+    setGeneratorStage('structures');
+    setGeneratorStructureResults([]);
     const generatorSearch = sequenceGenerator.generate(request, controller.signal);
     generatorIteratorRef.current = generatorSearch[Symbol.asyncIterator]();
     generatorPendingRef.current = null;
     setGeneratorResults([]);
     setGeneratorError('');
     setGeneratorHasMore(true);
-    await loadGeneratorPage();
+    await loadGeneratorPage('structures');
+  };
+
+  const exploreGeneratorStructure = async (structure: Sequence) => {
+    if (generatorRunning) return;
+    const request = generatorRequestRef.current;
+    if (!request) return;
+    const controller = new AbortController();
+    generatorAbortRef.current = controller;
+    const locationSearch = sequenceGenerator.expandLocations(structure, request, controller.signal);
+    generatorIteratorRef.current = locationSearch[Symbol.asyncIterator]();
+    generatorPendingRef.current = null;
+    setGeneratorStage('locations');
+    setGeneratorResults([]);
+    setGeneratorError('');
+    setGeneratorHasMore(true);
+    await loadGeneratorPage('locations');
   };
 
   const stopGenerator = () => {
@@ -1133,7 +1172,9 @@ export default function App() {
     const target = index + direction;
     if (index < 0 || target < 0 || target >= sequence.beats.length) return;
     const beats = [...sequence.beats];
-    [beats[index], beats[target]] = [beats[target]!, beats[index]!];
+    const currentBeat = beats[index]!;
+    beats[index] = beats[target]!;
+    beats[target] = currentBeat;
     commit({ ...sequence, beats });
     setShowActionMenu(false);
   };
@@ -2033,12 +2074,14 @@ export default function App() {
             </label>
             <button type="button" onClick={runGenerator} disabled={generatorRunning || !sequence.beats.length || !sequence.performers.length}>Generate</button>
             {generatorRunning && <button type="button" onClick={stopGenerator}>Stop</button>}
-            <span>{generatorRunning ? 'Searching… ' + generatorResults.length + ' found' : generatorResults.length + ' results'}</span>
+            <span>{generatorRunning
+              ? 'Searching… ' + (generatorStage === 'structures' ? generatorStructureResults.length : generatorResults.length) + ' found'
+              : (generatorStage === 'structures' ? generatorStructureResults.length : generatorResults.length) + ' results'}</span>
           </div>
           <details className="generator-advanced">
             <summary>Constraints</summary>
             <div className="generator-action-constraints">
-              {actionNames.map((actionType) => (
+              {generatorActionNames.map((actionType) => (
                 <label key={actionType}>
                   <span>{actionType}</span>
                   <select value={generatorActionModes[actionType]} onChange={(event) => setGeneratorActionModes((current) => ({ ...current, [actionType]: event.target.value as GeneratorActionMode }))} disabled={generatorRunning}>
@@ -2054,8 +2097,8 @@ export default function App() {
             <label className="generator-each-performer">
               <input type="checkbox" checked={generatorRequireEachPerformer} onChange={(event) => setGeneratorRequireEachPerformer(event.target.checked)} disabled={generatorRunning} />
               Require an action for every performer
-              <select value={generatorRequiredPerformerAction} onChange={(event) => setGeneratorRequiredPerformerAction(event.target.value as ActionName)} disabled={generatorRunning || !generatorRequireEachPerformer}>
-                {actionNames.map((action) => <option key={action} value={action}>{action}</option>)}
+              <select value={generatorRequiredPerformerAction} onChange={(event) => setGeneratorRequiredPerformerAction(event.target.value as GeneratorActionName)} disabled={generatorRunning || !generatorRequireEachPerformer}>
+                {generatorActionNames.map((action) => <option key={action} value={action}>{action}</option>)}
               </select>
             </label>
             <div className="generator-transfer-counts">
@@ -2070,9 +2113,34 @@ export default function App() {
             </label>
           </details>
           {generatorError && <p role="alert">{generatorError}</p>}
-          {!generatorRunning && generatorResults.length === 0 && !generatorError && <p>No results yet. Choose a mode and start generation.</p>}
+          {generatorStage === 'locations' && <button type="button" onClick={() => { setGeneratorStage('structures'); setGeneratorResults([]); setGeneratorHasMore(false); generatorIteratorRef.current = null; }}>Back to structures</button>}
+          {!generatorRunning && generatorStage === 'structures' && generatorStructureResults.length === 0 && !generatorError && <p>No structures yet. Choose a mode and start generation.</p>}
+          {!generatorRunning && generatorStage === 'locations' && generatorResults.length === 0 && !generatorError && <p>No valid location arrangements found for this structure.</p>}
           <div className="generator-results">
-            {generatorResults.map((result, resultIndex) => (
+            {generatorStage === 'structures' && generatorStructureResults.map((result, resultIndex) => (
+              <article className="generator-result" key={'structure-' + resultIndex}>
+                <div className="panel-heading"><strong>Structure {resultIndex + 1}</strong><span>{result.notation.length} actions</span></div>
+                <p>Action structure only. Concrete positions have not been assigned yet.</p>
+                <div className="generator-preview">
+                  {result.performers.map((performer) => (
+                    <div className="generator-preview-performer" key={performer.id}>
+                      <strong>{performer.name}</strong>
+                      {hands.map((hand) => (
+                        <div className="generator-preview-row" key={hand} style={{ gridTemplateColumns: `24px repeat(${result.beats.length}, 48px)` }}>
+                          <span>{hand === 'left' ? 'L' : 'R'}</span>
+                          {result.beats.map((beat) => {
+                            const entry = result.notation.find((item) => item.performerId === performer.id && item.hand === hand && item.time.beatId === beat.id);
+                            return <div className="generator-preview-cell" key={beat.id}>{entry ? <ActionSymbol action={entry.action} sequence={result} hand={hand} abstractTargets={!generatorRequestRef.current?.baseSequence?.notation.some((baseEntry) => baseEntry.id === entry.id)} /> : null}</div>;
+                          })}
+                        </div>
+                      ))}
+                    </div>
+                  ))}
+                </div>
+                <button type="button" onClick={() => void exploreGeneratorStructure(result)} disabled={generatorRunning}>Explore locations</button>
+              </article>
+            ))}
+            {generatorStage === 'locations' && generatorResults.map((result, resultIndex) => (
               <article className="generator-result" key={resultIndex}>
                 <div className="panel-heading"><strong>Result {resultIndex + 1}</strong><span>{result.notation.length} actions</span></div>
                 <div className="generator-preview">

@@ -12,6 +12,7 @@ import type {
 import { rational } from '../../domain/time/rational';
 import { simulateSequence } from '../../domain/state';
 import {
+  allBeatsUsed,
   isLoopClosed,
   preservesBaseSequence,
   satisfiesActionRequirements,
@@ -62,15 +63,20 @@ function buildChoices(
   cell: Cell,
   cells: readonly Cell[],
   occupied: ReadonlySet<string>,
+  abstractLocations = false,
 ): Choice[] {
   const choices: Choice[] = [];
   const targetFor = (position: Extract<Sequence['positions'][number], { kind: 'table' }>) => sequence.sequenceType === 'circle-passing'
     ? { kind: 'circle-position' as const, position: position.name as 'A' | 'B' | 'C' }
     : { kind: 'position' as const, positionId: position.id };
 
+  const abstractPosition = sequence.positions.find((position) => position.kind === 'table') ?? sequence.positions[0];
+  const targetPositions = abstractLocations
+    ? abstractPosition ? [abstractPosition] : []
+    : sequence.positions;
   const singles: NotationAction[] = [
     { type: 'HOLD' },
-    ...sequence.positions.flatMap((position) => {
+    ...targetPositions.flatMap((position) => {
       const target = position.kind === 'table' ? targetFor(position) : { kind: 'position' as const, positionId: position.id };
       return [
         { type: 'LIFT' as const, target },
@@ -81,7 +87,6 @@ function buildChoices(
         ] : []),
       ];
     }),
-    { type: 'SPECIAL', text: 'SPECIAL' },
     { type: 'EMPTY' },
   ];
 
@@ -101,6 +106,14 @@ function buildChoices(
 
   for (const partner of partnerCells) {
     if (partner.performerId === cell.performerId && partner.hand !== cell.hand) {
+      const clapLinkId = asLinkId('gen-clap-' + cell.beatIndex + '-' + cell.performerIndex);
+      choices.push({
+        entries: [
+          makeEntry(cell, { type: 'SPECIAL', text: 'Clap', linkId: clapLinkId }, 'clap-left'),
+          makeEntry(partner, { type: 'SPECIAL', text: 'Clap', linkId: clapLinkId }, 'clap-right'),
+        ],
+        coveredCells: [cellKey(cell), cellKey(partner)],
+      });
       for (const [source, receiver] of [[cell, partner], [partner, cell]] as const) {
         const linkId = asLinkId('gen-zip-' + cell.beatIndex + '-' + cell.performerIndex + '-' + source.hand);
         choices.push({
@@ -180,6 +193,34 @@ function isAccepted(
   if (request.constraints.looping === 'must-loop' && !closed) return false;
   if (request.constraints.looping === 'must-not-loop' && closed) return false;
   return true;
+}
+
+function isStructurallyAccepted(
+  request: GeneratorRequest,
+  sequence: Sequence,
+  base: Sequence | undefined,
+): boolean {
+  if (base && !preservesBaseSequence(base, sequence)) return false;
+  return satisfiesActionRequirements(sequence, {
+    ...request.constraints,
+    looping: 'either',
+    requiredFragments: [],
+    forbiddenFragments: [],
+  });
+}
+
+function isLocationAction(action: NotationAction): action is Extract<NotationAction, { type: 'LIFT' | 'LEAVE' | 'TAP' | 'BOUNCE' }> {
+  return (action.type === 'LIFT' || action.type === 'LEAVE' || action.type === 'TAP' || action.type === 'BOUNCE') &&
+    (action.target.kind === 'position' || action.target.kind === 'circle-position');
+}
+
+type LocationTarget = Extract<Extract<NotationAction, { type: 'LIFT' }>['target'], { kind: 'position' | 'circle-position' }>;
+
+function locationTarget(sequence: Sequence, position: Sequence['positions'][number]): LocationTarget {
+  if (sequence.sequenceType === 'circle-passing' && position.kind === 'table') {
+    return { kind: 'circle-position', position: position.name as 'A' | 'B' | 'C' };
+  }
+  return { kind: 'position', positionId: position.id };
 }
 
 export function candidateKey(sequence: Sequence, canonicalizeRotation = false): string {
@@ -267,23 +308,105 @@ export const sequenceGenerator = {
         if (index >= cells.length) {
           if (entries.length === 0) return;
           const candidate = { ...template, notation: [...template.notation, ...entries] };
-          if (isAccepted(request, candidate, base)) yield candidate;
+          if (allBeatsUsed(candidate) && (request.locationMode === 'abstract'
+            ? isStructurallyAccepted(request, candidate, base)
+            : isAccepted(request, candidate, base))) yield candidate;
           return;
         }
 
         const cell = cells[index]!;
         const key = cellKey(cell);
-        occupied.add(key);
-        yield* visit(index + 1, entries);
-        occupied.delete(key);
+        const exactZipRequirement = request.constraints.actionRequirements.find((requirement) =>
+          requirement.actionType === 'ZIP' && requirement.occurrence === 'exact-count',
+        );
+        const exactZipTarget = request.constraints.zipTransferCount ??
+          (exactZipRequirement && 'count' in exactZipRequirement ? exactZipRequirement.count : undefined);
+        const exactSpecialRequirement = request.constraints.actionRequirements.find((requirement) =>
+          requirement.actionType === 'SPECIAL' && requirement.occurrence === 'exact-count',
+        );
+        const exactSpecialTarget = exactSpecialRequirement && 'count' in exactSpecialRequirement
+          ? exactSpecialRequirement.count
+          : undefined;
+        const currentZipLinks = new Set([
+          ...template.notation,
+          ...entries,
+        ].flatMap((entry) => entry.action.type === 'ZIP' ? [entry.action.linkId] : []));
+        if (exactZipTarget !== undefined) {
+          const remainingZipPairs = template.beats.reduce((total, beat) =>
+            total + template.performers.filter((performer) => {
+              const leftKey = String(performer.id) + ':left:' + String(beat.id);
+              const rightKey = String(performer.id) + ':right:' + String(beat.id);
+              return !occupied.has(leftKey) && !occupied.has(rightKey);
+            }).length, 0);
+          if (currentZipLinks.size > exactZipTarget ||
+            currentZipLinks.size + remainingZipPairs < exactZipTarget) return;
+        }
 
-        for (const choice of buildChoices(template, cell, cells, occupied)) {
+        const zipStillNeeded = exactZipTarget !== undefined &&
+          currentZipLinks.size < exactZipTarget;
+        const performerHasAction = [...template.notation, ...entries].some((entry) =>
+          entry.performerId === cell.performerId && entry.time.beatId === cell.beatId && entry.action.type !== 'EMPTY');
+        const hasLaterFreeHand = cells.slice(index + 1).some((later) =>
+          later.performerId === cell.performerId && later.beatId === cell.beatId && !occupied.has(cellKey(later)));
+        const mustUseThisPerformerBeat = !performerHasAction && !hasLaterFreeHand;
+        if (!zipStillNeeded && !mustUseThisPerformerBeat) {
+          occupied.add(key);
+          yield* visit(index + 1, entries);
+          occupied.delete(key);
+        }
+
+        const choices = buildChoices(template, cell, cells, occupied, request.locationMode === 'abstract');
+        const currentEntries = [...template.notation, ...entries];
+        const currentSpecialCount = currentEntries.filter((entry) => entry.action.type === 'SPECIAL').length;
+        const clapStillNeeded = exactSpecialTarget !== undefined && currentSpecialCount < exactSpecialTarget;
+        const requiredActionTypes = new Set<string>();
+        for (const requirement of request.constraints.actionRequirements) {
+          const count = requirement.actionType === 'ZIP'
+            ? new Set(currentEntries.flatMap((entry) => entry.action.type === 'ZIP' ? [entry.action.linkId] : [])).size
+            : currentEntries.filter((entry) => entry.action.type === requirement.actionType).length;
+          if (requirement.occurrence === 'at-least-once' && count === 0) requiredActionTypes.add(requirement.actionType);
+          if (requirement.occurrence === 'exact-count' && count < requirement.count) requiredActionTypes.add(requirement.actionType);
+        }
+        if (request.constraints.requiredActionPerPerformer &&
+          !currentEntries.some((entry) =>
+            entry.performerId === cell.performerId &&
+            entry.action.type === request.constraints.requiredActionPerPerformer,
+          )) {
+          requiredActionTypes.add(request.constraints.requiredActionPerPerformer);
+        }
+        const choicePriority = (choice: Choice): number => {
+          let score = 0;
+          if (zipStillNeeded && choice.entries.some((entry) => entry.action.type === 'ZIP')) score += 1000;
+          if (clapStillNeeded && choice.entries.length === 2 && choice.entries.every((entry) =>
+            entry.action.type === 'SPECIAL' && entry.action.text === 'Clap',
+          )) score += 1000;
+          for (const actionType of requiredActionTypes) {
+            if (choice.entries.some((entry) => entry.action.type === actionType)) score += 100;
+          }
+          return score;
+        };
+        choices.sort((left, right) => choicePriority(right) - choicePriority(left));
+        for (const choice of choices) {
           if (signal?.aborted || visited >= maxSearchNodes || yielded >= maxResults) return;
+          if (mustUseThisPerformerBeat && choice.entries.every((entry) => entry.action.type === 'EMPTY')) continue;
+          if (exactZipTarget !== undefined &&
+            currentZipLinks.size >= exactZipTarget &&
+            choice.entries.some((entry) => entry.action.type === 'ZIP')) continue;
+          if (exactSpecialTarget !== undefined &&
+            currentSpecialCount >= exactSpecialTarget &&
+            choice.entries.some((entry) => entry.action.type === 'SPECIAL')) continue;
           const newlyCovered = choice.coveredCells.filter((covered) => !occupied.has(covered));
           if (newlyCovered.length !== choice.coveredCells.length) continue;
           newlyCovered.forEach((covered) => occupied.add(covered));
           yield* visit(index + 1, [...entries, ...choice.entries]);
           newlyCovered.forEach((covered) => occupied.delete(covered));
+        }
+        if (zipStillNeeded || mustUseThisPerformerBeat) {
+          if (zipStillNeeded && !mustUseThisPerformerBeat) {
+            occupied.add(key);
+            yield* visit(index + 1, entries);
+            occupied.delete(key);
+          }
         }
       }
 
@@ -296,6 +419,66 @@ export const sequenceGenerator = {
         yield { sequence: candidate };
         if (yielded >= maxResults) return;
       }
+    }
+  },
+
+  async *expandLocations(
+    structure: Sequence,
+    request: GeneratorRequest,
+    signal?: AbortSignal,
+  ): AsyncIterable<GeneratedCandidate> {
+    const base = request.mode === 'complete-base' ? request.baseSequence : undefined;
+    const immutableIds = new Set(base?.notation.map((entry) => entry.id) ?? []);
+    const expandable = structure.notation.filter((entry) =>
+      !immutableIds.has(entry.id) && isLocationAction(entry.action),
+    );
+    const targetOptions = expandable.map((entry) => {
+      const positions = structure.positions.filter((position) =>
+        (entry.action.type === 'TAP' || entry.action.type === 'BOUNCE') ? position.kind === 'table' : true,
+      );
+      return positions.map((position) => ({
+        entryId: entry.id,
+        target: locationTarget(structure, position),
+      }));
+    });
+    const maxResults = Math.max(1, Math.floor(request.maxResults ?? 100));
+    const maxSearchNodes = Math.max(1, Math.floor(request.maxSearchNodes ?? 100_000));
+    let visited = 0;
+    let yielded = 0;
+    const seen = new Set<string>();
+    const selected = new Map<string, LocationTarget>();
+
+    async function* visit(index: number): AsyncGenerator<Sequence> {
+      if (signal?.aborted || visited >= maxSearchNodes || yielded >= maxResults) return;
+      visited += 1;
+      if (visited % 256 === 0) await new Promise<void>((resolve) => setTimeout(resolve, 0));
+      if (index >= expandable.length) {
+        const notation = structure.notation.map((entry) => {
+          const target = selected.get(entry.id);
+          if (!target || !isLocationAction(entry.action)) return entry;
+          return { ...entry, action: { ...entry.action, target } } as NotationEntry;
+        });
+        const candidate = { ...structure, notation };
+        if (allBeatsUsed(candidate) && isAccepted(request, candidate, base)) yield candidate;
+        return;
+      }
+      const entry = expandable[index]!;
+      const options = targetOptions[index] ?? [];
+      for (const option of options) {
+        selected.set(entry.id, option.target);
+        yield* visit(index + 1);
+        selected.delete(entry.id);
+        if (signal?.aborted || visited >= maxSearchNodes || yielded >= maxResults) return;
+      }
+    }
+
+    for await (const candidate of visit(0)) {
+      if (signal?.aborted) return;
+      const key = candidateKey(candidate, request.constraints.looping === 'must-loop');
+      if (seen.has(key)) continue;
+      seen.add(key);
+      yielded += 1;
+      yield { sequence: candidate };
     }
   },
 };
