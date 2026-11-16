@@ -39,8 +39,12 @@ test('share links copy the current P4 sequence and load it ahead of local persis
   await bpm.fill('95');
   await bpm.press('Enter');
   await page.goto(shareUrl);
-  await page.getByRole('button', { name: 'Settings' }).click();
-  await expect(page.getByRole('region', { name: 'Sequence settings' }).getByLabel('BPM')).toHaveValue('85');
+  const sharedCode = await page.evaluate(() => new URLSearchParams(window.location.hash.slice(1)).get('code'));
+  expect(sharedCode).toBeTruthy();
+  await page.getByRole('button', { name: /Code, presets and export/ }).click();
+  const codeField = page.getByLabel('Import sequence code');
+  await page.getByRole('button', { name: 'Show current code' }).click();
+  await expect(codeField).toHaveValue(sharedCode!);
 });
 
 test('invalid share links show an error and preserve the locally saved sequence', async ({ page }) => {
@@ -50,10 +54,18 @@ test('invalid share links show an error and preserve the locally saved sequence'
   await bpm.fill('95');
   await bpm.press('Enter');
 
-  await page.goto('./#code=P4invalid');
-  await expect(page.getByRole('alert')).toContainText('could not be loaded');
-  await page.getByRole('button', { name: 'Settings' }).click();
-  await expect(page.getByRole('region', { name: 'Sequence settings' }).getByLabel('BPM')).toHaveValue('95');
+  await page.getByRole('button', { name: /Code, presets and export/ }).click();
+  await page.getByRole('button', { name: 'Show current code' }).click();
+  const savedCode = await page.getByLabel('Import sequence code').inputValue();
+
+  const invalidUrl = new URL(page.url());
+  invalidUrl.hash = 'code=P4invalid';
+  await page.goto(invalidUrl.toString());
+  await expect(page.locator('.update-banner[role="alert"]')).toContainText('could not be loaded');
+  await page.getByRole('button', { name: /Code, presets and export/ }).click();
+  const codeField = page.getByLabel('Import sequence code');
+  await page.getByRole('button', { name: 'Show current code' }).click();
+  await expect(codeField).toHaveValue(savedCode);
 });
 
 test('sequence changes persist across a reload in the same tab', async ({ page }) => {
