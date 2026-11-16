@@ -17,12 +17,12 @@ function circleSubscript(target: Extract<NotationAction, { type: 'LIFT' }>['targ
 function positionReference(sequence: Sequence, positionId: string): string {
   const position = sequence.positions.find((item) => item.id === positionId);
   if (!position) return '?';
-  if (position.kind === 'table' && position.owner.kind === 'performer') {
-    const owner = position.owner as Extract<Sequence['positions'][number], { kind: 'table' }>['owner'] & { readonly kind: 'performer'; readonly performerId: Sequence['performers'][number]['id'] };
-    const identifier = sequence.performers.find((person) => person.id === owner.performerId)?.identifier;
-    return identifier ? position.name + '(' + identifier + ')' : position.name;
-  }
-  return position.name;
+  if (position.kind !== 'table') return position.name;
+  const duplicates = sequence.positions.filter((item) => item.kind === 'table' && item.name === position.name);
+  if (duplicates.length < 2 || position.owner.kind !== 'performer') return position.name;
+  const owner = position.owner as Extract<Sequence['positions'][number], { kind: 'table' }>['owner'] & { readonly kind: 'performer'; readonly performerId: Sequence['performers'][number]['id'] };
+  const identifier = sequence.performers.find((person) => person.id === owner.performerId)?.identifier;
+  return identifier ? position.name + '(' + identifier + ')' : position.name;
 }
 
 /** Shared, renderer independent action geometry for editor, previews, and export. */
