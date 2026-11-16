@@ -286,6 +286,12 @@ export const sequenceGenerator = {
         );
         const exactZipTarget = request.constraints.zipTransferCount ??
           (exactZipRequirement && 'count' in exactZipRequirement ? exactZipRequirement.count : undefined);
+        const exactSpecialRequirement = request.constraints.actionRequirements.find((requirement) =>
+          requirement.actionType === 'SPECIAL' && requirement.occurrence === 'exact-count',
+        );
+        const exactSpecialTarget = exactSpecialRequirement && 'count' in exactSpecialRequirement
+          ? exactSpecialRequirement.count
+          : undefined;
         if (exactZipTarget !== undefined) {
           const currentZipLinks = new Set([
             ...template.notation,
@@ -310,6 +316,16 @@ export const sequenceGenerator = {
           choices.sort((left, right) =>
             Number(right.entries.some((entry) => entry.action.type === 'ZIP')) -
             Number(left.entries.some((entry) => entry.action.type === 'ZIP')),
+          );
+        }
+        if (exactSpecialTarget === 2) {
+          choices.sort((left, right) =>
+            Number(right.entries.length === 2 && right.entries.every((entry) =>
+              entry.action.type === 'SPECIAL' && entry.action.text === 'Clap',
+            )) -
+            Number(left.entries.length === 2 && left.entries.every((entry) =>
+              entry.action.type === 'SPECIAL' && entry.action.text === 'Clap',
+            )),
           );
         }
         for (const choice of choices) {
