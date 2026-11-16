@@ -255,6 +255,10 @@ function readSeatSide(value: string): 'long-a' | 'long-b' | 'short-a' | 'short-b
 
 export const sequenceCodec: SequenceCodec = {
   encode(sequence) {
+    sequence.notation.forEach((entry) => {
+      idx(sequence.performers, entry.performerId);
+      idx(sequence.beats, entry.time.beatId);
+    });
     const links = [...new Set(sequence.notation.flatMap(({ action }) =>
       'linkId' in action && action.linkId !== undefined ? [action.linkId] : [],
     ))];
@@ -444,6 +448,7 @@ export const sequenceCodec: SequenceCodec = {
               const offset = rrat(code, cursor);
               const decoded = actionIn(code, cursor, positions, performers);
               decoded.links.forEach((link) => linkRefs.add(link));
+              if (raw.length >= MAX_ITEMS) throw new Error('Too many notation events.');
               raw.push({ ordinal, performer, hand, beat, offset, action: decoded.action });
             }
             beat += 1;
