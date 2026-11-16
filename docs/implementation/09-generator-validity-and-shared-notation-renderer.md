@@ -1,3 +1,13 @@
+## Implementation status
+
+Implementation is in progress on `fix/generator-state-and-shared-notation-renderer`.
+
+- Added abstract hand and object state validation before structure results are yielded.
+- Added regression coverage for all-HOLD structures with empty hands, HOLD after LIFT, and LEAVE without a held object.
+- Extracted shared action symbol geometry and reused it in the editor and PNG export.
+- Updated generator preview cells to use the editor notation cell styling and grid sizing.
+- Automated checks and browser review are pending.
+
 # Generator validity and shared notation rendering
 
 ## Goals
