@@ -29,17 +29,17 @@ P3 does not use Base64, JSON, encryption or lossy compression. It uses explicit 
 
 ## 2. Document structure
 
-A P3 document consists of exactly fourteen semicolon separated parts. The first part is the version marker. The remaining thirteen parts must appear in the exact order shown below.
+A P3 document consists of exactly fourteen semicolon separated parts. The first part is the version marker. The remaining thirteen values appear in a fixed order. Section labels are deliberately omitted because their positions are defined by this specification.
 
 ```text
-P3;S:<type>;Q:<bpm>;T:<signature>;B:<beat-count>;P:<performers>;X:<positions>;O:<object-count>;I:<placements>;D:<subdivisions>;A:<action-streams>;J:<individual-layout>;M:<table-layout>;C:<seats>
+P3;<sequence-type>;<bpm>;<time-signature>;<beat-count>;<performers>;<positions>;<object-count>;<placements>;<subdivisions>;<action-streams>;<individual-layout>;<table-layout>;<seats>
 ```
 
 No whitespace is permitted outside encoded text values. The entire code is one line. A decoder may trim whitespace surrounding the complete pasted code, but must not trim or normalise data inside fields.
 
-Every section is mandatory, including sections whose value is empty. Empty lists are represented by an empty section value, such as `I:`. Empty values are not defaults.
+Every value is mandatory, including values whose content is empty. Empty lists are represented by an empty value between semicolons. Empty values are not defaults.
 
-Unknown, missing, duplicated or reordered sections make the document malformed.
+A missing value, extra value or reordered value makes the document malformed.
 
 ## 3. Character and separator rules
 
@@ -100,7 +100,7 @@ The decoder must percent decode the value and verify its UTF8 byte length. It mu
 
 ## 5. Section definitions
 
-### S: Sequence type
+### Field 1: Sequence type
 
 Exactly one character:
 
@@ -110,11 +110,11 @@ Exactly one character:
 | `c` | Circle passing |
 | `i` | Individual passing |
 
-### Q: Tempo
+### Field 2: Tempo
 
 One finite number representing BPM. BPM always means quarter notes per minute.
 
-### T: Time signature
+### Field 3: Time signature
 
 Three period separated fields:
 
@@ -126,11 +126,11 @@ Grouping values are separated by plus signs. An empty grouping list is represent
 
 Example: `4.4.1+1+1+1` represents 4/4 grouped into four quarter note beats. `6.8.3+3` represents 6/8 grouped into two dotted quarter note beats.
 
-### B: Main beat count
+### Field 4: Main beat count
 
 One nonnegative integer. This is the exact number of main beats in the sequence. Beat indices in other sections refer to this ordered beat collection.
 
-### P: Performers
+### Field 5: Performers
 
 A comma separated list of performer records. Each record has two period separated fields:
 
@@ -142,7 +142,7 @@ The name is always present, including when empty. The identifier is either `-` w
 
 Performer indices are assigned by record order, starting at zero.
 
-### X: Positions
+### Field 6: Positions
 
 A comma separated list of position records.
 
@@ -164,11 +164,11 @@ The second field is the displayed hand back position name. The final field is th
 
 Position indices are assigned by record order, starting at zero.
 
-### O: Object count
+### Field 7: Object count
 
 One nonnegative integer. Ball identities are reconstructed as local indices from zero up to this count minus one. The count is explicit even when it is zero.
 
-### I: Initial placements
+### Field 8: Initial placements
 
 A comma separated list of placement records. Each record begins with the ball index.
 
@@ -192,7 +192,7 @@ Hand back placement:
 
 Every ball may have zero or one placement record in structurally valid data. The codec must preserve structurally complete but semantically invalid placements, including duplicate or missing placements, so the application validator can report them.
 
-### D: Subdivisions
+### Field 9: Subdivisions
 
 A comma separated list of subdivision records. Each record has four fields:
 
@@ -204,7 +204,7 @@ Records are ordered first by beat index and then by their original order within 
 
 Subdivision identifiers are internal implementation identifiers and are regenerated during decoding. Their order and semantic values are preserved.
 
-### A: Action streams
+### Field 10: Action streams
 
 There are exactly two streams per performer, in canonical order: performer zero left hand, performer zero right hand, performer one left hand, performer one right hand, and so on.
 
@@ -279,7 +279,7 @@ Every distinct LinkId is assigned a local link index in order of its first occur
 
 The decoder reconstructs local LinkIds from these indices. It must preserve one sided or otherwise semantically invalid links so the existing validator can report them.
 
-### J: Individual passing layout
+### Field 11: Individual passing layout
 
 Exactly one character:
 
@@ -291,7 +291,7 @@ Exactly one character:
 
 Absence is explicitly represented and is not inferred from sequence type.
 
-### M: Table layout
+### Field 12: Table layout
 
 Solo table:
 
@@ -313,7 +313,7 @@ r<long side seat count>_<short side seat count>
 
 All dimensions are explicit, including zero seat counts.
 
-### C: Seat assignments
+### Field 13: Seat assignments
 
 A comma separated list of seat assignment records.
 
@@ -407,10 +407,10 @@ Encoding a decoded P3 sequence must reproduce the same canonical code.
 This example represents four beats, one performer, one ball, three table positions, two hand back positions, a 4/4 signature and four notation entries.
 
 ```text
-P3;S:s;Q:120;T:4.4.1+1+1+1;B:4;P:~9:Juggler%201.-;X:T.~1:A.p0,T.~1:B.p0,T.~1:C.p0,B.L.0.L,B.R.0.R;O:1;I:0.P.0;D:1.0.1/2.1,1.1/2.1/2.1;A:0:L:3.3.0.T.p2,0:R:0.0.0.L.p0.-+1.1.0.H+2.2.0.V.p1.-;J:n;M:s;C:
+P3;s;120;4.4.1+1+1+1;4;~9:Juggler%201.-;T.~1:A.p0,T.~1:B.p0,T.~1:C.p0,B.L.0.L,B.R.0.R;1;0.P.0;1.0.1/2.1,1.1/2.1/2.1;L:3.3.0.T.p2,R:0.0.0.L.p0.-+1.1.0.H+2.2.0.V.p1.-;n;s;
 ```
 
-The left hand stream contains the TAP on beat four. The right hand stream contains LIFT, HOLD and LEAVE on beats one, two and three. The stream headers establish performer and hand ownership. The event fields establish the original notation order, beat and offset.
+The left hand stream contains the TAP on beat four. The right hand stream contains LIFT, HOLD and LEAVE on beats one, two and three. The stream order establishes performer ownership, and each stream header establishes its hand. The event fields establish the original notation order, beat and offset.
 
 ## 11. Format replacement policy
 
