@@ -209,7 +209,7 @@ function targetFromCode(value: string, positions: PositionDefinition[], performe
     if (!position) throw new Error('Unknown position reference.');
     return { kind: 'position' as const, positionId: position.id };
   }
-  const circle = /^c([ABC])_([LR-])_(-|(?:-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?))$/.exec(value);
+  const circle = /^c([ABC])_([LR-])_(-|[^_]+)$/.exec(value);
   if (circle) {
     return {
       kind: 'circle-position' as const,
