@@ -1,5 +1,12 @@
 import { expect, test } from '@playwright/test';
 
+async function readSavedSequence(page: import('@playwright/test').Page) {
+  return page.evaluate(() => {
+    const tabId = sessionStorage.getItem('points.tab-id');
+    return tabId ? localStorage.getItem('points.sequence.' + tabId) : null;
+  });
+}
+
 test('sequence code can be shown, imported and undone', async ({ page }) => {
   await page.goto('./');
   await page.getByRole('button', { name: /Code, presets and export/ }).click();
@@ -23,29 +30,89 @@ test('sequence code can be shown, imported and undone', async ({ page }) => {
   await expect(codeField).not.toHaveValue('');
 });
 
-test('share links copy the current P4 sequence and load it ahead of local persistence', async ({ page, context }) => {
+test('share links require confirmation before replacing saved notation', async ({ page, context }) => {
   await context.grantPermissions(['clipboard-read', 'clipboard-write']);
   await page.goto('./');
-  await page.getByRole('button', { name: 'Settings' }).click();
-  const bpm = page.getByRole('region', { name: 'Sequence settings' }).getByLabel('BPM');
-  await bpm.fill('85');
-  await bpm.press('Enter');
-
   await page.getByRole('button', { name: /Code, presets and export/ }).click();
   await page.getByRole('button', { name: 'Copy share link' }).click();
   const shareUrl = await page.evaluate(() => navigator.clipboard.readText());
   expect(shareUrl).toContain('#code=P4');
 
-  await bpm.fill('95');
-  await bpm.press('Enter');
+  await page.getByLabel('Find a preset').fill('Solo basics');
+  page.once('dialog', (dialog) => dialog.accept());
+  await page.getByRole('button', { name: /Solo basics/ }).click();
+  const savedProgress = await readSavedSequence(page);
+  expect(savedProgress).not.toBeNull();
+  expect(JSON.parse(savedProgress!).notation.length).toBeGreaterThan(0);
+
+  let confirmationCount = 0;
+  page.on('dialog', (dialog) => {
+    confirmationCount += 1;
+    expect(dialog.message()).toBe('Replace the current sequence with the imported sequence?');
+    void dialog.accept();
+  });
   await page.goto(shareUrl);
   await page.reload();
-  const sharedCode = await page.evaluate(() => new URLSearchParams(window.location.hash.slice(1)).get('code'));
-  expect(sharedCode).toBeTruthy();
+  await expect.poll(() => confirmationCount).toBe(1);
+  await expect.poll(async () => {
+    const saved = await readSavedSequence(page);
+    return saved ? JSON.parse(saved).notation.length : -1;
+  }).toBe(0);
+});
+
+test('cancelling a share link import preserves saved progress across reloads', async ({ page, context }) => {
+  await context.grantPermissions(['clipboard-read', 'clipboard-write']);
+  await page.goto('./');
   await page.getByRole('button', { name: /Code, presets and export/ }).click();
-  const codeField = page.getByLabel('Import sequence code');
-  await page.getByRole('button', { name: 'Show current code' }).click();
-  await expect(codeField).toHaveValue(sharedCode!);
+  await page.getByRole('button', { name: 'Copy share link' }).click();
+  const shareUrl = await page.evaluate(() => navigator.clipboard.readText());
+
+  await page.getByLabel('Find a preset').fill('Solo basics');
+  page.once('dialog', (dialog) => dialog.accept());
+  await page.getByRole('button', { name: /Solo basics/ }).click();
+  const savedProgress = await readSavedSequence(page);
+  expect(savedProgress).not.toBeNull();
+  expect(JSON.parse(savedProgress!).notation.length).toBeGreaterThan(0);
+
+  let confirmationCount = 0;
+  page.on('dialog', (dialog) => {
+    confirmationCount += 1;
+    void dialog.dismiss();
+  });
+  await page.goto(shareUrl);
+  await page.reload();
+  await expect.poll(() => confirmationCount).toBe(1);
+  await expect.poll(() => readSavedSequence(page)).toBe(savedProgress);
+
+  await page.reload();
+  await expect.poll(() => confirmationCount).toBe(2);
+  await expect.poll(() => readSavedSequence(page)).toBe(savedProgress);
+});
+
+test('an empty saved sequence does not require confirmation to open a share link', async ({ page, context }) => {
+  await context.grantPermissions(['clipboard-read', 'clipboard-write']);
+  await page.goto('./');
+  await page.getByRole('button', { name: /Code, presets and export/ }).click();
+  await page.getByLabel('Find a preset').fill('Solo basics');
+  page.once('dialog', (dialog) => dialog.accept());
+  await page.getByRole('button', { name: /Solo basics/ }).click();
+  await page.getByRole('button', { name: /Code, presets and export/ }).click();
+  await page.getByRole('button', { name: 'Copy share link' }).click();
+  const shareUrl = await page.evaluate(() => navigator.clipboard.readText());
+
+  const emptyTab = await context.newPage();
+  let unexpectedDialog = false;
+  emptyTab.on('dialog', (dialog) => {
+    unexpectedDialog = true;
+    void dialog.dismiss();
+  });
+  await emptyTab.goto('./');
+  await emptyTab.goto(shareUrl);
+  expect(unexpectedDialog).toBe(false);
+  await expect.poll(async () => {
+    const saved = await readSavedSequence(emptyTab);
+    return saved ? JSON.parse(saved).notation.length : -1;
+  }).toBeGreaterThan(0);
 });
 
 test('invalid share links show an error and preserve the locally saved sequence', async ({ page }) => {
@@ -55,19 +122,15 @@ test('invalid share links show an error and preserve the locally saved sequence'
   await bpm.fill('95');
   await bpm.press('Enter');
 
-  await page.getByRole('button', { name: /Code, presets and export/ }).click();
-  await page.getByRole('button', { name: 'Show current code' }).click();
-  const savedCode = await page.getByLabel('Import sequence code').inputValue();
+  const savedProgress = await readSavedSequence(page);
+  expect(savedProgress).not.toBeNull();
 
   const invalidUrl = new URL(page.url());
   invalidUrl.hash = 'code=P4invalid';
   await page.goto(invalidUrl.toString());
   await page.reload();
   await expect(page.locator('.update-banner[role="alert"]')).toContainText('could not be loaded');
-  await page.getByRole('button', { name: /Code, presets and export/ }).click();
-  const codeField = page.getByLabel('Import sequence code');
-  await page.getByRole('button', { name: 'Show current code' }).click();
-  await expect(codeField).toHaveValue(savedCode);
+  await expect.poll(() => readSavedSequence(page)).toBe(savedProgress);
 });
 
 test('sequence changes persist across a reload in the same tab', async ({ page }) => {

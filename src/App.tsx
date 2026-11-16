@@ -29,6 +29,7 @@ import SequenceDataTools from './features/export/SequenceDataTools';
 import { restoreSequence, saveSequence } from './features/data/persistence';
 import { sequenceCodec } from './features/data/codec';
 import { getSequenceCodeFromUrl } from './features/data/share-link';
+import { confirmSequenceImport } from './features/data/import-confirmation';
 
 let nextId = 1;
 const id = (prefix: string) => prefix + '-' + (++nextId).toString(36);
@@ -308,20 +309,21 @@ export default function App() {
   const [shareLinkError, setShareLinkError] = useState('');
 
   useEffect(() => {
+    const restored = import.meta.env.MODE === 'test' ? null : restoreSequence();
+    if (restored) setSequence(restored);
+
     const sharedCode = getSequenceCodeFromUrl(window.location.href);
     if (sharedCode !== null) {
       const decoded = sequenceCodec.decode(sharedCode);
-      if (decoded.ok) setSequence(decoded.sequence);
-      else {
-        setShareLinkError(decoded.message);
-        if (import.meta.env.MODE !== 'test') {
-          const restored = restoreSequence();
-          if (restored) setSequence(restored);
+      if (decoded.ok) {
+        if (restored && restored.notation.length > 0) {
+          if (confirmSequenceImport()) setSequence(decoded.sequence);
+        } else {
+          setSequence(decoded.sequence);
         }
+      } else {
+        setShareLinkError(decoded.message);
       }
-    } else if (import.meta.env.MODE !== 'test') {
-      const restored = restoreSequence();
-      if (restored) setSequence(restored);
     }
     setPersistenceReady(true);
   }, []);
