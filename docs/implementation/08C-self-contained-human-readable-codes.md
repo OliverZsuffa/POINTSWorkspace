@@ -55,7 +55,8 @@ The structural separators are:
 | `|` | Separates successive beat cells within an action stream |
 | `_` | Separates components of circle targets and rectangle dimensions |
 | `~` | Begins an encoded text value |
-| `-` | Represents an absent optional value where explicitly allowed |
+| `-` | Represents an absent optional value or one empty beat cell where explicitly allowed |
+| `-N` | Represents a run of N consecutive empty beat cells, where N is at least two |
 
 Text escaping ensures that structural separators never occur literally inside a text atom.
 
@@ -217,7 +218,7 @@ Each stream has two colon separated fields:
 
 Streams are separated by commas. The performer is determined by the stream's position in this ordered list. The hand is stated explicitly in the stream header.
 
-Each stream contains exactly the number of beat cells declared in Field 4. Beat cells are separated by vertical bars. The first cell represents beat zero, the second cell beat one, and so on. An empty beat cell is `-`. If the sequence has zero beats, the stream has no cell content after the colon.
+Each stream expands to exactly the number of beat cells declared in Field 4. Beat cells are separated by vertical bars. The first cell represents beat zero, the second cell beat one, and so on. An empty beat cell is `-`. Two or more consecutive empty cells are compressed into `-N`, where N is the number of empty cells in that run. The count must be at least two and must not contain leading zeroes. A decoder expands the run before checking the total cell count. If the sequence has zero beats, the stream has no cell content after the colon.
 
 Multiple events within one beat cell are separated by plus signs. Every event has this common prefix:
 
@@ -412,10 +413,10 @@ Encoding a decoded P3 sequence must reproduce the same canonical code.
 This example represents four beats, one performer, one ball, three table positions, two hand back positions, a 4/4 signature and four notation entries.
 
 ```text
-P3;s;120;4.4.1+1+1+1;4;~9:Juggler%201.-;T.~1:A.p0,T.~1:B.p0,T.~1:C.p0,B.L.0.L,B.R.0.R;1;0.P.0;1.0.1/2.1,1.1/2.1/2.1;L:-|-|-|3.0.T.p2,R:0.0.L.p0.-|1.0.H|2.0.V.p1.-|-;n;s;
+P3;s;120;4.4.1+1+1+1;4;~9:Juggler%201.-;T.~1:A.p0,T.~1:B.p0,T.~1:C.p0,B.L.0.L,B.R.0.R;1;0.P.0;1.0.1/2.1,1.1/2.1/2.1;L:-3|3.0.T.p2,R:0.0.L.p0.-|1.0.H|2.0.V.p1.-|-;n;s;
 ```
 
-The left hand stream contains three empty beat cells followed by the TAP on beat four. The right hand stream contains LIFT, HOLD and LEAVE on beats one, two and three, followed by an empty cell. The stream order establishes performer ownership, each stream header establishes its hand, and the cell position establishes the beat. Event ordinals preserve the original notation array order.
+The left hand stream uses `-3` to represent its first three empty beat cells, followed by the TAP on beat four. The right hand stream contains LIFT, HOLD and LEAVE on beats one, two and three, followed by an empty cell. The stream order establishes performer ownership, each stream header establishes its hand, and the cell position establishes the beat. Event ordinals preserve the original notation array order.
 
 ## 11. Format replacement policy
 
