@@ -381,4 +381,26 @@ describe('object state simulation', () => {
     expect(result.snapshots[1]?.handStates[firstPerformer]?.left.heldBallId).toBe('pass-ball-1');
   });
 
+
+  it('validates half beats with the same action semantics as regular beats', () => {
+    const regular = {
+      ...representativeSoloSequence,
+      beats: representativeSoloSequence.beats.map((beat) => ({ ...beat, durationKind: 'regular' as const })),
+    };
+    const half = {
+      ...regular,
+      beats: regular.beats.map((beat, index) => index === 1 ? { ...beat, durationKind: 'half' as const } : beat),
+    };
+    expect(simulateSequence(half).validation).toEqual(simulateSequence(regular).validation);
+  });
+
+  it('rejects action offsets inside a discrete beat', () => {
+    const sequence: Sequence = {
+      ...representativeSoloSequence,
+      notation: representativeSoloSequence.notation.map((item, index) => index === 0
+        ? { ...item, time: { ...item.time, offset: rational(1, 2) } }
+        : item),
+    };
+    expect(simulateSequence(sequence).validation.issues.some((issue) => issue.code === 'invalid-action-offset')).toBe(true);
+  });
 });

@@ -6,7 +6,6 @@ import type {
   PerformerId,
   PositionId,
   SequenceId,
-  SubdivisionId,
 } from './ids';
 import type { Rational } from './time/rational';
 import type { TimeSignature } from './time/time-signature';
@@ -70,23 +69,17 @@ export interface InitialState {
   readonly placements: readonly InitialObjectPlacement[];
 }
 
-export interface Subdivision {
-  readonly id: SubdivisionId;
-  /** Start offset relative to the containing main beat, in the range [0, 1). */
-  readonly start: Rational;
-  /** Duration relative to the containing main beat. */
-  readonly duration: Rational;
-  readonly depth: number;
-}
+export type BeatDurationKind = 'regular' | 'half';
 
 export interface Beat {
   readonly id: BeatId;
-  readonly subdivisions: readonly Subdivision[];
+  /** A half beat is a complete beat with half the normal playback duration. */
+  readonly durationKind?: BeatDurationKind;
 }
 
 export interface TimelinePosition {
   readonly beatId: BeatId;
-  /** Fractional offset from the beginning of the main beat, in the range [0, 1). */
+  /** Actions occur at the beginning of a discrete beat. The offset is retained as an exact zero value in persisted notation. */
   readonly offset: Rational;
 }
 
@@ -290,14 +283,20 @@ export interface GeneratorConstraints {
 }
 
 export interface GeneratorRequest {
+  readonly mode: 'from-scratch' | 'complete-base';
   readonly sequenceTypes: readonly SequenceType[];
+  /** Supplies performer identities, beat identities, table layout and other structural metadata. */
+  readonly templateSequence: Sequence;
+  /** Required in complete-base mode. Every existing beat and notation entry is immutable. */
+  readonly baseSequence?: Sequence;
   readonly beatCount: number;
   readonly performerCount: number;
   readonly objectCount: number;
   readonly availablePositions: readonly PositionDefinition[];
   readonly timeSignature: TimeSignature;
   readonly initialState: InitialState;
-  readonly sourceSequence?: Sequence;
+  readonly maxResults?: number;
+  readonly maxSearchNodes?: number;
   readonly constraints: GeneratorConstraints;
 }
 

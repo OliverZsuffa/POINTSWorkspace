@@ -367,9 +367,8 @@ export function simulateSequence(sequence: Sequence): SimulationResult {
       !Number.isSafeInteger(entry.time.offset.numerator) ||
       !Number.isSafeInteger(entry.time.offset.denominator) ||
       entry.time.offset.denominator <= 0 ||
-      entry.time.offset.numerator < 0 ||
-      entry.time.offset.numerator >= entry.time.offset.denominator
-    ) structuralIssues.push(problem('invalid-action-offset', 'Action offset must be within its main beat.', [entry]));
+      entry.time.offset.numerator !== 0
+    ) structuralIssues.push(problem('invalid-action-offset', 'Actions must occur at the beginning of a discrete beat.', [entry]));
 
     const group = entriesByBeat.get(entry.time.beatId) ?? [];
     group.push(entry);

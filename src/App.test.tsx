@@ -447,34 +447,32 @@ describe('sequence editor', () => {
     prompt.mockRestore();
   });
 
-  it('splits timeline intervals recursively and labels conventional counts', async () => {
+  it('toggles a half beat without creating another notation column', async () => {
     const user = userEvent.setup();
     render(<App />);
-    await user.click(screen.getByRole('button', { name: 'Subdivide beat 1 interval 1' }));
-    expect(screen.getByRole('button', { name: 'Juggler 1 left beat 1 empty' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Juggler 1 left beat 1 & empty' })).toBeInTheDocument();
-    await user.click(screen.getByRole('button', { name: 'Subdivide beat 1 interval 1' }));
-    expect(screen.getByRole('button', { name: 'Juggler 1 left beat 1 e empty' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Juggler 1 left beat 1 & empty' })).toBeInTheDocument();
-    expect(screen.getByText(/simulator currently evaluates all actions/)).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Make beat 1 half length' }));
+    expect(screen.getByRole('button', { name: 'Make beat 1 regular length' })).toBeInTheDocument();
+    expect(screen.getAllByRole('button', { name: 'Juggler 1 left beat 1 empty' })).toHaveLength(1);
   });
 
-  it('adds notation at the selected subdivision offset', async () => {
+  it('uses the normal notation cell and action rules on a half beat', async () => {
     const user = userEvent.setup();
     render(<App />);
-    await user.click(screen.getByRole('button', { name: 'Subdivide beat 1 interval 1' }));
-    await user.click(screen.getByRole('button', { name: 'Juggler 1 left beat 1 & empty' }));
+    await user.click(screen.getByRole('button', { name: 'Make beat 1 half length' }));
+    await user.click(screen.getByRole('button', { name: 'Juggler 1 left beat 1 empty' }));
     await user.click(screen.getByRole('button', { name: 'LIFT' }));
-    expect(screen.getByRole('button', { name: 'Juggler 1 left beat 1 & LIFT A' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Juggler 1 left beat 1 LIFT A' })).toBeInTheDocument();
   });
 
-  it('moves a beat together with its notation and subdivision structure', async () => {
+  it('moves a beat together with its notation and duration kind', async () => {
     const user = userEvent.setup();
     render(<App />);
+    await user.click(screen.getByRole('button', { name: 'Make beat 2 half length' }));
     await user.click(screen.getByRole('button', { name: 'Juggler 1 left beat 1 empty' }));
     await user.click(screen.getByRole('button', { name: 'LIFT' }));
     await user.click(screen.getByRole('button', { name: 'Move beat 2 left' }));
     expect(screen.getByRole('button', { name: 'Juggler 1 left beat 2 LIFT A' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Make beat 1 regular length' })).toBeInTheDocument();
   });
 
   it('allows performer names and identifiers to be edited', async () => {
@@ -745,17 +743,16 @@ describe('sequence editor', () => {
 
 
 
-  it('navigates to the exact subdivision cell from a validation issue', async () => {
+  it('navigates to the discrete beat cell from a validation issue', async () => {
     const user = userEvent.setup();
     render(<App />);
 
-    await user.click(screen.getByRole('button', { name: 'Subdivide beat 1 interval 1' }));
-    await user.click(screen.getByRole('button', { name: 'Juggler 1 left beat 1 & empty' }));
+    await user.click(screen.getByRole('button', { name: 'Juggler 1 left beat 1 empty' }));
     await user.click(screen.getByRole('button', { name: 'LIFT' }));
     await user.selectOptions(screen.getByLabelText('Target'), 'position-B');
 
     expect(screen.queryByText('Sequence valid')).not.toBeInTheDocument();
-    const invalidCell = screen.getByRole('button', { name: 'Juggler 1 left beat 1 & LIFT B' });
+    const invalidCell = screen.getByRole('button', { name: 'Juggler 1 left beat 1 LIFT B' });
     expect(invalidCell).toHaveClass('invalid');
 
     await user.click(screen.getAllByRole('button', { name: 'Go to' })[0]!);
@@ -922,5 +919,14 @@ describe('sequence editor', () => {
     expect(screen.getByRole('button', { name: 'Juggler 1 left beat 1 LIFT A' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Juggler 1 left beat 2 HOLD' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Juggler 1 left beat 3 LEAVE A' })).toBeInTheDocument();
+  });
+
+  it('runs the sequence generator and displays a selectable notation result', async () => {
+    const user = userEvent.setup();
+    render(<App />);
+    await user.click(screen.getByRole('button', { name: 'Show' }));
+    await user.click(screen.getByRole('button', { name: 'Generate' }));
+    expect(await screen.findByText('Result 1')).toBeInTheDocument();
+    expect(screen.getAllByRole('button', { name: 'Load into editor' }).length).toBeGreaterThan(0);
   });
 });

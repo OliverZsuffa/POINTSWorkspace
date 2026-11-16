@@ -4,6 +4,7 @@ import {
   DEFAULT_TIME_SIGNATURE,
   getBarDuration,
   getMainBeatDurationSeconds,
+  getBeatDurationSeconds,
   getMainBeatDurations,
   getMainBeatsPerBar,
   getQuarterNoteDurationSeconds,
@@ -41,6 +42,8 @@ describe('musical time signatures', () => {
     expect(getQuarterNoteDurationSeconds(120)).toBe(0.5);
     expect(getMainBeatDurationSeconds(DEFAULT_TIME_SIGNATURE, 0, 120)).toBe(0.5);
     expect(getMainBeatDurationSeconds(SIX_EIGHT_TIME_SIGNATURE, 0, 120)).toBe(0.75);
+    expect(getBeatDurationSeconds(DEFAULT_TIME_SIGNATURE, 0, 120, 'half')).toBe(0.25);
+    expect(getBeatDurationSeconds(SIX_EIGHT_TIME_SIGNATURE, 0, 120, 'half')).toBe(0.375);
   });
 
   it('rejects groupings that do not fill the bar', () => {

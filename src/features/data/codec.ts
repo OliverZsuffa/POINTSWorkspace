@@ -6,7 +6,7 @@ import type { SequenceCodec } from '../../contracts';
 import type { LinkId } from '../../domain/ids';
 import {
   asActionEntryId, asBallId, asBeatId, asLinkId, asPerformerId, asPositionId,
-  asSequenceId, asSubdivisionId,
+  asSequenceId,
 } from '../../domain/ids';
 
 const MAX_CODE_LENGTH = 1_000_000;
@@ -269,7 +269,7 @@ export const sequenceCodec: SequenceCodec = {
       if (value < 0) throw new Error('Unknown link reference.');
       return value;
     };
-    let out = 'P4' + (sequence.sequenceType === 'solo' ? 'S' : sequence.sequenceType === 'circle-passing' ? 'C' : 'I');
+    let out = 'P5' + (sequence.sequenceType === 'solo' ? 'S' : sequence.sequenceType === 'circle-passing' ? 'C' : 'I');
     out += num(sequence.bpm) + num(sequence.timeSignature.numerator) + num(sequence.timeSignature.denominator);
     out += u(sequence.timeSignature.beatGrouping.length);
     sequence.timeSignature.beatGrouping.forEach((value) => { out += num(value); });
@@ -289,10 +289,7 @@ export const sequenceCodec: SequenceCodec = {
     sequence.initialState.placements.forEach((placement) => {
       out += u(idx(sequence.balls, placement.ballId)) + locationOut(placement.location, sequence);
     });
-    sequence.beats.forEach((beat) => {
-      out += u(beat.subdivisions.length);
-      beat.subdivisions.forEach((part) => { out += rat(part.start) + rat(part.duration) + num(part.depth); });
-    });
+    sequence.beats.forEach((beat) => { out += beat.durationKind === 'half' ? 'H' : 'R'; });
     out += sequence.individualPassingLayout === undefined ? 'N'
       : sequence.individualPassingLayout === 'shared-positions' ? 'S' : 'P';
     const layout = sequence.tableLayout;
@@ -335,7 +332,7 @@ export const sequenceCodec: SequenceCodec = {
 
   decode(code): SequenceDecodeResult {
     if (!code.startsWith('P')) return { ok: false, code: 'malformed', message: 'This is not a POINTS sequence code.' };
-    if (!code.startsWith('P4')) return { ok: false, code: 'unsupported-version', message: 'This sequence code uses a superseded or unsupported format.' };
+    if (!code.startsWith('P5')) return { ok: false, code: 'unsupported-version', message: 'This sequence code uses a superseded or unsupported format.' };
     try {
       if (code.length > MAX_CODE_LENGTH) throw new Error('Sequence code exceeds the maximum supported length.');
       if (/\s/.test(code)) throw new Error('Whitespace is not permitted in a sequence code.');
@@ -392,15 +389,9 @@ export const sequenceCodec: SequenceCodec = {
         return { ballId: ball.id, location: locationIn(code, cursor, positions, performers) };
       });
       const beats: Beat[] = Array.from({ length: beatCount }, (_, index) => {
-        const count = ru(code, cursor);
-        if (count > MAX_ITEMS) throw new Error('Too many subdivisions.');
-        const subdivisions = Array.from({ length: count }, (_, subIndex) => ({
-          id: asSubdivisionId('b' + index + 's' + subIndex),
-          start: rrat(code, cursor),
-          duration: rrat(code, cursor),
-          depth: rnum(code, cursor, 'subdivision depth'),
-        }));
-        return { id: asBeatId('b' + index), subdivisions };
+        const durationCode = code[cursor.at++];
+        if (durationCode !== 'R' && durationCode !== 'H') throw new Error('Invalid beat duration kind.');
+        return { id: asBeatId('b' + index), durationKind: durationCode === 'H' ? 'half' : 'regular' };
       });
       const passingCode = code[cursor.at++];
       const individualPassingLayout = passingCode === 'N' ? undefined
