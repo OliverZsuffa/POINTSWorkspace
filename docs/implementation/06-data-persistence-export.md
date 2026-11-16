@@ -2,7 +2,7 @@
 
 ## Status
 
-Base package implemented and merged through PR #19 on 13 November 2026. The P2 sequence code redesign and decoder audit are implemented in PR #20. Formatting, lint, strict TypeScript, 160 unit tests and production build passed. The final browser viewport check is running. PR #20 is awaiting merge. Manual visual inspection of exported PNG files remains outstanding.
+Base package implemented and merged through PR #19 on 13 November 2026. The P2 sequence code redesign and decoder audit are implemented in PR #20. Formatting, lint, strict TypeScript, 160 unit tests and production build passed. The final browser viewport check passed. Formatting, lint, strict TypeScript, 160 unit tests, production build and 16 browser tests all passed. PR #20 is awaiting merge. Manual visual inspection of exported PNG files remains outstanding.
 
 ## User facing data format
 
