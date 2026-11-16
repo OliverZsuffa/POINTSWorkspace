@@ -51,6 +51,23 @@ describe('sequence generator', () => {
     expect(result.notation.length).toBeGreaterThan(base.notation.length);
   });
 
+  it('treats cyclic rotations as duplicates only when loop canonicalization is enabled', () => {
+    const sequence = representativeSoloSequence;
+    const rotated = {
+      ...sequence,
+      beats: [...sequence.beats.slice(1), sequence.beats[0]!],
+      notation: sequence.notation.map((entry) => {
+        const index = sequence.beats.findIndex((beat) => beat.id === entry.time.beatId);
+        return {
+          ...entry,
+          time: { ...entry.time, beatId: sequence.beats[(index + 1) % sequence.beats.length]!.id },
+        };
+      }),
+    };
+    expect(candidateKey(sequence, true)).toBe(candidateKey(rotated, true));
+    expect(candidateKey(sequence, false)).not.toBe(candidateKey(rotated, false));
+  });
+
   it('stops promptly when its abort signal is already cancelled', async () => {
     const controller = new AbortController();
     controller.abort();
