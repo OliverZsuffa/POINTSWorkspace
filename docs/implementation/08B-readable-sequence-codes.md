@@ -2,7 +2,7 @@
 
 ## Status
 
-Plan written for review. No codec implementation changes have been made yet.
+Approved. Implementation in progress.
 
 ## Goal
 
@@ -18,7 +18,7 @@ The code is a compact representation of the juggling sequence, not a compressed 
 4. **Human readable alphabet.** Prefer letters, digits and a small set of punctuation characters. Avoid Base64, opaque binary payloads and long encoded JSON.
 5. **Lossless semantic round trip.** Decoding must reconstruct every sequence property that affects editing, validation, simulation, rendering or export. Internal IDs may be regenerated, provided all references and relationships remain consistent.
 6. **Invalid but structurally complete sequences remain importable.** The codec must not silently repair notation or reject sequences merely because the validator reports notation errors.
-7. **Versioned compatibility.** Keep the existing `P1.` decoder for codes already shared. New codes use `P2.`. Import recognises both. Encoding always emits P2.
+7. **Experimental format.** Use `P2.` for this redesign. No backward compatibility is required. Existing test codes and saved patterns may be discarded while the app is under development.
 
 ## Proposed code shape
 
@@ -57,7 +57,7 @@ The encoder should omit values only when they can be reconstructed without ambig
 6. Use compact defaults for common configurations, while providing explicit escape forms for uncommon values.
 7. Do not introduce a generic compression stage unless measurements show a clear benefit without harming readability.
 
-## Backward compatibility and migration
+## Format replacement
 
 - Keep the current P1 decoder unchanged as a legacy path.
 - P2 is the only format emitted by the new encoder.
@@ -78,7 +78,7 @@ The encoder should omit values only when they can be reconstructed without ambig
 1. Round trip all existing representative fixtures, including solo, individual passing and structurally complete invalid notation.
 2. Add fixtures or generated cases covering circle passing, per-performer and shared positions, custom table layouts, subdivisions, fractional offsets, ZIP, SPECIAL, hand-back placements and all target variants.
 3. Verify all decoded IDs and references are internally consistent and all semantic fields are preserved.
-4. Verify legacy P1 codes still decode.
+4. Verify P1 is not treated as a supported format.
 5. Verify malformed and unsupported versions are distinguished.
 6. Verify deterministic output.
 7. Add tests proving the code contains visible action initials and does not contain UUIDs, JSON field names or Base64 payloads.
