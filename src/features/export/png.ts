@@ -1,4 +1,4 @@
-import type { Sequence, NotationEntry } from '../../domain/model';
+import type { Sequence } from '../../domain/model';
 import { simulateSequence } from '../../domain/state';
 import { sequenceCodec } from '../data/codec';
 import { getActionSymbolGeometry } from '../notation/action-symbol';
@@ -14,23 +14,6 @@ export interface PNGExportOptions {
   readonly includePerformerNames: boolean;
   readonly includeCode: boolean;
   readonly includeObjectState: boolean;
-}
-
-function targetLabel(entry: NotationEntry, sequence: Sequence): string {
-  const action = entry.action;
-  if (!('target' in action)) return action.type === 'SPECIAL' ? action.text : action.type;
-  const target = action.target;
-  if (target.kind === 'position') return sequence.positions.find((position) => position.id === target.positionId)?.name ?? '?';
-  if (target.kind === 'circle-position') return target.position + (target.direction ? (target.distance && target.distance > 1 ? target.distance : '') + (target.direction === 'left' ? 'L' : 'R') : '');
-  if (target.kind === 'pass-source') return 'X' + (sequence.performers.find((person) => person.id === target.performerId)?.identifier ?? '?');
-  return (target.hand === 'left' ? 'L' : 'R') + (sequence.performers.find((person) => person.id === target.performerId)?.identifier ?? '?');
-}
-
-function entryText(entry: NotationEntry, sequence: Sequence): string {
-  if (entry.action.type === 'ZIP') return 'ZIP';
-  if (entry.action.type === 'SPECIAL') return entry.action.text || 'SPECIAL';
-  if (entry.action.type === 'HOLD' || entry.action.type === 'EMPTY') return entry.action.type;
-  return entry.action.type + ' ' + targetLabel(entry, sequence);
 }
 
 function escapeXml(value: string): string {
