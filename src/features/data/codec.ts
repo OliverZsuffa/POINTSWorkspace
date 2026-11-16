@@ -70,7 +70,13 @@ function decodeAction(value: unknown, positions: PositionDefinition[], performer
   if (!isPacked(value) || typeof value[0] !== 'string') throw new Error('Invalid action');
   const type = CODE_TO_ACTION[value[0]];
   if (!type) throw new Error('Unknown action code');
-  const link = (index: unknown) => typeof index === 'number' && index >= 0 ? links[index] : undefined;
+  const link = (index: unknown) => {
+    if (index === -1) return undefined;
+    if (typeof index !== 'number' || !Number.isSafeInteger(index) || index < 0 || !links[index]) {
+      throw new Error('Invalid link reference');
+    }
+    return links[index];
+  };
   switch (type) {
     case 'HOLD': return { type };
     case 'EMPTY': return { type };
@@ -78,7 +84,11 @@ function decodeAction(value: unknown, positions: PositionDefinition[], performer
     case 'LEAVE': return { type, target: decodeTarget(value[1], positions, performers) as Extract<NotationAction, { type: 'LEAVE' }>['target'], ...(link(value[2]) ? { linkId: link(value[2]) } : {}) };
     case 'BOUNCE': return { type, target: decodeTarget(value[1], positions, performers) as Extract<NotationAction, { type: 'BOUNCE' }>['target'] };
     case 'TAP': return { type, target: decodeTarget(value[1], positions, performers) as Extract<NotationAction, { type: 'TAP' }>['target'] };
-    case 'ZIP': return { type, role: value[1] === 'S' ? 'source' : 'receiver', linkId: links[Number(value[2])]! };
+    case 'ZIP': {
+      const linkId = link(value[2]);
+      if (!linkId || (value[1] !== 'S' && value[1] !== 'R')) throw new Error('Invalid ZIP action');
+      return { type, role: value[1] === 'S' ? 'source' : 'receiver', linkId };
+    }
     case 'SPECIAL': return { type, text: String(value[1]), ...(link(value[2]) ? { linkId: link(value[2]) } : {}) };
   }
 }
