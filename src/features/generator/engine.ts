@@ -524,7 +524,11 @@ export const sequenceGenerator = {
           const newlyCovered = choice.coveredCells.filter((covered) => !occupied.has(covered));
           if (newlyCovered.length !== choice.coveredCells.length) continue;
           newlyCovered.forEach((covered) => occupied.add(covered));
-          yield* visit(index + 1, [...entries, ...choice.entries]);
+          const nextEntries = [...entries, ...choice.entries];
+          const partialSequence = { ...template, notation: [...template.notation, ...nextEntries] };
+          if (request.locationMode !== 'abstract' || isAbstractStateValid(partialSequence)) {
+            yield* visit(index + 1, nextEntries);
+          }
           newlyCovered.forEach((covered) => occupied.delete(covered));
         }
         if (zipStillNeeded || mustUseThisPerformerBeat) {
