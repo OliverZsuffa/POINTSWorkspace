@@ -22,7 +22,7 @@ The code is a compact representation of the juggling sequence, not a compressed 
 
 ## Proposed code shape
 
-Use a compact version prefix followed by nested tuples. Tuples use parentheses and comma separators. Strings use a `~` marker followed by percent escaped text. Numbers remain unquoted. There are no JSON brackets, quoted strings, field names, Base64 payloads or UUIDs. For example, action tuples begin with `~L`, `~H`, `~V`, `~B`, `~T`, `~E`, `~Z` or `~S`. The rest of each tuple contains only the references and parameters needed by that action.
+Use a compact version prefix followed by nested tuples. Tuples use parentheses and comma separators. Single letter tokens are unquoted, so action initials appear directly as `H`, `L`, `V`, `B`, `T`, `E`, `Z` or `S`. Other strings use a `~` marker followed by percent escaped text. Numbers remain unquoted. There are no JSON brackets, quoted strings, field names, Base64 payloads or UUIDs. For example, action tuples begin with `~L`, `~H`, `~V`, `~B`, `~T`, `~E`, `~Z` or `~S`. The rest of each tuple contains only the references and parameters needed by that action.
 
 The encoder should omit values only when they can be reconstructed without ambiguity. Examples include default solo layout, default time signature, default performer identifiers where derivable, and internal entity IDs. Names, non-default settings, subdivisions, custom SPECIAL text, unusual table geometry and initial object placements must be preserved when present.
 
