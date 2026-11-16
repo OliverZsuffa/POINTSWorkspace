@@ -2,7 +2,7 @@
 
 ## Status
 
-Base package implemented and merged through PR #19 on 13 November 2026. The P2 sequence code redesign is implemented in PR #20 and its formatting, lint, strict TypeScript, 152 unit tests, production build and 16 Playwright browser tests all pass. PR #20 is awaiting merge. Manual visual inspection of exported PNG files remains outstanding.
+Base package implemented and merged through PR #19 on 13 November 2026. The P2 sequence code redesign and decoder audit are implemented in PR #20. Final automated verification is running. PR #20 is awaiting merge. Manual visual inspection of exported PNG files remains outstanding.
 
 ## User facing data format
 
