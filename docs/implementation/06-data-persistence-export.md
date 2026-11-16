@@ -8,17 +8,17 @@ Implemented and merged through PR #19 on 13 November 2026. CI and GitHub Pages d
 
 The only sequence representation exposed to users is a compact POINTS code. Users do not need to see or edit JSON.
 
-The current format uses the version prefix `P1.` followed by URL safe Base64 encoding of a compact LZW compressed UTF 8 payload. The payload preserves the complete canonical sequence object, including stable IDs and every sequence property. JSON is an internal serialization detail only. It is never presented as the user facing format.
+The current experimental format uses the version prefix `P2.` followed by a compact tuple grammar. Tuples use parentheses and comma separators. Strings use a `~` marker and percent escaped text. Numbers are unquoted. Action initials remain visible, for example `~H`, `~L`, `~V`, `~B`, `~T`, `~E`, `~Z` and `~S`. The code contains no JSON syntax, Base64 payload, UUIDs or internal object keys.
 
 The codec is deterministic. The same sequence produces the same code. Decoding distinguishes malformed input, unsupported format versions and structurally invalid data. The codec does not run notation validation during decoding. Structurally readable but notation invalid sequences are imported and reported by the existing validator.
 
-The version prefix is reserved for compatibility. Future format changes must add a new version and retain decoders for previously released versions where practical. Never silently reinterpret a code from an unknown version.
+P2 is an experimental development format. P1 is intentionally unsupported, with no decoder or migration path. The format may change again before public release.
 
 ## Implemented scope
 
 ### Sequence code and import
 
-- Compact versioned sequence code.
+- Compact P2 tuple sequence code.
 - Deterministic encode and decode.
 - Full sequence round trip, including BPM, time signature, beats and subdivisions, performers, positions, balls, initial placements, notation, passing layout, table layout and seat assignments.
 - Import by pasting a code.
@@ -57,7 +57,7 @@ The curated preset registry is repository data and supports text search. Initial
 
 | File | Responsibility |
 |---|---|
-| `src/features/data/codec.ts` | Compact versioned sequence code |
+| `src/features/data/codec.ts` | Compact P2 tuple sequence code |
 | `src/features/data/codec.test.ts` | Round trip and malformed input tests |
 | `src/features/data/persistence.ts` | Per tab local save and restore |
 | `src/features/data/persistence.test.ts` | Persistence tests |
@@ -69,7 +69,7 @@ The curated preset registry is repository data and supports text search. Initial
 
 ## Verification
 
-- [x] Deterministic compact code format defined.
+- [x] Deterministic P2 tuple grammar implemented.
 - [x] Complete canonical sequence round trip covered by tests.
 - [x] Unsupported versions and malformed codes distinguished.
 - [x] Import uses undoable editor replacement.
@@ -88,7 +88,7 @@ The curated preset registry is repository data and supports text search. Initial
 
 ## Known limitations to review
 
-1. The first compact code version is intentionally opaque rather than hand editable. Users copy and paste it.
+1. The compact code is intended to be recognisable and partly decipherable. Users copy and paste it rather than edit it manually.
 2. PNG export currently prioritises a clear print summary and notation grid. A future visual pass may refine action geometry and support explicit export options.
 3. Preset library starts with two canonical examples. Additional curated material can be added without changing the code format.
 4. The tab collision mechanism depends on BroadcastChannel where available. Browsers without it still use per tab session identifiers and local storage.
