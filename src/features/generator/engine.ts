@@ -470,18 +470,6 @@ export const sequenceGenerator = {
 
         const zipStillNeeded = exactZipTarget !== undefined &&
           currentZipLinks.size < exactZipTarget;
-        const performerHasAction = [...template.notation, ...entries].some((entry) =>
-          entry.performerId === cell.performerId && entry.time.beatId === cell.beatId && entry.action.type !== 'EMPTY');
-        const hasLaterFreeHand = cells.slice(index + 1).some((later) =>
-          later.performerId === cell.performerId && later.beatId === cell.beatId && !occupied.has(cellKey(later)));
-        const mustUseThisPerformerBeat = !performerHasAction && !hasLaterFreeHand;
-        if (!zipStillNeeded && !mustUseThisPerformerBeat) {
-          occupied.add(key);
-          yield* visit(index + 1, entries);
-          occupied.delete(key);
-        }
-
-        const choices = buildChoices(template, cell, cells, occupied, request.locationMode === 'abstract');
         const currentEntries = [...template.notation, ...entries];
         const currentSpecialCount = currentEntries.filter((entry) => entry.action.type === 'SPECIAL').length;
         const clapStillNeeded = exactSpecialTarget !== undefined && currentSpecialCount < exactSpecialTarget;
@@ -499,6 +487,20 @@ export const sequenceGenerator = {
             entry.action.type === request.constraints.requiredActionPerPerformer,
           )) {
           requiredActionTypes.add(request.constraints.requiredActionPerPerformer);
+        }
+        const choices = buildChoices(template, cell, cells, occupied, request.locationMode === 'abstract');
+        const canSatisfyRequirementHere = choices.some((choice) =>
+          choice.entries.some((entry) => requiredActionTypes.has(entry.action.type)),
+        );
+        const performerHasAction = currentEntries.some((entry) =>
+          entry.performerId === cell.performerId && entry.time.beatId === cell.beatId && entry.action.type !== 'EMPTY');
+        const hasLaterFreeHand = cells.slice(index + 1).some((later) =>
+          later.performerId === cell.performerId && later.beatId === cell.beatId && !occupied.has(cellKey(later)));
+        const mustUseThisPerformerBeat = !performerHasAction && !hasLaterFreeHand;
+        if (!zipStillNeeded && !mustUseThisPerformerBeat && !canSatisfyRequirementHere) {
+          occupied.add(key);
+          yield* visit(index + 1, entries);
+          occupied.delete(key);
         }
         const choicePriority = (choice: Choice): number => {
           let score = 0;
