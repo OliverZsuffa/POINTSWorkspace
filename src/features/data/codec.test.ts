@@ -249,7 +249,7 @@ describe('readable sequence code', () => {
     expect(sequenceCodec.decode(code.replace('(P,0)', '(P,99)')).ok).toBe(false);
   });
 
-  it('rejects invalid circle target direction and distance combinations', () => {
+  it('preserves structurally complete circle targets even when their optional fields are invalid', () => {
     const sequence = {
       ...representativeSoloSequence,
       sequenceType: 'circle-passing' as const,
@@ -259,8 +259,25 @@ describe('readable sequence code', () => {
       }],
     };
     const code = sequenceCodec.encode(sequence);
-    expect(code.includes('(C,A,~,0)')).toBe(true);
-    expect(sequenceCodec.decode(code.replace('(C,A,~,0)', '(C,A,R,0)')).ok).toBe(false);
+    expect(code.includes('(C,A,~,0,0)')).toBe(true);
+    const directionOnlyCode = code.replace('(C,A,~,0,0)', '(C,A,R,0,0)');
+    const directionOnly = sequenceCodec.decode(directionOnlyCode);
+    expect(directionOnly.ok).toBe(true);
+    if (directionOnly.ok) {
+      expect(directionOnly.sequence.notation[0]?.action).toMatchObject({
+        type: 'LIFT',
+        target: { kind: 'circle-position', position: 'A', direction: 'right' },
+      });
+    }
+    const distanceOnlyCode = code.replace('(C,A,~,0,0)', '(C,A,~,1,2)');
+    const distanceOnly = sequenceCodec.decode(distanceOnlyCode);
+    expect(distanceOnly.ok).toBe(true);
+    if (distanceOnly.ok) {
+      expect(distanceOnly.sequence.notation[0]?.action).toMatchObject({
+        type: 'LIFT',
+        target: { kind: 'circle-position', position: 'A', distance: 2 },
+      });
+    }
   });
 
   it('does not support the abandoned experimental P1 format', () => {
