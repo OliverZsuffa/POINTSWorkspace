@@ -81,7 +81,6 @@ function buildChoices(
         ] : []),
       ];
     }),
-    { type: 'SPECIAL', text: 'SPECIAL' },
     { type: 'EMPTY' },
   ];
 
@@ -101,6 +100,14 @@ function buildChoices(
 
   for (const partner of partnerCells) {
     if (partner.performerId === cell.performerId && partner.hand !== cell.hand) {
+      const clapLinkId = asLinkId('gen-clap-' + cell.beatIndex + '-' + cell.performerIndex);
+      choices.push({
+        entries: [
+          makeEntry(cell, { type: 'SPECIAL', text: 'Clap', linkId: clapLinkId }, 'clap-left'),
+          makeEntry(partner, { type: 'SPECIAL', text: 'Clap', linkId: clapLinkId }, 'clap-right'),
+        ],
+        coveredCells: [cellKey(cell), cellKey(partner)],
+      });
       for (const [source, receiver] of [[cell, partner], [partner, cell]] as const) {
         const linkId = asLinkId('gen-zip-' + cell.beatIndex + '-' + cell.performerIndex + '-' + source.hand);
         choices.push({
@@ -267,7 +274,14 @@ export const sequenceGenerator = {
         if (index >= cells.length) {
           if (entries.length === 0) return;
           const candidate = { ...template, notation: [...template.notation, ...entries] };
-          if (isAccepted(request, candidate, base)) yield candidate;
+          const everyBeatUsed = candidate.performers.every((performer) =>
+            candidate.beats.every((beat) => {
+              const left = candidate.notation.find((entry) => entry.performerId === performer.id && entry.hand === 'left' && entry.time.beatId === beat.id);
+              const right = candidate.notation.find((entry) => entry.performerId === performer.id && entry.hand === 'right' && entry.time.beatId === beat.id);
+              return left?.action.type !== 'EMPTY' || right?.action.type !== 'EMPTY';
+            }),
+          );
+          if (everyBeatUsed && isAccepted(request, candidate, base)) yield candidate;
           return;
         }
 
