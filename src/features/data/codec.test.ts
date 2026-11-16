@@ -157,7 +157,6 @@ describe('readable sequence code', () => {
   });
 
   it('rejects invalid circle target direction and distance combinations', () => {
-    const performer = representativeSoloSequence.performers[0]!;
     const sequence = {
       ...representativeSoloSequence,
       sequenceType: 'circle-passing' as const,
