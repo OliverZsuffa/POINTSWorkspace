@@ -23,8 +23,17 @@ describe('readable sequence code', () => {
         expect(result.sequence.timeSignature).toEqual(sequence.timeSignature);
         expect(result.sequence.performers.map(({ name, identifier }) => ({ name, identifier })))
           .toEqual(sequence.performers.map(({ name, identifier }) => ({ name, identifier })));
-        expect(result.sequence.notation.map(({ hand, time, action }) => ({ hand, time: { beat: sequence.beats.findIndex((b) => b.id === time.beatId), offset: time.offset }, action: action.type })))
-          .toHaveLength(sequence.notation.length);
+        expect(result.sequence.notation.map(({ hand, time, action }) => ({
+          hand,
+          beat: result.sequence.beats.findIndex((beat) => beat.id === time.beatId),
+          offset: time.offset,
+          action: action.type,
+        }))).toEqual(sequence.notation.map(({ hand, time, action }) => ({
+          hand,
+          beat: sequence.beats.findIndex((beat) => beat.id === time.beatId),
+          offset: time.offset,
+          action: action.type,
+        })));
         expect(sequenceCodec.encode(result.sequence)).toBe(code);
       }
     },
@@ -44,6 +53,7 @@ describe('readable sequence code', () => {
     const decoded = sequenceCodec.decode(code);
     expect(decoded.ok).toBe(true);
     if (decoded.ok) expect(sequenceCodec.encode(decoded.sequence)).toBe(code);
+    expect(sequenceCodec.decode(code.replace('"Z","S",0', '"Z","S",99')).ok).toBe(false);
   });
 
   it('round trips circle passing targets, including self targets', () => {
