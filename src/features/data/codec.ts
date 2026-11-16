@@ -184,6 +184,7 @@ function assertPackedSequence(raw: unknown): asserts raw is Packed {
         if (!['', 'L', 'R'].includes(expectText(circle[2], 'circle direction'))) throw new Error('Invalid circle direction');
         if (circle[3] !== 0 && circle[3] !== 1) throw new Error('Invalid circle distance flag');
         if (typeof circle[4] !== 'number' || !Number.isFinite(circle[4])) throw new Error('Invalid circle distance');
+        if (circle[3] === 0 && circle[4] !== 0) throw new Error('Unexpected circle distance without presence flag');
       } else if (target[0] === 'S' && actionType === 'L') {
         expectTuple(target, 2, 'pass source target');
         expectIndex(target[1], performers.length, 'pass source');
@@ -206,6 +207,7 @@ function assertPackedSequence(raw: unknown): asserts raw is Packed {
         if (!['', 'L', 'R'].includes(expectText(circle[2], 'circle direction'))) throw new Error('Invalid circle direction');
         if (circle[3] !== 0 && circle[3] !== 1) throw new Error('Invalid circle distance flag');
         if (typeof circle[4] !== 'number' || !Number.isFinite(circle[4])) throw new Error('Invalid circle distance');
+        if (circle[3] === 0 && circle[4] !== 0) throw new Error('Unexpected circle distance without presence flag');
       } else throw new Error('Invalid tap target kind');
     } else if (actionType === 'Z') {
       expectTuple(action, 3, 'ZIP action');
