@@ -17,7 +17,7 @@ function circleSubscript(target: Extract<NotationAction, { type: 'LIFT' }>['targ
 function positionReference(sequence: Sequence, positionId: string): string {
   const position = sequence.positions.find((item) => item.id === positionId);
   if (!position) return '?';
-  if (position.owner.kind !== 'performer') return position.name;
+  if (position.kind !== 'table' || position.owner.kind !== 'performer') return position.name;
   const identifier = sequence.performers.find((person) => person.id === position.owner.performerId)?.identifier;
   return identifier ? position.name + '(' + identifier + ')' : position.name;
 }
