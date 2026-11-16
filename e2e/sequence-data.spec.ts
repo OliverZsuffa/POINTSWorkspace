@@ -23,6 +23,39 @@ test('sequence code can be shown, imported and undone', async ({ page }) => {
   await expect(codeField).not.toHaveValue('');
 });
 
+test('share links copy the current P4 sequence and load it ahead of local persistence', async ({ page, context }) => {
+  await context.grantPermissions(['clipboard-read', 'clipboard-write']);
+  await page.goto('./');
+  await page.getByRole('button', { name: 'Settings' }).click();
+  const bpm = page.getByRole('region', { name: 'Sequence settings' }).getByLabel('BPM');
+  await bpm.fill('85');
+  await bpm.press('Enter');
+
+  await page.getByRole('button', { name: /Code, presets and export/ }).click();
+  await page.getByRole('button', { name: 'Copy share link' }).click();
+  const shareUrl = await page.evaluate(() => navigator.clipboard.readText());
+  expect(shareUrl).toContain('#code=P4');
+
+  await bpm.fill('95');
+  await bpm.press('Enter');
+  await page.goto(shareUrl);
+  await page.getByRole('button', { name: 'Settings' }).click();
+  await expect(page.getByRole('region', { name: 'Sequence settings' }).getByLabel('BPM')).toHaveValue('85');
+});
+
+test('invalid share links show an error and preserve the locally saved sequence', async ({ page }) => {
+  await page.goto('./');
+  await page.getByRole('button', { name: 'Settings' }).click();
+  const bpm = page.getByRole('region', { name: 'Sequence settings' }).getByLabel('BPM');
+  await bpm.fill('95');
+  await bpm.press('Enter');
+
+  await page.goto('./#code=P4invalid');
+  await expect(page.getByRole('alert')).toContainText('could not be loaded');
+  await page.getByRole('button', { name: 'Settings' }).click();
+  await expect(page.getByRole('region', { name: 'Sequence settings' }).getByLabel('BPM')).toHaveValue('95');
+});
+
 test('sequence changes persist across a reload in the same tab', async ({ page }) => {
   await page.goto('./');
   await page.getByRole('button', { name: 'Settings' }).click();
