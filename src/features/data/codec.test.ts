@@ -124,7 +124,7 @@ describe('readable sequence code', () => {
     const sequence = { ...representativeSoloSequence, notation: [...representativeSoloSequence.notation, ...representativeNotationExamples] };
     const code = sequenceCodec.encode(sequence);
     for (const action of ['L', 'H', 'V', 'T', 'B', 'E', 'Z', 'S']) {
-      expect(code).toMatch(new RegExp(`\\.${action}(?:\\.|\\+|,|;)`));
+      expect(code).toMatch(new RegExp(`\\.${action}(?:\\.|\\+|,|;|\\|)`));
     }
     const decoded = sequenceCodec.decode(code);
     expect(decoded.ok).toBe(true);
