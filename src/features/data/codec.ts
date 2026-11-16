@@ -59,7 +59,10 @@ function isPacked(value: unknown): value is Packed {
 
 function encodePacked(value: unknown): string {
   if (Array.isArray(value)) return `(${value.map(encodePacked).join(',')})`;
-  if (typeof value === 'string') return `~${encodeURIComponent(value).replace(/~/g, '%7E')}`;
+  if (typeof value === 'string') {
+    if (/^[A-Za-z]$/.test(value)) return value;
+    return `~${encodeURIComponent(value).replace(/~/g, '%7E')}`;
+  }
   if (typeof value === 'number' && Number.isFinite(value)) return String(value);
   throw new Error('Unsupported packed value');
 }
