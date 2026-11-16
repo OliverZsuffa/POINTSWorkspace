@@ -160,4 +160,42 @@ describe('sequence generator', () => {
     expect(zipSources.map((entry) => entry.hand)).toEqual(['left', 'right']);
   });
 
+  it('generates abstract structures before expanding concrete position choices', async () => {
+    const base = representativeSoloSequence;
+    const generationRequest: GeneratorRequest = {
+      ...request('from-scratch'),
+      templateSequence: { ...base, notation: [] },
+      locationMode: 'abstract',
+      maxResults: 1,
+      maxSearchNodes: 100_000,
+    };
+    const structures = [];
+    for await (const candidate of sequenceGenerator.generate(generationRequest)) {
+      structures.push(candidate.sequence);
+    }
+    expect(structures).toHaveLength(1);
+    const abstractTargets = structures[0]!.notation.filter((entry) =>
+      entry.action.type === 'LIFT' || entry.action.type === 'LEAVE' ||
+      entry.action.type === 'TAP' || entry.action.type === 'BOUNCE',
+    );
+    expect(abstractTargets.length).toBeGreaterThan(0);
+    expect(abstractTargets.every((entry) =>
+      entry.action.type === 'LIFT' || entry.action.type === 'LEAVE' ||
+      entry.action.type === 'TAP' || entry.action.type === 'BOUNCE'
+        ? entry.action.target.kind === 'position' && entry.action.target.positionId === base.positions[0]!.id
+        : true,
+    )).toBe(true);
+
+    const concrete = [];
+    for await (const candidate of sequenceGenerator.expandLocations(structures[0]!, generationRequest)) {
+      concrete.push(candidate.sequence);
+    }
+    expect(concrete).toHaveLength(1);
+    expect(concrete[0]!.notation.some((entry) =>
+      (entry.action.type === 'LIFT' || entry.action.type === 'LEAVE' ||
+        entry.action.type === 'TAP' || entry.action.type === 'BOUNCE') &&
+      entry.action.target.kind === 'position',
+    )).toBe(true);
+  });
+
 });
