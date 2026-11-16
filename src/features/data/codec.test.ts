@@ -72,7 +72,7 @@ describe('readable sequence code', () => {
     'round trips semantic sequence data',
     (sequence) => {
       const code = sequenceCodec.encode(sequence);
-      expect(code.startsWith('P2.')).toBe(true);
+      expect(code.startsWith('P3;')).toBe(true);
       expect(code).not.toContain('{');
       expect(code).not.toContain('[');
       expect(code).not.toContain(']');
@@ -106,18 +106,13 @@ describe('readable sequence code', () => {
   it('keeps action initials visible in the code', () => {
     const sequence = { ...representativeSoloSequence, notation: [...representativeSoloSequence.notation, ...representativeNotationExamples] };
     const code = sequenceCodec.encode(sequence);
-    expect(code).toContain('(L');
-    expect(code).toContain('(H');
-    expect(code).toContain('(V');
-    expect(code).toContain('(T');
-    expect(code).toContain('(B');
-    expect(code).toContain('(E');
-    expect(code).toContain('(Z');
-    expect(code).toContain('(S');
+    for (const action of ['L', 'H', 'V', 'T', 'B', 'E', 'Z', 'S']) {
+      expect(code).toMatch(new RegExp(`\\.${action}(?:\\.|\\+|,|;)`));
+    }
     const decoded = sequenceCodec.decode(code);
     expect(decoded.ok).toBe(true);
     if (decoded.ok) expect(sequenceCodec.encode(decoded.sequence)).toBe(code);
-    expect(sequenceCodec.decode(code.replace('(Z,S,0', '(Z,S,99')).ok).toBe(false);
+    expect(sequenceCodec.decode(code.replace('.Z.S.l0', '.Z.S.l99')).ok).toBe(false);
   });
 
   it('round trips circle targets, polygon seats and relative distance', () => {
@@ -287,15 +282,15 @@ describe('readable sequence code', () => {
   });
 
   it('rejects damaged codes without producing partial sequences', () => {
-    expect(sequenceCodec.decode('P2.not-valid').ok).toBe(false);
+    expect(sequenceCodec.decode('P3;not-valid').ok).toBe(false);
     expect(sequenceCodec.decode('not a code')).toMatchObject({ ok: false, code: 'malformed' });
   });
 
   it('rejects malformed action tuples, unknown actions and invalid references', () => {
     const code = sequenceCodec.encode(representativeSoloSequence);
-    expect(sequenceCodec.decode(code.replace('(H)', '(H,0)')).ok).toBe(false);
-    expect(sequenceCodec.decode(code.replace('(H)', '(Q)')).ok).toBe(false);
-    expect(sequenceCodec.decode(code.replace('(P,0)', '(P,99)')).ok).toBe(false);
+    expect(sequenceCodec.decode(code.replace('.H', '.H.0')).ok).toBe(false);
+    expect(sequenceCodec.decode(code.replace('.H', '.Q')).ok).toBe(false);
+    expect(sequenceCodec.decode(code.replace('.p0.', '.p99.')).ok).toBe(false);
   });
 
   it('preserves structurally complete circle targets even when their optional fields are invalid', () => {
@@ -308,8 +303,8 @@ describe('readable sequence code', () => {
       }],
     };
     const code = sequenceCodec.encode(sequence);
-    expect(code.includes('(C,A,~,0,0)')).toBe(true);
-    const directionOnlyCode = code.replace('(C,A,~,0,0)', '(C,A,R,0,0)');
+    expect(code.includes('cA_-_-')).toBe(true);
+    const directionOnlyCode = code.replace('cA_-_-', 'cA_R_-');
     const directionOnly = sequenceCodec.decode(directionOnlyCode);
     expect(directionOnly.ok).toBe(true);
     if (directionOnly.ok) {
@@ -318,7 +313,7 @@ describe('readable sequence code', () => {
         target: { kind: 'circle-position', position: 'A', direction: 'right' },
       });
     }
-    const distanceOnlyCode = code.replace('(C,A,~,0,0)', '(C,A,~,1,2)');
+    const distanceOnlyCode = code.replace('cA_-_-', 'cA_-_2');
     const distanceOnly = sequenceCodec.decode(distanceOnlyCode);
     expect(distanceOnly.ok).toBe(true);
     if (distanceOnly.ok) {
@@ -329,12 +324,13 @@ describe('readable sequence code', () => {
     }
   });
 
-  it('does not support the abandoned experimental P1 format', () => {
+  it('does not support superseded P1 or P2 formats', () => {
     expect(sequenceCodec.decode('P1.anything')).toMatchObject({ ok: false, code: 'unsupported-version' });
+    expect(sequenceCodec.decode('P2.anything')).toMatchObject({ ok: false, code: 'unsupported-version' });
   });
 
   it('reports unknown formats separately', () => {
-    expect(sequenceCodec.decode('P9.abc')).toMatchObject({ ok: false, code: 'unsupported-version' });
+    expect(sequenceCodec.decode('P9;abc')).toMatchObject({ ok: false, code: 'unsupported-version' });
   });
 
   it('uses a deterministic representation', () => {
