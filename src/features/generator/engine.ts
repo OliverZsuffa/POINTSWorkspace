@@ -233,6 +233,9 @@ export function isAbstractStateValid(sequence: Sequence): boolean {
     const linked = new Set<string>();
     const nextHeld = new Map(held);
     let tableDelta = 0;
+    let backDelta = 0;
+    let tableLifts = 0;
+    let backLifts = 0;
     for (const [linkId, group] of links) {
       const zips = group.filter((entry) => entry.action.type === 'ZIP');
       const passes = group.filter((entry) =>
@@ -284,10 +287,12 @@ export function isAbstractStateValid(sequence: Sequence): boolean {
           if (entry.action.target.kind === 'pass-source' || isHeld) return false;
           const target = entry.action.target.kind === 'position' ? positionById.get(String(entry.action.target.positionId)) : undefined;
           if (target?.kind === 'hand-back') {
-            if (backObjects <= 0) return false;
-            backObjects -= 1;
+            if (backObjects - backLifts <= 0) return false;
+            backLifts += 1;
+            backDelta -= 1;
           } else {
-            if (tableObjects + tableDelta <= 0) return false;
+            if (tableObjects - tableLifts <= 0) return false;
+            tableLifts += 1;
             tableDelta -= 1;
           }
           nextHeld.set(handKey(entry), true);
@@ -296,7 +301,7 @@ export function isAbstractStateValid(sequence: Sequence): boolean {
         case 'LEAVE': {
           if (entry.action.target.kind === 'pass-recipient-hand' || !isHeld) return false;
           const target = entry.action.target.kind === 'position' ? positionById.get(String(entry.action.target.positionId)) : undefined;
-          if (target?.kind === 'hand-back') backObjects += 1;
+          if (target?.kind === 'hand-back') backDelta += 1;
           else tableDelta += 1;
           nextHeld.set(handKey(entry), false);
           break;
@@ -308,6 +313,7 @@ export function isAbstractStateValid(sequence: Sequence): boolean {
     held.clear();
     nextHeld.forEach((value, key) => held.set(key, value));
     tableObjects += tableDelta;
+    backObjects += backDelta;
   }
   return true;
 }
