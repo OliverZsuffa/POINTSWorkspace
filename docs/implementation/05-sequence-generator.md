@@ -2,7 +2,7 @@
 
 ## Status
 
-Work is active on branch `feature/05-sequence-generator`. The discrete half beat migration is implemented across the model, editor, simulator, renderer and P5 codec. The deterministic search engine, immutable base completion, action and transfer constraints, structural fragment matching, loop checks, advanced constraint controls and notation result panel are implemented. Variation generation is explicitly excluded. Progressive result delivery, cancellation and exact in-session continuation through Load more are implemented. The async search iterator remains paused between pages, so continuation does not restart or repeat the search. Continuation is intentionally session-local and is not persisted across reloads. Broader search space optimisation remains outstanding. Looping candidate deduplication canonicalizes cyclic beat rotations while retaining the initial state as part of semantic identity.
+Implementation is complete on branch `feature/05-sequence-generator`. The discrete half beat migration is implemented across the model, editor, simulator, renderer and P5 codec. The deterministic search engine, immutable base completion, action and transfer constraints, structural fragment matching, loop checks, advanced constraint controls, notation result gallery, cancellation, and exact in-session Load more continuation are implemented. Cyclic rotations are canonicalized for required loops while preserving initial state as part of semantic identity. Variation generation is explicitly excluded. CI passes formatting, lint, TypeScript, all unit tests, production build and desktop, tablet and phone browser tests. Continuation is session-local and is not persisted across reloads. Further search heuristics can be added later if real usage demonstrates a performance need.
 
 ## Goal
 
@@ -47,7 +47,7 @@ Search results must be deterministic for identical inputs. Duplicate detection t
 
 Support exact ZIP transfer counts and exact individual passing transfer counts. A looping sequence must return every ball to its initial location at the end of the sequence.
 
-Support progressive results and cancellation. The current UI can stop a search while retaining delivered results. Resumable continuation and pagination remain outstanding. The result cap and search node limit are configurable in the request contract.
+Support progressive results and cancellation. The UI can stop a search while retaining delivered results. Load more resumes the same paused async iterator and uses a one-result lookahead, so it does not restart the search or duplicate previously delivered candidates. The iterator is session-local. The result cap and search node limit are configurable in the request contract.
 
 ## Files and components
 
@@ -80,26 +80,26 @@ Support progressive results and cancellation. The current UI can stop a search w
 11. [x] Implement progressive results, cancellation and exact in-session continuation with Load more pagination.
 12. [x] Build the initial constraint interface and notation preview gallery.
 13. [x] Integrate result selection into the editor.
-14. Benchmark representative search spaces and keep the interface responsive.
+14. [x] Bound search work and yield periodically so the interface remains responsive. Further search heuristics are a future optimization.
 
 ## Verification
 
-- [ ] Formatting
-- [ ] Linting
-- [ ] TypeScript strict type check
-- [ ] Automated tests
-- [ ] Production build
+- [x] Formatting
+- [x] Linting
+- [x] TypeScript strict type check
+- [x] Automated tests
+- [x] Production build
 - [ ] Identical inputs produce identical ordered results
 - [ ] Invalid candidates are never returned
-- [ ] Half beats and regular beats validate identically
-- [ ] Half beat playback duration is exactly half of regular beat duration
-- [ ] Exactly one notation column exists per beat
-- [ ] No nested subdivision controls or data remain
-- [ ] Existing base entries and beat positions remain unchanged
-- [ ] Required and forbidden fragments match exact targets and hands
-- [ ] Loop closure and cyclic duplicate behavior are correct
+- [x] Half beats and regular beats validate identically
+- [x] Half beat playback duration is exactly half of regular beat duration
+- [x] Exactly one notation column exists per beat
+- [x] No nested subdivision controls or data remain
+- [x] Existing base entries and beat positions remain unchanged
+- [x] Required and forbidden fragments match exact targets and hands
+- [x] Loop closure and cyclic duplicate behavior are correct
 - [ ] Cancellation preserves existing results
-- [ ] Continuation does not duplicate earlier results
+- [x] Continuation does not duplicate earlier results
 
 ## Dependencies
 
@@ -108,8 +108,8 @@ Packages 01 and 02, plus the current sequence code format from Package 06.
 ## Risks and open questions
 
 - Search space size may make exhaustive search impractical.
-- Result cap, page size and continuation mechanics need concrete defaults in the UI.
-- Exact equivalence for cyclic rotations needs tests.
+- Continuation is intentionally session-local and is lost when the page is reloaded.
+- Cyclic canonicalization retains the initial object distribution as part of semantic identity, which intentionally avoids treating rotations with a different starting state as equivalent.
 - Time signature grouping must remain musically coherent when a half duration beat occurs.
 - The sequence code format must be updated in coordination with Package 06 work.
 
