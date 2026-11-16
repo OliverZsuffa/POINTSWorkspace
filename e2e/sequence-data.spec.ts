@@ -13,7 +13,7 @@ test('sequence code can be shown, imported and undone', async ({ page }) => {
   const codeField = page.getByLabel('Import sequence code');
   await page.getByRole('button', { name: 'Show current code' }).click();
   const originalCode = await codeField.inputValue();
-  expect(originalCode.startsWith('P4')).toBe(true);
+  expect(originalCode.startsWith('P5')).toBe(true);
 
   await page.getByLabel('Find a preset').fill('Individual passing');
   page.once('dialog', (dialog) => dialog.accept());
@@ -36,7 +36,7 @@ test('share links require confirmation before replacing saved notation', async (
   await page.getByRole('button', { name: /Code, presets and export/ }).click();
   await page.getByRole('button', { name: 'Copy share link' }).click();
   const shareUrl = await page.evaluate(() => navigator.clipboard.readText());
-  expect(shareUrl).toContain('#code=P4');
+  expect(shareUrl).toContain('#code=P5');
 
   await page.getByLabel('Find a preset').fill('Solo basics');
   page.once('dialog', (dialog) => dialog.accept());
@@ -126,7 +126,7 @@ test('invalid share links show an error and preserve the locally saved sequence'
   expect(savedProgress).not.toBeNull();
 
   const invalidUrl = new URL(page.url());
-  invalidUrl.hash = 'code=P4invalid';
+  invalidUrl.hash = 'code=P5invalid';
   await page.goto(invalidUrl.toString());
   await page.reload();
   await expect(page.locator('.update-banner[role="alert"]')).toContainText('could not be loaded');
