@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import type { Sequence } from '../../domain/model';
 import { sequenceCodec } from '../data/codec';
 import { createSequenceShareUrl } from '../data/share-link';
@@ -28,6 +28,10 @@ export default function SequenceDataTools({ sequence, onReplace }: Props) {
       return null;
     }
   }, [sequence]);
+
+  useEffect(() => {
+    setShareLink('');
+  }, [currentCode]);
 
   const copyCode = async () => {
     if (!currentCode) {
