@@ -8,7 +8,7 @@ P4 replaces P3. The compact codec is implemented in the P4 branch and is awaitin
 
 The only sequence representation exposed to users is a compact POINTS code. Users do not need to see or edit JSON.
 
-The active release candidate is P4. It uses fixed order sections separated by semicolons, compact records, performer and hand action streams sliced into exactly the declared number of beat cells, local references and length checked escaped text. Action initials remain visible as `H`, `L`, `V`, `B`, `T`, `E`, `Z` and `S`. The code contains no JSON syntax, Base64 payload, UUIDs or internal object keys. The normative P4 grammar is documented in `08F-p4-compact-sequence-code.md`.
+The active release candidate is P4. It uses a compact fixed order header, one metadata separator, performer and hand action streams sliced into exactly the declared number of beat cells, local references, compact counts and length checked UTF8 text. Action initials remain visible as `H`, `L`, `V`, `B`, `T`, `E`, `Z` and `S`. The code contains no JSON syntax, Base64 payload, UUIDs or internal object keys. The normative P4 grammar is documented in `08F-p4-compact-sequence-code.md`.
 
 The codec is deterministic. The same sequence produces the same code. Decoding distinguishes malformed input, unsupported format versions and structurally invalid data. The codec does not run notation validation during decoding. Structurally readable but notation invalid sequences are imported and reported by the existing validator.
 
