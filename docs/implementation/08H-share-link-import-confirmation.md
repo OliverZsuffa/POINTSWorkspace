@@ -25,9 +25,9 @@ Manual code import already asks for confirmation before replacing the current se
 ## Implementation approach
 
 - Refactor the manual import confirmation into one shared confirmation mechanism that can be invoked by both manual import and startup share loading.
-- Prefer an application controlled confirmation dialogue over a browser native prompt if needed to support a reliable prompt during startup. Keep its wording and actions consistent for both entry points.
+- Use the same browser confirmation dialogue and shared confirmation helper for both manual code imports and share link imports.
 - Make startup restoration and share code handling an explicit sequence so persistence cannot save the shared sequence before the user accepts it.
-- Do not call the normal replacement callback until the user accepts. Cancellation must not create an undo entry or alter the editor state.
+- Do not install the decoded sequence or save it until the user accepts. Cancellation must not alter the editor state or saved progress.
 - Keep the P4 codec and URL format unchanged.
 
 ## Files and areas
@@ -47,7 +47,7 @@ Manual code import already asks for confirmation before replacing the current se
 - Opening a valid share URL with existing saved progress displays the confirmation dialogue and initially leaves the saved sequence active.
 - Accepting the dialogue loads the shared sequence and persists it.
 - Cancelling the dialogue keeps the previously saved sequence active and unchanged after reload.
-- Opening a valid share URL with no prior saved sequence still asks before loading it. Cancelling leaves the normal default sequence active.
+- Opening a valid share URL with no saved sequence or an empty saved sequence loads it directly without a confirmation dialogue.
 - Reloading a share URL asks again. The shared sequence is not applied unless accepted each time.
 - Invalid share URLs show the existing error and do not overwrite saved progress.
 - Manual code import still uses the same dialogue and continues to work.
