@@ -21,7 +21,7 @@ export function NotationSymbol({
     return (
       <span className={'special-symbol' + (geometry.clap ? ' clap-symbol' : '')} aria-label={geometry.clap ? 'Clap' : undefined}>
         {geometry.clap ? <span className="clap-bar" /> : geometry.specialText}
-        {'linkId' in action && action.linkId && !geometry.clap && <span className="special-link-indicator" aria-label="Linked SPECIAL">↔</span>}
+        {'linkId' in action && action.linkId && <span className="special-link-indicator" aria-label="Linked SPECIAL">↔</span>}
       </span>
     );
   }
