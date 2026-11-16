@@ -2,7 +2,7 @@
 
 ## Status
 
-Proposed plan. Documentation only. No generator implementation changes are included. Implementation requires Oliver's explicit approval.
+Core implementation completed and merged through PR #30 on 16 November 2026. The implementation adds two stage structural and location generation, rejects wholly unused beats, generates CLAP through linked SPECIAL entries, and counts ZIP transfers by linked pair. The detailed implementation is recorded in PR #30. Search limit diagnostics and consolidation of the ZIP controls remain follow up verification items.
 
 ## Context
 
@@ -204,4 +204,4 @@ Do not report "no possible pattern" when the search simply exhausted its node bu
 
 ## Approval
 
-Awaiting Oliver's approval before implementation.
+Core implementation approved by Oliver and merged through PR #30. Remaining follow up items are tracked in the current work package status.
