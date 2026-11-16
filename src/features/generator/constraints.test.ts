@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { asActionEntryId } from '../../domain/ids';
+import { asActionEntryId, asLinkId } from '../../domain/ids';
 import type { Sequence, SequenceFragment } from '../../domain/model';
 import { rational } from '../../domain/time/rational';
 import { representativeSoloSequence } from '../../fixtures/sequences';
@@ -66,4 +66,33 @@ describe('generator constraints', () => {
       forbiddenFragments: [],
     })).toBe(false);
   });
+  it('counts ZIP symbols as paired transfers and supports both directions', () => {
+    const base = representativeSoloSequence;
+    const [firstBeat, secondBeat] = base.beats;
+    expect(firstBeat).toBeDefined();
+    expect(secondBeat).toBeDefined();
+    const firstLink = asLinkId('zip-left-to-right');
+    const secondLink = asLinkId('zip-right-to-left');
+    const zipEntries = [
+      { id: asActionEntryId('zip-a-source'), performerId: base.performers[0]!.id, hand: 'left' as const, time: { beatId: firstBeat!.id, offset: rational(0) }, action: { type: 'ZIP' as const, role: 'source' as const, linkId: firstLink } },
+      { id: asActionEntryId('zip-a-receiver'), performerId: base.performers[0]!.id, hand: 'right' as const, time: { beatId: firstBeat!.id, offset: rational(0) }, action: { type: 'ZIP' as const, role: 'receiver' as const, linkId: firstLink } },
+      { id: asActionEntryId('zip-b-source'), performerId: base.performers[0]!.id, hand: 'right' as const, time: { beatId: secondBeat!.id, offset: rational(0) }, action: { type: 'ZIP' as const, role: 'source' as const, linkId: secondLink } },
+      { id: asActionEntryId('zip-b-receiver'), performerId: base.performers[0]!.id, hand: 'left' as const, time: { beatId: secondBeat!.id, offset: rational(0) }, action: { type: 'ZIP' as const, role: 'receiver' as const, linkId: secondLink } },
+    ];
+    const sequence: Sequence = { ...base, notation: zipEntries };
+    expect(satisfiesActionRequirements(sequence, {
+      looping: 'either',
+      actionRequirements: [{ actionType: 'ZIP', occurrence: 'exact-count', count: 2 }],
+      zipTransferCount: 2,
+      requiredFragments: [],
+      forbiddenFragments: [],
+    })).toBe(true);
+    expect(satisfiesActionRequirements(sequence, {
+      looping: 'either',
+      actionRequirements: [{ actionType: 'ZIP', occurrence: 'exact-count', count: 4 }],
+      requiredFragments: [],
+      forbiddenFragments: [],
+    })).toBe(false);
+  });
+
 });
