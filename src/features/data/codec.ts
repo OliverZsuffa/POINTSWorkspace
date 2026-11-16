@@ -285,13 +285,16 @@ function decodeAction(
   }
 }
 
-function parseStream(value: string): { hand: 'left' | 'right'; events: string[] } {
+function parseStream(value: string): { hand: 'left' | 'right'; cells: string[] } {
   const separator = value.indexOf(':');
   if (separator !== 1) throw new Error('Invalid action stream.');
   const handCode = value[0];
   if (handCode !== 'L' && handCode !== 'R') throw new Error('Invalid stream hand.');
-  const eventText = value.slice(separator + 1);
-  return { hand: handCode === 'L' ? 'left' : 'right', events: eventText === '-' ? [] : eventText.split('+') };
+  const timeline = value.slice(separator + 1);
+  return {
+    hand: handCode === 'L' ? 'left' : 'right',
+    cells: timeline === '' ? [] : timeline.split('|'),
+  };
 }
 
 export const sequenceCodec: SequenceCodec = {
@@ -343,17 +346,21 @@ export const sequenceCodec: SequenceCodec = {
     const streams = sequence.performers.flatMap((performer) =>
       (['left', 'right'] as const).map((hand) => {
         const handCode = hand === 'left' ? 'L' : 'R';
-        const events = sequence.notation.flatMap((entry, ordinal) =>
-          entry.performerId === performer.id && entry.hand === hand
-            ? [[
-                String(ordinal),
-                String(beatIndex(entry.time.beatId)),
-                encodeRational(entry.time.offset),
-                ...encodeActionParts(entry.action, sequence, linkIndex),
-              ].join('.')]
-            : [],
-        );
-        return `${handCode}:${events.length ? events.join('+') : '-'}`;
+        const cells = sequence.beats.map((beat, beatPosition) => {
+          const events = sequence.notation.flatMap((entry, ordinal) =>
+            entry.performerId === performer.id &&
+            entry.hand === hand &&
+            entry.time.beatId === beat.id
+              ? [[
+                  String(ordinal),
+                  encodeRational(entry.time.offset),
+                  ...encodeActionParts(entry.action, sequence, linkIndex),
+                ].join('.')]
+              : [],
+          );
+          return events.length ? events.join('+') : '-';
+        });
+        return `${handCode}:${cells.join('|')}`;
       }),
     ).join(',');
     const individualLayout = sequence.individualPassingLayout === undefined ? 'n'
@@ -497,17 +504,22 @@ export const sequenceCodec: SequenceCodec = {
       streamRecords.forEach((stream, streamIndex) => {
         const expectedPerformer = Math.floor(streamIndex / 2);
         const expectedHand = streamIndex % 2 === 0 ? 'left' : 'right';
-        if (stream.hand !== expectedHand) {
-          throw new Error('Action streams are not in canonical order.');
+        if (stream.hand !== expectedHand || stream.cells.length !== beats.length) {
+          throw new Error('Action streams do not match the performer and beat structure.');
         }
-        stream.events.forEach((event) => {
-          const eventParts = event.split('.');
-          if (eventParts.length < 4) throw new Error('Invalid action event.');
-          rawEvents.push({
-            ordinal: parseInteger(eventParts[0]!, 'event order'),
-            performer: expectedPerformer,
-            hand: stream.hand,
-            parts: eventParts.slice(1),
+        stream.cells.forEach((cell, beatPosition) => {
+          if (cell === '-') return;
+          cell.split('+').forEach((event) => {
+            const eventParts = event.split('.');
+            if (eventParts.length < 3) throw new Error('Invalid action event.');
+            rawEvents.push({
+              ordinal: parseInteger(eventParts[0]!, 'event order'),
+              performer: expectedPerformer,
+              hand: stream.hand,
+              beat: beatPosition,
+              offset: eventParts[1]!,
+              actionParts: eventParts.slice(2),
+            });
           });
         });
       });
