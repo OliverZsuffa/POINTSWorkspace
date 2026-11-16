@@ -56,7 +56,7 @@ describe('readable sequence code', () => {
     const decoded = sequenceCodec.decode(code);
     expect(decoded.ok).toBe(true);
     if (decoded.ok) expect(sequenceCodec.encode(decoded.sequence)).toBe(code);
-    expect(sequenceCodec.decode(code.replace('~Z,~S,0', '~Z,~S,99')).ok).toBe(false);
+    expect(sequenceCodec.decode(code.replace('(Z,S,0', '(Z,S,99')).ok).toBe(false);
   });
 
   it('round trips circle passing targets, including self targets', () => {
