@@ -10,7 +10,7 @@ Allow a complete P4 sequence to be loaded automatically by opening a share URL, 
 
 - Read a P4 code from the URL fragment using the `#code=` parameter.
 - Decode the code with the existing P4 codec before changing editor state.
-- Give a valid shared code precedence over locally restored work on initial load.
+- Restore local work first. A valid shared code loads directly only when no saved progress exists; otherwise require explicit confirmation.
 - Preserve the fragment so reloading or sharing the URL continues to load the same sequence.
 - Show a visible error for malformed or unsupported shared codes without overwriting saved local work.
 - Add a Copy share link action beside the existing sequence code export actions.
@@ -28,7 +28,7 @@ Allow a complete P4 sequence to be loaded automatically by opening a share URL, 
 
 Use the URL fragment rather than a query parameter. The format is `https://oliverzsuffa.github.io/POINTSWorkspace/#code=P4...`. Fragments are not sent to the GitHub Pages server, need no routing configuration, and are available to client-side code. P4 characters are safely encoded through the URL API.
 
-A small data-layer helper will parse the code from a URL and construct a share URL. App initialization will check for a shared code before restoring local persistence. It will decode first and only replace the initial sequence on successful decoding. Invalid links will display an error and will not be saved over local persistence.
+A small data-layer helper will parse the code from a URL and construct a share URL. App initialization restores local persistence first, then decodes any shared code. Empty sequences, defined as sequences with no notation entries, do not count as saved progress and can be replaced directly. Nonempty saved progress requires the same explicit confirmation used by manual code import. Invalid links display an error and never replace saved progress.
 
 The Sequence data tools panel will add a Copy share link action. If clipboard access fails, the generated URL will remain visible in a read-only selectable field.
 
