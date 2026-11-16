@@ -182,32 +182,55 @@ function isAccepted(
   return true;
 }
 
-function candidateKey(sequence: Sequence): string {
+function candidateKey(sequence: Sequence, canonicalizeRotation = false): string {
   const beatIndex = new Map(sequence.beats.map((beat, index) => [beat.id, index]));
   const performerIndex = new Map(sequence.performers.map((performer, index) => [performer.id, index]));
   const positionIndex = new Map(sequence.positions.map((position, index) => [position.id, index]));
-  const entries = sequence.notation.map((entry) => {
-    const action = entry.action;
-    let actionShape: unknown;
-    if (action.type === 'HOLD' || action.type === 'EMPTY') actionShape = [action.type];
-    else if (action.type === 'ZIP') actionShape = [action.type, action.role, action.linkId];
-    else if (action.type === 'SPECIAL') actionShape = [action.type, action.text, action.linkId];
-    else if (action.target.kind === 'position') actionShape = [action.type, positionIndex.get(action.target.positionId), 'linkId' in action ? action.linkId : null];
-    else if (action.target.kind === 'circle-position') actionShape = [action.type, action.target.position, action.target.direction, action.target.distance];
-    else if (action.target.kind === 'pass-source') actionShape = [action.type, performerIndex.get(action.target.performerId), 'linkId' in action ? action.linkId : null];
-    else actionShape = [action.type, performerIndex.get(action.target.performerId), action.target.hand, 'linkId' in action ? action.linkId : null];
-    return [beatIndex.get(entry.time.beatId), performerIndex.get(entry.performerId), entry.hand, actionShape];
-  }).sort((a, b) => JSON.stringify(a).localeCompare(JSON.stringify(b)));
-  return JSON.stringify({
-    sequenceType: sequence.sequenceType,
-    timeSignature: sequence.timeSignature,
-    beats: sequence.beats.map((beat) => beat.durationKind ?? 'regular'),
-    performers: sequence.performers,
-    positions: sequence.positions,
-    balls: sequence.balls.length,
-    initialState: sequence.initialState,
-    entries,
-  });
+  const rotations = canonicalizeRotation ? sequence.beats.map((_, index) => index) : [0];
+
+  const serializeRotation = (rotation: number): string => {
+    const count = sequence.beats.length;
+    const rotatedEntries = sequence.notation.map((entry) => ({
+      entry,
+      beat: ((beatIndex.get(entry.time.beatId) ?? 0) - rotation + count) % count,
+      performer: performerIndex.get(entry.performerId) ?? -1,
+    })).sort((a, b) =>
+      a.beat - b.beat ||
+      a.performer - b.performer ||
+      a.entry.hand.localeCompare(b.entry.hand),
+    );
+
+    const linkIds = [...new Set(rotatedEntries.flatMap(({ entry }) =>
+      'linkId' in entry.action && entry.action.linkId ? [entry.action.linkId] : [],
+    ))];
+    const linkIndexes = new Map(linkIds.map((linkId, index) => [linkId, index]));
+    const entries = rotatedEntries.map(({ entry, beat, performer }) => {
+      const action = entry.action;
+      const link = 'linkId' in action && action.linkId ? linkIndexes.get(action.linkId) : null;
+      let actionShape: unknown;
+      if (action.type === 'HOLD' || action.type === 'EMPTY') actionShape = [action.type];
+      else if (action.type === 'ZIP') actionShape = [action.type, action.role, link];
+      else if (action.type === 'SPECIAL') actionShape = [action.type, action.text, link];
+      else if (action.target.kind === 'position') actionShape = [action.type, positionIndex.get(action.target.positionId), link];
+      else if (action.target.kind === 'circle-position') actionShape = [action.type, action.target.position, action.target.direction, action.target.distance];
+      else if (action.target.kind === 'pass-source') actionShape = [action.type, performerIndex.get(action.target.performerId), link];
+      else actionShape = [action.type, performerIndex.get(action.target.performerId), action.target.hand, link];
+      return [beat, performer, entry.hand, actionShape];
+    });
+
+    return JSON.stringify({
+      sequenceType: sequence.sequenceType,
+      timeSignature: sequence.timeSignature,
+      beats: sequence.beats.map((beat, index) => sequence.beats[(index + rotation) % count]?.durationKind ?? 'regular'),
+      performers: sequence.performers,
+      positions: sequence.positions,
+      balls: sequence.balls.length,
+      initialState: sequence.initialState,
+      entries,
+    });
+  };
+
+  return rotations.map(serializeRotation).sort()[0] ?? '';
 }
 
 /**
@@ -266,7 +289,7 @@ export const sequenceGenerator = {
 
       for await (const candidate of visit(0, [])) {
         if (signal?.aborted) return;
-        const key = candidateKey(candidate);
+        const key = candidateKey(candidate, request.constraints.looping === 'must-loop');
         if (seen.has(key)) continue;
         seen.add(key);
         yielded += 1;
