@@ -125,7 +125,7 @@ describe('readable sequence code', () => {
     const sequence = {
       ...representativeSoloSequence,
       sequenceType: 'circle-passing' as const,
-      tableLayout: { type: 'polygon' as const, sideCount: 3 },
+      tableLayout: { type: 'polygon' as const, sideCount: 2 },
       seatAssignments: [{ performerId: performer.id, seat: { kind: 'polygon-edge' as const, edgeIndex: 1 } }],
       notation: [
         {
