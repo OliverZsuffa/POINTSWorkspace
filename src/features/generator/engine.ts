@@ -292,11 +292,11 @@ export const sequenceGenerator = {
         const exactSpecialTarget = exactSpecialRequirement && 'count' in exactSpecialRequirement
           ? exactSpecialRequirement.count
           : undefined;
+        const currentZipLinks = new Set([
+          ...template.notation,
+          ...entries,
+        ].flatMap((entry) => entry.action.type === 'ZIP' ? [entry.action.linkId] : []));
         if (exactZipTarget !== undefined) {
-          const currentZipLinks = new Set([
-            ...template.notation,
-            ...entries,
-          ].flatMap((entry) => entry.action.type === 'ZIP' ? [entry.action.linkId] : []));
           const remainingZipPairs = template.beats.reduce((total, beat) =>
             total + template.performers.filter((performer) => {
               const leftKey = String(performer.id) + ':left:' + String(beat.id);
@@ -307,9 +307,13 @@ export const sequenceGenerator = {
             currentZipLinks.size + remainingZipPairs < exactZipTarget) return;
         }
 
-        occupied.add(key);
-        yield* visit(index + 1, entries);
-        occupied.delete(key);
+        const zipStillNeeded = exactZipTarget !== undefined &&
+          currentZipLinks.size < exactZipTarget;
+        if (!zipStillNeeded) {
+          occupied.add(key);
+          yield* visit(index + 1, entries);
+          occupied.delete(key);
+        }
 
         const choices = buildChoices(template, cell, cells, occupied);
         if (exactZipTarget !== undefined && exactZipTarget > 0) {
@@ -330,11 +334,19 @@ export const sequenceGenerator = {
         }
         for (const choice of choices) {
           if (signal?.aborted || visited >= maxSearchNodes || yielded >= maxResults) return;
+          if (exactZipTarget !== undefined &&
+            currentZipLinks.size >= exactZipTarget &&
+            choice.entries.some((entry) => entry.action.type === 'ZIP')) continue;
           const newlyCovered = choice.coveredCells.filter((covered) => !occupied.has(covered));
           if (newlyCovered.length !== choice.coveredCells.length) continue;
           newlyCovered.forEach((covered) => occupied.add(covered));
           yield* visit(index + 1, [...entries, ...choice.entries]);
           newlyCovered.forEach((covered) => occupied.delete(covered));
+        }
+        if (zipStillNeeded) {
+          occupied.add(key);
+          yield* visit(index + 1, entries);
+          occupied.delete(key);
         }
       }
 
