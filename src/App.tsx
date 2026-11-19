@@ -852,7 +852,7 @@ export default function App() {
     setShowActionMenu(false);
   };
 
-  const loadGeneratorPage = async (targetStage: 'structures' | 'locations' = generatorStage) => {
+  const loadGeneratorPage = async (targetStage: 'structures' | 'locations' = generatorStage === 'flourishes' ? 'locations' : generatorStage) => {
     if (generatorRunning || !generatorIteratorRef.current) return;
     const iterator = generatorIteratorRef.current;
     setGeneratorRunning(true);
