@@ -347,6 +347,62 @@ function evaluateBeat(sequence: Sequence, entries: readonly NotationEntry[], sta
   return issues;
 }
 
+
+/** Validate the structural progression of handling actions across the sequence. */
+function validateActionChains(sequence: Sequence): ValidationIssue[] {
+  const issues: ValidationIssue[] = [];
+  const beatIndex = new Map(sequence.beats.map((beat, index) => [beat.id, index]));
+  const entries = [...sequence.notation].sort((a, b) =>
+    (beatIndex.get(a.time.beatId) ?? 0) - (beatIndex.get(b.time.beatId) ?? 0) ||
+    String(a.performerId).localeCompare(String(b.performerId)) || a.hand.localeCompare(b.hand));
+  const previous = new Map<string, NotationEntry>();
+  const active = new Map<string, NotationEntry>();
+  let lifts = 0;
+  let leaves = 0;
+  for (const entry of entries) {
+    const handKey = String(entry.performerId) + ':' + entry.hand;
+    const prior = previous.get(handKey);
+    const action = entry.action;
+    if (action.type === 'LIFT') lifts++;
+    if (action.type === 'LEAVE') leaves++;
+    if (action.type === 'LIFT') {
+      active.set(handKey, entry);
+    } else if (action.type === 'HOLD') {
+      if (!prior || !(['LIFT', 'ZIP'].includes(prior.action.type)) || !active.has(handKey)) {
+        issues.push(problem('invalid-hold-predecessor', 'HOLD must follow LIFT or a receiving ZIP in the same hand.', [entry, ...(prior ? [prior] : [])]));
+      }
+    } else if (action.type === 'ZIP') {
+      if (action.role === 'source') {
+        if (!prior || !(['LIFT', 'HOLD'].includes(prior.action.type)) || !active.has(handKey)) {
+          issues.push(problem('invalid-zip-predecessor', 'ZIP source must follow LIFT or HOLD in the same hand.', [entry, ...(prior ? [prior] : [])]));
+        }
+        active.delete(handKey);
+      } else {
+        if (!prior || prior.action.type !== 'ZIP') {
+          issues.push(problem('invalid-zip-predecessor', 'ZIP receiver must be preceded by a ZIP in the same hand.', [entry, ...(prior ? [prior] : [])]));
+        }
+        active.set(handKey, entry);
+      }
+    } else if (action.type === 'LEAVE') {
+      if (!prior || !(['LIFT', 'HOLD', 'ZIP'].includes(prior.action.type)) || !active.has(handKey)) {
+        issues.push(problem('invalid-leave-predecessor', 'LEAVE must follow LIFT, HOLD or ZIP in the same hand.', [entry, ...(prior ? [prior] : [])]));
+      }
+      active.delete(handKey);
+    }
+    previous.set(handKey, entry);
+  }
+  if (leaves > lifts) {
+    issues.push(problem('lift-leave-count', 'The sequence must contain at least as many LIFT actions as LEAVE actions.', entries.filter(e => e.action.type === 'LIFT' || e.action.type === 'LEAVE')));
+  }
+  for (const [handKey, start] of active) {
+    const last = previous.get(handKey);
+    if (last && (last.action.type === 'HOLD' || (last.action.type === 'ZIP' && last.action.role === 'receiver') || last.action.type === 'LIFT')) {
+      issues.push(problem('unfinished-action-chain', 'A handling chain must be completed by LEAVE or transferred by a ZIP source.', [start, last]));
+    }
+  }
+  return issues;
+}
+
 export function simulateSequence(sequence: Sequence): SimulationResult {
   const initial = initialState(sequence);
   const issues = [...initial.issues];
@@ -414,6 +470,7 @@ export function simulateSequence(sequence: Sequence): SimulationResult {
     snapshots.push(makeSnapshot(sequence, state, at, 'after'));
   }
 
+  issues.push(...validateActionChains(sequence));
   return { snapshots, validation: { isValid: issues.length === 0, issues } };
 }
 
