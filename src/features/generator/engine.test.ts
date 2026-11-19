@@ -40,6 +40,26 @@ describe('sequence generator', () => {
     expect(candidates[0]?.notation.some((entry) => entry.action.type === 'LIFT')).toBe(true);
   });
 
+  it('generates executable core sequences containing LEAVE when required', async () => {
+    const base = representativeSoloSequence;
+    const leaveRequest: GeneratorRequest = {
+      ...request('from-scratch'),
+      templateSequence: { ...base, notation: [] },
+      constraints: {
+        looping: 'either',
+        actionRequirements: [{ actionType: 'LEAVE', occurrence: 'at-least-once' }],
+        requiredFragments: [],
+        forbiddenFragments: [],
+      },
+      maxResults: 1,
+    };
+    const candidates = [];
+    for await (const candidate of sequenceGenerator.generate(leaveRequest)) candidates.push(candidate.sequence);
+    expect(candidates).toHaveLength(1);
+    expect(candidates[0]!.notation.some((entry) => entry.action.type === 'LEAVE')).toBe(true);
+    expect(simulateSequence(candidates[0]!).validation.isValid).toBe(true);
+  });
+
   it('completes a base without changing any existing action or beat', async () => {
     const base = representativeSoloSequence;
     const candidates = [];
