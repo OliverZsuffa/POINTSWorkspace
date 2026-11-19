@@ -88,6 +88,21 @@ describe('sequence generator', () => {
     expect(candidateKey(sequence, false)).not.toBe(candidateKey(rotated, false));
   });
 
+  it('reports when abstract generation reaches its search node limit', async () => {
+    const limited = { ...request('from-scratch'), maxSearchNodes: 1 };
+    let notified = false;
+    const boundedRequest = { ...limited, onSearchLimitReached: (stage: 'structures' | 'locations') => { if (stage === 'structures') notified = true; } };
+    for await (const _candidate of sequenceGenerator.generate(boundedRequest)) { void _candidate; }
+    expect(notified).toBe(true);
+  });
+
+  it('reports when concrete location expansion reaches its search node limit', async () => {
+    let notified = false;
+    const boundedRequest = { ...request('from-scratch'), maxSearchNodes: 1, onSearchLimitReached: (stage: 'structures' | 'locations') => { if (stage === 'locations') notified = true; } };
+    for await (const _candidate of sequenceGenerator.expandLocations(representativeSoloSequence, boundedRequest)) { void _candidate; }
+    expect(notified).toBe(true);
+  });
+
   it('stops promptly when its abort signal is already cancelled', async () => {
     const controller = new AbortController();
     controller.abort();
