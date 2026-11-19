@@ -359,6 +359,11 @@ function validateActionChains(sequence: Sequence): ValidationIssue[] {
   const previous = new Map<string, NotationEntry>();
   const active = new Set<string>();
   const openedDuringSequence = new Set<string>();
+  for (const placement of sequence.initialState.placements) {
+    if (placement.location.kind === 'hand-held') {
+      active.add(String(placement.location.performerId) + ':' + placement.location.hand);
+    }
+  }
   for (const entry of entries) {
     const handKey = String(entry.performerId) + ':' + entry.hand;
     const prior = previous.get(handKey);
