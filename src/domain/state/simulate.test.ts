@@ -458,8 +458,8 @@ describe('object state simulation', () => {
     expect(simulateSequence(sequence).validation.issues.some((issue) => issue.code === 'invalid-action-offset')).toBe(true);
   });
 
-  it('rejects consecutive HOLD actions in a handling chain', () => {
-    const beats = representativeSoloSequence.beats.slice(0, 3);
+  it('accepts consecutive HOLD actions within a handling chain', () => {
+    const beats = representativeSoloSequence.beats.slice(0, 4);
     const chain = (action: NotationEntry['action'], index: number): NotationEntry => ({
       ...entry('chain-' + index, 'right', action),
       time: { beatId: beats[index]!.id, offset: rational(0) },
@@ -471,12 +471,10 @@ describe('object state simulation', () => {
         chain({ type: 'LIFT', target: { kind: 'position', positionId: positionA } }, 0),
         chain({ type: 'HOLD' }, 1),
         chain({ type: 'HOLD' }, 2),
+        chain({ type: 'LEAVE', target: { kind: 'position', positionId: positionB } }, 3),
       ],
     };
-    const result = validateSequence(sequence);
-    expect(result.isValid).toBe(false);
-    expect(result.issues.map(issue => issue.code)).not.toContain('unfinished-action-chain');
-    expect(result.issues.map(issue => issue.code)).toContain('invalid-hold-predecessor');
+    expect(validateSequence(sequence).isValid).toBe(true);
   });
 
   it('accepts a completed LIFT to LEAVE chain', () => {
