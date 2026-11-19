@@ -222,7 +222,7 @@ function circleSubscript(target: Extract<TableActionTarget, { kind: 'circle-posi
 }
 
 function ActionSymbol({ action, sequence, hand, abstractTargets = false }: { action: NotationAction; sequence: Sequence; hand: Hand; abstractTargets?: boolean }) {
-  return <NotationSymbol action={action} sequence={sequence} hand={hand} abstractTargets={abstractTargets} className="notation-symbol" />;
+  return <NotationSymbol action={action} sequence={sequence} hand={hand} abstractTargets={abstractTargets} className="ball-segment" />;
 }
 
 function NotationMark({ action, sequence, hand }: { action: NotationAction; sequence: Sequence; hand: Hand }) {
@@ -293,7 +293,7 @@ export default function App() {
   const [generatorPassCount, setGeneratorPassCount] = useState('');
   const [generatorRequiredFragmentCode, setGeneratorRequiredFragmentCode] = useState('');
   const [generatorForbiddenFragmentCode, setGeneratorForbiddenFragmentCode] = useState('');
-  const [generatorResults, setGeneratorResults] = useState<Sequence[]>([]);\n  const [generatorFlourishResults, setGeneratorFlourishResults] = useState<Sequence[]>([]);
+  const [generatorResults, setGeneratorResults] = useState<Sequence[]>([]);\n  const [generatorFlourishResults, setGeneratorFlourishResults] = useState<Sequence[]>([]);\n  const [generatorCoreSequence, setGeneratorCoreSequence] = useState<Sequence | null>(null);
   const [generatorStructureResults, setGeneratorStructureResults] = useState<Sequence[]>([]);
   const [generatorStage, setGeneratorStage] = useState<'structures' | 'locations' | 'flourishes'>('structures');
   const [generatorRunning, setGeneratorRunning] = useState(false);
@@ -1004,7 +1004,7 @@ export default function App() {
     await loadGeneratorPage('locations');
   };
 
-  const exploreGeneratorFlourishes = (core: Sequence) => {
+  const exploreGeneratorFlourishes = (core: Sequence) => {\n    setGeneratorCoreSequence(core);
     setGeneratorStage('flourishes');
     setGeneratorFlourishResults(generateFlourishes(core));
     setGeneratorHasMore(false);
@@ -2087,6 +2087,28 @@ export default function App() {
               </article>
             ))}
           </div>
+            {generatorStage === 'flourishes' && generatorFlourishResults.map((result, resultIndex) => (
+              <article className="generator-result" key={'flourish-' + resultIndex}>
+                <div className="generator-result-heading"><strong>{resultIndex === 0 ? 'Core sequence' : 'Flourish ' + resultIndex}</strong><span>{result.notation.length} actions</span></div>
+                <div className="generator-preview">
+                  {result.performers.map((performer) => (
+                    <div className="generator-preview-performer" key={performer.id}>
+                      <strong>{performer.name}</strong>
+                      {hands.map((hand) => (
+                        <div className="generator-preview-row" key={hand} style={{ gridTemplateColumns: `82px repeat(${result.beats.length}, var(--notation-cell-size))` }}>
+                          <span className="row-label">{hand === 'left' ? 'L' : 'R'}</span>
+                          {result.beats.map((beat) => {
+                            const entry = result.notation.find((item) => item.performerId === performer.id && item.hand === hand && item.time.beatId === beat.id);
+                            return <div className="notation-cell generator-preview-cell" key={beat.id}>{entry ? <ActionSymbol action={entry.action} sequence={result} hand={hand} /> : null}</div>;
+                          })}
+                        </div>
+                      ))}
+                    </div>
+                  ))}
+                </div>
+                <button type="button" onClick={() => { commit(result); setShowGenerator(false); }}>Load into editor</button>
+              </article>
+            ))}
           {generatorHasMore && <button type="button" onClick={() => void loadGeneratorPage()} disabled={generatorRunning}>Load more results</button>}
         </>}
       </section>
