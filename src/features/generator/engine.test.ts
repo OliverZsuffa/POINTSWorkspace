@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest';
 import { asActionEntryId, asLinkId } from '../../domain/ids';
-import { simulateSequence } from '../../domain/state';
 import type { GeneratorRequest } from '../../domain/model';
 import { representativeSoloSequence } from '../../fixtures/sequences';
 import { candidateKey, generateFlourishes, isAbstractStateValid, sequenceGenerator } from './engine';
@@ -290,6 +289,16 @@ describe('sequence generator', () => {
       }],
     };
     expect(isAbstractStateValid(sequence)).toBe(false);
+  });
+
+  it('creates optional flourish variants and keeps the core sequence', () => {
+    const core = representativeSoloSequence;
+    const variants = generateFlourishes(core);
+    expect(variants[0]).toBe(core);
+    expect(variants.length).toBeGreaterThan(1);
+    expect(variants.every((variant) => simulateSequence(variant).validation.isValid)).toBe(true);
+    expect(variants.some((variant) => variant.notation.some((entry) => entry.action.type === 'BOUNCE'))).toBe(true);
+    expect(variants.some((variant) => variant.notation.some((entry) => entry.action.type === 'TAP'))).toBe(true);
   });
 
 });
