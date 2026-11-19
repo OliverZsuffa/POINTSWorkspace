@@ -114,7 +114,7 @@ describe('sequence generator', () => {
   it('does not confuse one added action with a one action base', async () => {
     const sequence = {
       ...representativeSoloSequence,
-      notation: [representativeSoloSequence.notation[0]!],
+      notation: [representativeSoloSequence.notation[0]!, representativeSoloSequence.notation[2]!],
     };
     const baseRequest: GeneratorRequest = {
       mode: 'complete-base',
