@@ -373,13 +373,13 @@ function validateActionChains(sequence: Sequence): ValidationIssue[] {
       const receiver = zipPairs.get(action.linkId);
       if (action.role === 'source') {
         if ((!active.has(hand)) || (prior && !validPredecessors.includes(prior.action.type)) || (!prior))
-          issues.push(problem('invalid-zip-predecessor', 'ZIP source must follow LIFT, HOLD, ZIP or an initial held object.', [entry, ...(prior ? [prior] : [])]));
+          issues.push(problem('invalid-zip-predecessor', 'ZIP source must follow LIFT, HOLD, ZIP or BOUNCE in an active chain.', [entry, ...(prior ? [prior] : [])]));
         if (receiver && active.has(hand)) active.add(handKey(receiver));
         active.delete(hand);
       }
     } else if (action.type === 'LEAVE') {
-      if ((!active.has(hand) && !initiallyHeld.has(hand)) || (prior && !validPredecessors.includes(prior.action.type)) || (!prior && !initiallyHeld.has(hand)))
-        issues.push(problem('invalid-leave-predecessor', 'LEAVE must follow LIFT, HOLD, ZIP or an initial held object.', [entry, ...(prior ? [prior] : [])]));
+      if (!active.has(hand) || !prior || !validPredecessors.includes(prior.action.type))
+        issues.push(problem('invalid-leave-predecessor', 'LEAVE must follow LIFT, HOLD, ZIP or BOUNCE in an active chain.', [entry, ...(prior ? [prior] : [])]));
       active.delete(hand);
     } else if (active.has(hand) && ['EMPTY', 'TAP', 'SPECIAL'].includes(action.type)) {
       issues.push(problem('interrupted-handling-chain', 'EMPTY, TAP or SPECIAL cannot interrupt an active handling chain. Close it with LEAVE or transfer it with ZIP first.', [entry, ...(prior ? [prior] : [])]));
