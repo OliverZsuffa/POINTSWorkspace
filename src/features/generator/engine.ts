@@ -329,42 +329,31 @@ function isAbstractHandlingChainsValid(sequence: Sequence): boolean {
   const entries = [...sequence.notation].sort((a, b) =>
     (beatIndex.get(a.time.beatId) ?? 0) - (beatIndex.get(b.time.beatId) ?? 0) ||
     String(a.performerId).localeCompare(String(b.performerId)) || a.hand.localeCompare(b.hand));
-  const active = new Set<string>();
-  const opened = new Set<string>();
-  const initiallyHeld = new Set<string>();
-  const previous = new Map<string, NotationEntry>();
-  const key = (entry: NotationEntry) => String(entry.performerId) + ':' + entry.hand;
-  for (const placement of sequence.initialState.placements) {
-    if (placement.location.kind === 'hand-held') { const hand = String(placement.location.performerId) + ':' + placement.location.hand; active.add(hand); initiallyHeld.add(hand); }
+  const active = new Set<string>(), initiallyHeld = new Set<string>(), previous = new Map<string, NotationEntry>();
+  const key = (entry: NotationEntry) => String(entry.performerId) + ':' + entry.hand, validPredecessors = ['LIFT', 'HOLD', 'ZIP', 'BOUNCE'];
+  for (const placement of sequence.initialState.placements) if (placement.location.kind === 'hand-held') {
+    const hand = String(placement.location.performerId) + ':' + placement.location.hand; active.add(hand); initiallyHeld.add(hand);
   }
   for (const entry of entries) {
     const hand = key(entry), prior = previous.get(hand), action = entry.action;
-    const isPass = (action.type === 'LIFT' && action.target.kind === 'pass-source') ||
-      (action.type === 'LEAVE' && action.target.kind === 'pass-recipient-hand');
+    const isPass = (action.type === 'LIFT' && action.target.kind === 'pass-source') || (action.type === 'LEAVE' && action.target.kind === 'pass-recipient-hand');
     if (!isPass) {
-      if (action.type === 'LIFT') {
-        if (active.has(hand)) return false;
-        active.add(hand); opened.add(hand);
-      } else if (action.type === 'HOLD' || action.type === 'BOUNCE') {
-        if (!active.has(hand) || !prior || !['LIFT', 'HOLD', 'ZIP', 'BOUNCE'].includes(prior.action.type)) return false;
+      if (action.type === 'LIFT') active.add(hand);
+      else if (action.type === 'HOLD' || action.type === 'BOUNCE') {
+        if ((!active.has(hand) && !initiallyHeld.has(hand)) || (!prior && !initiallyHeld.has(hand)) || (prior && !validPredecessors.includes(prior.action.type))) return false;
       } else if (action.type === 'ZIP') {
         if (action.role === 'source') {
-          if (!active.has(hand) || !prior || !['LIFT', 'HOLD', 'ZIP', 'BOUNCE'].includes(prior.action.type)) return false;
-          active.delete(hand); opened.delete(hand);
-        } else {
-          if (active.has(hand)) return false;
-          active.add(hand); opened.add(hand);
-        }
+          if ((!active.has(hand) && !initiallyHeld.has(hand)) || (prior && !validPredecessors.includes(prior.action.type)) || (!prior && !initiallyHeld.has(hand))) return false;
+          active.delete(hand);
+        } else active.add(hand);
       } else if (action.type === 'LEAVE') {
-        if (!active.has(hand) || (!prior && !initiallyHeld.has(hand)) || (prior && !['LIFT', 'HOLD', 'ZIP', 'BOUNCE'].includes(prior.action.type))) return false;
-        active.delete(hand); opened.delete(hand);
-      } else if (active.has(hand)) {
-        return false;
-      }
+        if ((!active.has(hand) && !initiallyHeld.has(hand)) || (prior && !validPredecessors.includes(prior.action.type)) || (!prior && !initiallyHeld.has(hand))) return false;
+        active.delete(hand);
+      } else if (active.has(hand) && prior && ['HOLD', 'BOUNCE'].includes(prior.action.type)) return false;
     }
     previous.set(hand, entry);
   }
-  return opened.size === 0;
+  return true;
 }
 
 function isStructurallyAccepted(
