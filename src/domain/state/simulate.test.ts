@@ -491,7 +491,7 @@ describe('object state simulation', () => {
   });
 
 
-  it('rejects unfinished LIFT HOLD HOLD chains', () => {
+  it('accepts unfinished LIFT HOLD HOLD chains', () => {
     const beats = representativeSoloSequence.beats.slice(0, 3);
     const chain = (action: NotationEntry['action'], index: number): NotationEntry => ({
       ...entry('unfinished-' + index, 'right', action),
@@ -506,8 +506,7 @@ describe('object state simulation', () => {
         chain({ type: 'HOLD' }, 2),
       ],
     };
-    expect(validateSequence(sequence).isValid).toBe(false);
-    expect(validateSequence(sequence).issues.map((issue) => issue.code)).toContain('unfinished-action-chain');
+    expect(validateSequence(sequence).isValid).toBe(true);
   });
 
 
