@@ -458,7 +458,7 @@ describe('object state simulation', () => {
     expect(simulateSequence(sequence).validation.issues.some((issue) => issue.code === 'invalid-action-offset')).toBe(true);
   });
 
-  it('rejects unfinished LIFT and HOLD chains', () => {
+  it('rejects consecutive HOLD actions in a handling chain', () => {
     const beats = representativeSoloSequence.beats.slice(0, 3);
     const chain = (action: NotationEntry['action'], index: number): NotationEntry => ({
       ...entry('chain-' + index, 'right', action),
