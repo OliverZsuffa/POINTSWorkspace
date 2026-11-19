@@ -349,7 +349,7 @@ function isAbstractHandlingChainsValid(sequence: Sequence): boolean {
         active.delete(hand);
       }
     } else if (action.type === 'LEAVE') {
-      if ((!active.has(hand) && !initiallyHeld.has(hand)) || (prior && !validPredecessors.includes(prior.action.type)) || (!prior && !initiallyHeld.has(hand))) return false;
+      if (!active.has(hand) || !prior || !validPredecessors.includes(prior.action.type)) return false;
       active.delete(hand);
     } else if (active.has(hand) && ['EMPTY', 'TAP', 'SPECIAL'].includes(action.type)) return false;
     previous.set(hand, entry);
