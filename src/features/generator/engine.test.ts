@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { asActionEntryId, asLinkId } from '../../domain/ids';
+import { asActionEntryId, asLinkId } from '../../domain/ids';\nimport { simulateSequence } from '../../domain/state';
 import type { GeneratorRequest } from '../../domain/model';
 import { representativeSoloSequence } from '../../fixtures/sequences';
 import { candidateKey, generateFlourishes, isAbstractStateValid, sequenceGenerator } from './engine';\nimport { simulateSequence } from '../../domain/state';
