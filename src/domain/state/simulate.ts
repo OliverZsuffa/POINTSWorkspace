@@ -357,7 +357,6 @@ function validateActionChains(sequence: Sequence): ValidationIssue[] {
     String(a.performerId).localeCompare(String(b.performerId)) || a.hand.localeCompare(b.hand));
   const handKey = (entry: NotationEntry) => String(entry.performerId) + ':' + entry.hand;
   const active = new Set<string>(), initiallyHeld = new Set<string>(), previous = new Map<string, NotationEntry>();
-  const zipReceivers = new Set<ActionEntryId>();
   const zipPairs = new Map<string, NotationEntry>();
   for (const entry of entries) if (entry.action.type === 'ZIP' && entry.action.role === 'receiver') zipPairs.set(entry.action.linkId, entry);
   for (const placement of sequence.initialState.placements) if (placement.location.kind === 'hand-held') initiallyHeld.add(String(placement.location.performerId) + ':' + placement.location.hand);
