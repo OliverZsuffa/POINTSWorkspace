@@ -349,40 +349,52 @@ function locationTarget(sequence: Sequence, position: Sequence['positions'][numb
   return { kind: 'position', positionId: position.id };
 }
 
-/** Builds optional flourish variants from a fully validated core sequence. */
+/** Builds simulator-validated optional flourish combinations from a core sequence. */
 export function generateFlourishes(sequence: Sequence): Sequence[] {
-  const variants: Sequence[] = [sequence];
   const tablePosition = sequence.positions.find((position) => position.kind === 'table');
-  if (!tablePosition) return variants;
+  if (!tablePosition) return [sequence];
   const target = sequence.sequenceType === 'circle-passing'
     ? { kind: 'circle-position' as const, position: tablePosition.name as 'A' | 'B' | 'C' }
     : { kind: 'position' as const, positionId: tablePosition.id };
-  const addIfValid = (notation: NotationEntry[]) => {
-    const candidate = { ...sequence, notation };
-    if (simulateSequence(candidate).validation.isValid && !variants.some((item) => candidateKey(item) === candidateKey(candidate))) {
-      variants.push(candidate);
-    }
+  const variants: Sequence[] = [sequence];
+  const seen = new Set([candidateKey(sequence)]);
+  const maxVariants = 64;
+
+  const add = (source: Sequence, notation: NotationEntry[]) => {
+    if (variants.length >= maxVariants) return;
+    const candidate = { ...source, notation };
+    if (!simulateSequence(candidate).validation.isValid) return;
+    const key = candidateKey(candidate);
+    if (seen.has(key)) return;
+    seen.add(key);
+    variants.push(candidate);
   };
-  sequence.notation.forEach((entry, index) => {
-    if (entry.action.type === 'HOLD') {
-      addIfValid(sequence.notation.map((item, i) => i === index ? { ...item, action: { type: 'BOUNCE' as const, target } } : item));
-    } else if (entry.action.type === 'EMPTY') {
-      addIfValid(sequence.notation.map((item, i) => i === index ? { ...item, action: { type: 'TAP' as const, target } } : item));
-    }
-  });
-  const beatIndex = new Map(sequence.beats.map((beat, index) => [beat.id, index]));
-  for (const performer of sequence.performers) {
-    for (const beat of sequence.beats) {
-      const left = sequence.notation.find((entry) => entry.performerId === performer.id && entry.hand === 'left' && entry.time.beatId === beat.id && entry.action.type === 'EMPTY');
-      const right = sequence.notation.find((entry) => entry.performerId === performer.id && entry.hand === 'right' && entry.time.beatId === beat.id && entry.action.type === 'EMPTY');
-      if (!left || !right) continue;
-      const linkId = asLinkId('flourish-clap-' + performer.id + '-' + beat.id);
-      addIfValid(sequence.notation.map((entry) => entry.id === left.id || entry.id === right.id
-        ? { ...entry, action: { type: 'SPECIAL' as const, text: 'Clap', linkId } }
-        : entry));
+
+  // Grow the set iteratively, so compatible flourishes can coexist rather
+  // than only ever producing one isolated substitution per core sequence.
+  for (let cursor = 0; cursor < variants.length && variants.length < maxVariants; cursor++) {
+    const source = variants[cursor]!;
+    source.notation.forEach((entry) => {
+      if (entry.action.type === 'HOLD') {
+        add(source, source.notation.map((item) => item.id === entry.id
+          ? { ...item, action: { type: 'BOUNCE' as const, target } } : item));
+      } else if (entry.action.type === 'EMPTY') {
+        add(source, source.notation.map((item) => item.id === entry.id
+          ? { ...item, action: { type: 'TAP' as const, target } } : item));
+      }
+    });
+    for (const performer of source.performers) {
+      for (const beat of source.beats) {
+        const left = source.notation.find((entry) => entry.performerId === performer.id && entry.hand === 'left' && entry.time.beatId === beat.id && entry.action.type === 'EMPTY');
+        const right = source.notation.find((entry) => entry.performerId === performer.id && entry.hand === 'right' && entry.time.beatId === beat.id && entry.action.type === 'EMPTY');
+        if (!left || !right) continue;
+        const linkId = asLinkId('flourish-clap-' + performer.id + '-' + beat.id);
+        add(source, source.notation.map((entry) => entry.id === left.id || entry.id === right.id
+          ? { ...entry, action: { type: 'SPECIAL' as const, text: 'Clap', linkId } }
+          : entry));
+      }
     }
   }
-  void beatIndex;
   return variants;
 }
 
