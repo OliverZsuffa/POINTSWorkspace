@@ -64,6 +64,7 @@ function buildChoices(
   cells: readonly Cell[],
   occupied: ReadonlySet<string>,
   abstractLocations = false,
+  allowClap = !abstractLocations,
 ): Choice[] {
   const choices: Choice[] = [];
   const targetFor = (position: Extract<Sequence['positions'][number], { kind: 'table' }>) => sequence.sequenceType === 'circle-passing'
@@ -106,8 +107,8 @@ function buildChoices(
 
   for (const partner of partnerCells) {
     if (partner.performerId === cell.performerId && partner.hand !== cell.hand) {
-      if (!abstractLocations) {
-      const clapLinkId = asLinkId('gen-clap-' + cell.beatIndex + '-' + cell.performerIndex);
+      if (allowClap) {
+        const clapLinkId = asLinkId('gen-clap-' + cell.beatIndex + '-' + cell.performerIndex);
       choices.push({
         entries: [
           makeEntry(cell, { type: 'SPECIAL', text: 'Clap', linkId: clapLinkId }, 'clap-left'),
@@ -550,7 +551,7 @@ export const sequenceGenerator = {
           occupied.delete(key);
         }
 
-        const choices = buildChoices(template, cell, cells, occupied, request.locationMode === 'abstract');
+        const choices = buildChoices(template, cell, cells, occupied, request.locationMode === 'abstract', request.constraints.actionRequirements.some((requirement) => requirement.actionType === 'SPECIAL' && requirement.occurrence !== 'forbidden'));
         const choicePriority = (choice: Choice): number => {
           let score = 0;
           if (zipStillNeeded && choice.entries.some((entry) => entry.action.type === 'ZIP')) score += 1000;
