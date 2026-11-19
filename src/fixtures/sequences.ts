@@ -120,7 +120,7 @@ export const representativeIndividualPassingSequence: Sequence = {
   sequenceType: 'individual-passing',
   timeSignature: DEFAULT_TIME_SIGNATURE,
   bpm: 120,
-  beats: [{ id: asBeatId('pass-beat-1') }],
+  beats: [{ id: asBeatId('pass-beat-1') }, { id: asBeatId('pass-beat-2') }],
   performers: [
     { id: asPerformerId('pass-performer-a'), name: 'Juggler 1', identifier: 'a' },
     { id: asPerformerId('pass-performer-b'), name: 'Juggler 2', identifier: 'b' },
@@ -150,20 +150,23 @@ export const representativeIndividualPassingSequence: Sequence = {
     placements: [
       {
         ballId: asBallId('pass-ball-1'),
-        location: {
-          kind: 'hand-held',
-          performerId: asPerformerId('pass-performer-a'),
-          hand: 'right',
-        },
+        location: { kind: 'position', positionId: asPositionId('shared-A') },
       },
     ],
   },
   notation: [
     {
-      id: asActionEntryId('pass-sender-leave'),
+      id: asActionEntryId('pass-opening-lift'),
       performerId: asPerformerId('pass-performer-a'),
       hand: 'right',
       time: { beatId: asBeatId('pass-beat-1'), offset: rational(0) },
+      action: { type: 'LIFT', target: { kind: 'position', positionId: asPositionId('shared-A') } },
+    },
+    {
+      id: asActionEntryId('pass-sender-leave'),
+      performerId: asPerformerId('pass-performer-a'),
+      hand: 'right',
+      time: { beatId: asBeatId('pass-beat-2'), offset: rational(0) },
       action: {
         type: 'LEAVE',
         target: {
@@ -178,7 +181,7 @@ export const representativeIndividualPassingSequence: Sequence = {
       id: asActionEntryId('pass-receiver-lift'),
       performerId: asPerformerId('pass-performer-b'),
       hand: 'left',
-      time: { beatId: asBeatId('pass-beat-1'), offset: rational(0) },
+      time: { beatId: asBeatId('pass-beat-2'), offset: rational(0) },
       action: {
         type: 'LIFT',
         target: {

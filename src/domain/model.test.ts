@@ -30,8 +30,8 @@ describe('shared sequence model fixtures', () => {
   });
 
   it('represents an individual pass as simultaneous linked sender and receiver entries', () => {
-    const sender = representativeIndividualPassingSequence.notation[0];
-    const receiver = representativeIndividualPassingSequence.notation[1];
+    const sender = representativeIndividualPassingSequence.notation[1];
+    const receiver = representativeIndividualPassingSequence.notation[2];
 
     expect(sender).toBeDefined();
     expect(receiver).toBeDefined();

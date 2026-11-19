@@ -214,9 +214,8 @@ export function isAbstractStateValid(sequence: Sequence): boolean {
   let backObjects = 0;
   const positionById = new Map(sequence.positions.map((position) => [String(position.id), position]));
   for (const placement of sequence.initialState.placements) {
-    if (placement.location.kind === 'hand-held') {
-      held.set(String(placement.location.performerId) + ':' + placement.location.hand, true);
-    } else if (placement.location.kind === 'position') {
+    if (placement.location.kind === 'hand-held') return false;
+    if (placement.location.kind === 'position') {
       tableObjects += 1;
     } else if (placement.location.kind === 'hand-back') {
       backObjects += 1;
@@ -324,43 +323,41 @@ export function isAbstractStateValid(sequence: Sequence): boolean {
   return true;
 }
 
-function isAbstractHandlingChainsValid(sequence: Sequence): boolean {
+function isAbstractHandlingChainsValid(sequence: Sequence, requireClosed = true): boolean {
   const beatIndex = new Map(sequence.beats.map((beat, index) => [beat.id, index]));
   const entries = [...sequence.notation].sort((a, b) =>
     (beatIndex.get(a.time.beatId) ?? 0) - (beatIndex.get(b.time.beatId) ?? 0) ||
     String(a.performerId).localeCompare(String(b.performerId)) || a.hand.localeCompare(b.hand));
-  const active = new Set<string>();
-  const previous = new Map<string, NotationEntry>();
+  const active = new Set<string>(), previous = new Map<string, NotationEntry>();
   const key = (entry: NotationEntry) => String(entry.performerId) + ':' + entry.hand;
   const validPredecessors = ['LIFT', 'HOLD', 'ZIP', 'BOUNCE'];
-
-  // Objects held before the sequence begins are not newly opened handling chains.
-  // They may be left directly, but cannot be used to justify HOLD or ZIP source.
-  for (const placement of sequence.initialState.placements) {
-    if (placement.location.kind === 'hand-held') {
-      active.add(String(placement.location.performerId) + ':' + placement.location.hand);
-    }
-  }
-
+  const zipReceivers = new Map<string, NotationEntry>();
+  for (const entry of entries) if (entry.action.type === 'ZIP' && entry.action.role === 'receiver') zipReceivers.set(entry.action.linkId, entry);
   for (const entry of entries) {
     const hand = key(entry), prior = previous.get(hand), action = entry.action;
-    if (action.type === 'LIFT' && action.target.kind !== 'pass-source') active.add(hand);
-    else if (action.type === 'HOLD') {
-      if (!active.has(hand) || !prior || !validPredecessors.includes(prior.action.type)) return false;
-    } else if (action.type === 'LEAVE' && action.target.kind !== 'pass-recipient-hand') {
-      if (active.has(hand) && prior && !validPredecessors.includes(prior.action.type)) return false;
-      active.delete(hand);
+    if (action.type === 'ZIP' && action.role === 'receiver') { previous.set(hand, entry); continue; }
+    if (action.type === 'LIFT' && action.target.kind === 'pass-source') { previous.set(hand, entry); continue; }
+    if (action.type === 'LEAVE' && action.target.kind === 'pass-recipient-hand') { active.delete(hand); previous.set(hand, entry); continue; }
+    if (action.type === 'LIFT') active.add(hand);
+    else if (action.type === 'HOLD' || action.type === 'BOUNCE') {
+      if ((!active.has(hand)) || (!prior) || (prior && !validPredecessors.includes(prior.action.type))) return false;
+      active.add(hand);
     } else if (action.type === 'ZIP') {
       if (action.role === 'source') {
-        if (!active.has(hand) || !prior || !validPredecessors.includes(prior.action.type)) return false;
+        if ((!active.has(hand)) || (prior && !validPredecessors.includes(prior.action.type)) || (!prior)) return false;
+        const receiver = zipReceivers.get(action.linkId);
+        if (receiver && active.has(hand)) active.add(key(receiver));
         active.delete(hand);
-      } else active.add(hand);
-    }
+      }
+    } else if (action.type === 'LEAVE') {
+      if (!active.has(hand) || !prior || !validPredecessors.includes(prior.action.type)) return false;
+      active.delete(hand);
+    } else if (active.has(hand) && ['EMPTY', 'TAP', 'SPECIAL'].includes(action.type)) return false;
     previous.set(hand, entry);
   }
-  for (const hand of active) if (previous.get(hand)?.action.type === 'HOLD') return false;
-  return true;
+  return requireClosed ? active.size === 0 : true;
 }
+
 function isStructurallyAccepted(
   request: GeneratorRequest,
   sequence: Sequence,
@@ -599,6 +596,16 @@ export const sequenceGenerator = {
         const choices = buildChoices(template, cell, cells, occupied, request.locationMode === 'abstract', request.constraints.actionRequirements.some((requirement) => (requirement.actionType === 'SPECIAL' || requirement.actionType === 'TAP' || requirement.actionType === 'BOUNCE') && requirement.occurrence !== 'forbidden') || request.constraints.requiredActionPerPerformer === 'SPECIAL', request.constraints.actionRequirements.some((requirement) => (requirement.actionType === 'TAP' || requirement.actionType === 'BOUNCE') && requirement.occurrence !== 'forbidden'));
         const choicePriority = (choice: Choice): number => {
           let score = 0;
+          const chainOpened = currentEntries.some((entry) => entry.action.type === 'LIFT' && entry.action.target.kind !== 'pass-source');
+          const hasActiveChain = currentEntries.some((entry) =>
+            ['LIFT', 'HOLD', 'BOUNCE', 'ZIP'].includes(entry.action.type),
+          );
+          // A ZIP can only move an already opened handling chain. Prioritise
+          // starting that chain before ZIP choices, then prefer transfers once
+          // a chain exists. Previously impossible ZIP choices outranked LIFT,
+          // making the DFS waste its node budget before opening a chain.
+          if (zipStillNeeded && !chainOpened && !hasActiveChain &&
+            choice.entries.some((entry) => entry.action.type === 'LIFT' && entry.action.target.kind !== 'pass-source')) score += 2500;
           if (zipStillNeeded && choice.entries.some((entry) => entry.action.type === 'ZIP')) score += 1000;
           if (clapStillNeeded && choice.entries.length === 2 && choice.entries.every((entry) =>
             entry.action.type === 'SPECIAL' && entry.action.text === 'Clap',
@@ -629,7 +636,8 @@ export const sequenceGenerator = {
           newlyCovered.forEach((covered) => occupied.add(covered));
           const nextEntries = [...entries, ...choice.entries];
           const partialSequence = { ...template, notation: [...template.notation, ...nextEntries] };
-          if (request.locationMode !== 'abstract' || isAbstractStateValid(partialSequence)) {
+          if ((request.locationMode !== 'abstract' || isAbstractStateValid(partialSequence)) &&
+            isAbstractHandlingChainsValid(partialSequence, false)) {
             yield* visit(index + 1, nextEntries);
           }
           newlyCovered.forEach((covered) => occupied.delete(covered));

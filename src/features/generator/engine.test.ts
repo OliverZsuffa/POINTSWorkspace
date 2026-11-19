@@ -42,19 +42,15 @@ describe('sequence generator', () => {
 
   it('generates executable core sequences containing LEAVE when required', async () => {
     const base = representativeSoloSequence;
-    const initialState = { placements: [{ ballId: base.balls[0]!.id, location: { kind: 'hand-held' as const, performerId: base.performers[0]!.id, hand: 'left' as const } }] };
+    const initialState = base.initialState;
     const leaveRequest: GeneratorRequest = {
       ...request('from-scratch'),
       templateSequence: { ...base, beats: base.beats.slice(0, 3), notation: [], initialState },
-      beatCount: 3,
-      initialState,
-      locationMode: 'abstract',
-      constraints: {
-        looping: 'either',
-        actionRequirements: [{ actionType: 'LEAVE', occurrence: 'at-least-once' }],
-        requiredFragments: [],
-        forbiddenFragments: [],
-      },
+      beatCount: 3, initialState, locationMode: 'abstract',
+      constraints: { looping: 'either', actionRequirements: [
+        { actionType: 'LIFT', occurrence: 'at-least-once' },
+        { actionType: 'LEAVE', occurrence: 'at-least-once' },
+      ], requiredFragments: [], forbiddenFragments: [] },
       maxResults: 1,
     };
     const candidates = [];
@@ -114,7 +110,7 @@ describe('sequence generator', () => {
   it('does not confuse one added action with a one action base', async () => {
     const sequence = {
       ...representativeSoloSequence,
-      notation: [representativeSoloSequence.notation[0]!],
+      notation: [representativeSoloSequence.notation[0]!, representativeSoloSequence.notation[2]!],
     };
     const baseRequest: GeneratorRequest = {
       mode: 'complete-base',
@@ -167,19 +163,18 @@ describe('sequence generator', () => {
     expect(new Set(clapEntries.map((entry) => entry.action.type === 'SPECIAL' ? entry.action.linkId : undefined)).size).toBe(1);
   });
 
-  it('finds two ZIP transfers when the second one must reverse direction', async () => {
+  it('finds two ZIP transfers with enough beats to open, transfer twice and close the chain', async () => {
     const base = representativeSoloSequence;
-    const performerId = base.performers[0]!.id;
     const initialState = {
       placements: [{
         ballId: base.balls[0]!.id,
-        location: { kind: 'hand-held' as const, performerId, hand: 'left' as const },
+        location: { kind: 'position' as const, positionId: base.positions[0]!.id },
       }],
     };
     const zipRequest: GeneratorRequest = {
       ...request('from-scratch'),
-      templateSequence: { ...base, beats: base.beats.slice(0, 2), notation: [], initialState },
-      beatCount: 2,
+      templateSequence: { ...base, beats: base.beats.slice(0, 4), notation: [], initialState },
+      beatCount: 4,
       initialState,
       constraints: {
         looping: 'either',
