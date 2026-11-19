@@ -330,37 +330,42 @@ function isAbstractHandlingChainsValid(sequence: Sequence): boolean {
     (beatIndex.get(a.time.beatId) ?? 0) - (beatIndex.get(b.time.beatId) ?? 0) ||
     String(a.performerId).localeCompare(String(b.performerId)) || a.hand.localeCompare(b.hand));
   const active = new Set<string>();
+  const opened = new Set<string>();
   const previous = new Map<string, NotationEntry>();
   const key = (entry: NotationEntry) => String(entry.performerId) + ':' + entry.hand;
-  const validPredecessors = ['LIFT', 'HOLD', 'ZIP', 'BOUNCE'];
-
-  // Objects held before the sequence begins are not newly opened handling chains.
-  // They may be left directly, but cannot be used to justify HOLD or ZIP source.
   for (const placement of sequence.initialState.placements) {
-    if (placement.location.kind === 'hand-held') {
-      active.add(String(placement.location.performerId) + ':' + placement.location.hand);
-    }
+    if (placement.location.kind === 'hand-held') active.add(String(placement.location.performerId) + ':' + placement.location.hand);
   }
-
   for (const entry of entries) {
     const hand = key(entry), prior = previous.get(hand), action = entry.action;
-    if (action.type === 'LIFT' && action.target.kind !== 'pass-source') active.add(hand);
-    else if (action.type === 'HOLD') {
-      if (!active.has(hand) || !prior || !validPredecessors.includes(prior.action.type)) return false;
-    } else if (action.type === 'LEAVE' && action.target.kind !== 'pass-recipient-hand') {
-      if (active.has(hand) && prior && !validPredecessors.includes(prior.action.type)) return false;
-      active.delete(hand);
-    } else if (action.type === 'ZIP') {
-      if (action.role === 'source') {
-        if (!active.has(hand) || !prior || !validPredecessors.includes(prior.action.type)) return false;
-        active.delete(hand);
-      } else active.add(hand);
+    const isPass = (action.type === 'LIFT' && action.target.kind === 'pass-source') ||
+      (action.type === 'LEAVE' && action.target.kind === 'pass-recipient-hand');
+    if (!isPass) {
+      if (action.type === 'LIFT') {
+        if (active.has(hand)) return false;
+        active.add(hand); opened.add(hand);
+      } else if (action.type === 'HOLD' || action.type === 'BOUNCE') {
+        if (!active.has(hand) || !prior || !['LIFT', 'HOLD', 'ZIP', 'BOUNCE'].includes(prior.action.type)) return false;
+      } else if (action.type === 'ZIP') {
+        if (action.role === 'source') {
+          if (!active.has(hand) || !prior || !['LIFT', 'HOLD', 'ZIP', 'BOUNCE'].includes(prior.action.type)) return false;
+          active.delete(hand); opened.delete(hand);
+        } else {
+          if (active.has(hand)) return false;
+          active.add(hand); opened.add(hand);
+        }
+      } else if (action.type === 'LEAVE') {
+        if (!active.has(hand) || !prior || !['LIFT', 'HOLD', 'ZIP', 'BOUNCE'].includes(prior.action.type)) return false;
+        active.delete(hand); opened.delete(hand);
+      } else if (active.has(hand)) {
+        return false;
+      }
     }
     previous.set(hand, entry);
   }
-  for (const hand of active) if (previous.get(hand)?.action.type === 'HOLD') return false;
-  return true;
+  return opened.size === 0;
 }
+
 function isStructurallyAccepted(
   request: GeneratorRequest,
   sequence: Sequence,
