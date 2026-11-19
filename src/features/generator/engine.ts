@@ -331,10 +331,11 @@ function isAbstractHandlingChainsValid(sequence: Sequence): boolean {
     String(a.performerId).localeCompare(String(b.performerId)) || a.hand.localeCompare(b.hand));
   const active = new Set<string>();
   const opened = new Set<string>();
+  const initiallyHeld = new Set<string>();
   const previous = new Map<string, NotationEntry>();
   const key = (entry: NotationEntry) => String(entry.performerId) + ':' + entry.hand;
   for (const placement of sequence.initialState.placements) {
-    if (placement.location.kind === 'hand-held') active.add(String(placement.location.performerId) + ':' + placement.location.hand);
+    if (placement.location.kind === 'hand-held') { const hand = String(placement.location.performerId) + ':' + placement.location.hand; active.add(hand); initiallyHeld.add(hand); }
   }
   for (const entry of entries) {
     const hand = key(entry), prior = previous.get(hand), action = entry.action;
@@ -355,7 +356,7 @@ function isAbstractHandlingChainsValid(sequence: Sequence): boolean {
           active.add(hand); opened.add(hand);
         }
       } else if (action.type === 'LEAVE') {
-        if (!active.has(hand) || !prior || !['LIFT', 'HOLD', 'ZIP', 'BOUNCE'].includes(prior.action.type)) return false;
+        if (!active.has(hand) || (!prior && !initiallyHeld.has(hand)) || (prior && !['LIFT', 'HOLD', 'ZIP', 'BOUNCE'].includes(prior.action.type))) return false;
         active.delete(hand); opened.delete(hand);
       } else if (active.has(hand)) {
         return false;
