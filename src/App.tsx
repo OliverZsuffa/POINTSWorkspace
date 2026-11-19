@@ -301,6 +301,7 @@ export default function App() {
   const [generatorRunning, setGeneratorRunning] = useState(false);
   const [generatorHasMore, setGeneratorHasMore] = useState(false);
   const [generatorError, setGeneratorError] = useState('');
+  const [generatorSearchLimitReached, setGeneratorSearchLimitReached] = useState(false);
   const generatorAbortRef = useRef<AbortController | null>(null);
   const generatorIteratorRef = useRef<AsyncIterator<GeneratedCandidate> | null>(null);
   const generatorPendingRef = useRef<GeneratedCandidate | null>(null);
@@ -964,6 +965,7 @@ export default function App() {
       initialState: sequence.initialState,
       maxResults: 100_000,
       maxSearchNodes: 100_000,
+      onSearchLimitReached: () => setGeneratorSearchLimitReached(true),
       constraints: {
         looping: generatorLooping,
         actionRequirements,
@@ -980,6 +982,7 @@ export default function App() {
     generatorAbortRef.current = controller;
     generatorRequestRef.current = request;
     setGeneratorStage('structures');
+    setGeneratorSearchLimitReached(false);
     setGeneratorStructureResults([]);
     const generatorSearch = sequenceGenerator.generate(request, controller.signal);
     generatorIteratorRef.current = generatorSearch[Symbol.asyncIterator]();
@@ -2040,6 +2043,7 @@ export default function App() {
             </label>
           </details>
           {generatorError && <p role="alert">{generatorError}</p>}
+          {generatorSearchLimitReached && <p role="status">Search limit reached. Results found so far are shown, but the search was not exhaustive.</p>}
           {generatorStage === 'locations' && <button type="button" onClick={() => { setGeneratorStage('structures'); setGeneratorResults([]); setGeneratorFlourishResults([]); setGeneratorHasMore(false); generatorIteratorRef.current = null; }}>Back to structures</button>}
           {generatorStage === 'flourishes' && <button type="button" onClick={() => { setGeneratorStage('locations'); setGeneratorResults(generatorCoreSequence ? [generatorCoreSequence] : []); }}>Back to core sequence</button>}
           {!generatorRunning && generatorStage === 'structures' && generatorStructureResults.length === 0 && !generatorError && <p>No structures yet. Choose a mode and start generation.</p>}
