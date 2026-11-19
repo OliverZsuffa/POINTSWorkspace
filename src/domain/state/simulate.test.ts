@@ -54,7 +54,7 @@ describe('object state simulation', () => {
     const result = simulateSequence(representativeIndividualPassingSequence);
     expect(result.validation.isValid).toBe(true);
     const receiverId = representativeIndividualPassingSequence.performers[1]!.id;
-    expect(result.snapshots[1]?.handStates[receiverId]?.left.heldBallId).toBe('pass-ball-1');
+    expect(result.snapshots[3]?.handStates[receiverId]?.left.heldBallId).toBe('pass-ball-1');
   });
 
   it('rejects illegal initial finger-held objects and accepts BOUNCE within a closed chain', () => {
