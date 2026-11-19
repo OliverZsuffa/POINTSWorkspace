@@ -214,9 +214,8 @@ export function isAbstractStateValid(sequence: Sequence): boolean {
   let backObjects = 0;
   const positionById = new Map(sequence.positions.map((position) => [String(position.id), position]));
   for (const placement of sequence.initialState.placements) {
-    if (placement.location.kind === 'hand-held') {
-      held.set(String(placement.location.performerId) + ':' + placement.location.hand, true);
-    } else if (placement.location.kind === 'position') {
+    if (placement.location.kind === 'hand-held') return false;
+    if (placement.location.kind === 'position') {
       tableObjects += 1;
     } else if (placement.location.kind === 'hand-back') {
       backObjects += 1;
