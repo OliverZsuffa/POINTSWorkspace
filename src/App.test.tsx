@@ -928,7 +928,7 @@ describe('sequence editor', () => {
     await user.click(screen.getByRole('button', { name: 'Generate' }));
     expect(await screen.findByText('Structure 1')).toBeInTheDocument();
     await user.click(screen.getAllByRole('button', { name: 'Explore locations' })[0]!);
-    expect(await screen.findByText(/Result 1|No valid location arrangements found for this structure\./)).toBeInTheDocument();
+    expect(await screen.findByText(/^(Result\s+1|No valid location arrangements found for this structure\.)$/)).toBeInTheDocument();
     if (screen.queryByText('Result 1')) {
       expect(screen.getAllByRole('button', { name: 'Load into editor' }).length).toBeGreaterThan(0);
     } else {
