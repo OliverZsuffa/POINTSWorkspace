@@ -348,8 +348,7 @@ function evaluateBeat(sequence: Sequence, entries: readonly NotationEntry[], sta
 }
 
 
-/** Validate action progression for objects picked up within the sequence. Initial held objects
- * remain valid starting points, and sequences may legitimately end with an object in hand. */
+/** Validate action progression for objects picked up within the sequence. Initial held objects remain valid starting points, but every chain opened within the sequence must close. */
 function validateActionChains(sequence: Sequence): ValidationIssue[] {
   const issues: ValidationIssue[] = [];
   const beatIndex = new Map(sequence.beats.map((beat, index) => [beat.id, index]));
@@ -382,7 +381,7 @@ function validateActionChains(sequence: Sequence): ValidationIssue[] {
           issues.push(problem('invalid-leave-predecessor', 'LEAVE must follow LIFT, HOLD or ZIP in the same handling chain.', [entry, ...(prior ? [prior] : [])]));
         active.delete(handKey);
       } else if (active.has(handKey) && ['EMPTY', 'TAP', 'SPECIAL'].includes(action.type)) {
-        issues.push(problem('interrupted-handling-chain', 'EMPTY, TAP or SPECIAL cannot interrupt an active handling chain. Close it with LEAVE or transfer it with ZIP first.', [entry, prior]));
+        issues.push(problem('interrupted-handling-chain', 'EMPTY, TAP or SPECIAL cannot interrupt an active handling chain. Close it with LEAVE or transfer it with ZIP first.', [entry, ...(prior ? [prior] : [])]));
         active.delete(handKey);
       }
     }
