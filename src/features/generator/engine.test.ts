@@ -42,10 +42,12 @@ describe('sequence generator', () => {
 
   it('generates executable core sequences containing LEAVE when required', async () => {
     const base = representativeSoloSequence;
+    const initialState = { placements: [{ ballId: base.balls[0]!.id, location: { kind: 'hand-held' as const, performerId: base.performers[0]!.id, hand: 'left' as const } }] };
     const leaveRequest: GeneratorRequest = {
       ...request('from-scratch'),
-      templateSequence: { ...base, beats: base.beats.slice(0, 3), notation: [] },
+      templateSequence: { ...base, beats: base.beats.slice(0, 3), notation: [], initialState },
       beatCount: 3,
+      initialState,
       locationMode: 'abstract',
       constraints: {
         looping: 'either',
