@@ -323,7 +323,7 @@ export function isAbstractStateValid(sequence: Sequence): boolean {
   return true;
 }
 
-function isAbstractHandlingChainsValid(sequence: Sequence): boolean {
+function isAbstractHandlingChainsValid(sequence: Sequence, requireClosed = true): boolean {
   const beatIndex = new Map(sequence.beats.map((beat, index) => [beat.id, index]));
   const entries = [...sequence.notation].sort((a, b) =>
     (beatIndex.get(a.time.beatId) ?? 0) - (beatIndex.get(b.time.beatId) ?? 0) ||
@@ -355,7 +355,7 @@ function isAbstractHandlingChainsValid(sequence: Sequence): boolean {
     } else if (active.has(hand) && ['EMPTY', 'TAP', 'SPECIAL'].includes(action.type)) return false;
     previous.set(hand, entry);
   }
-  return active.size === 0;
+  return requireClosed ? active.size === 0 : true;
 }
 
 function isStructurallyAccepted(
@@ -635,7 +635,8 @@ export const sequenceGenerator = {
           newlyCovered.forEach((covered) => occupied.add(covered));
           const nextEntries = [...entries, ...choice.entries];
           const partialSequence = { ...template, notation: [...template.notation, ...nextEntries] };
-          if (request.locationMode !== 'abstract' || isAbstractStateValid(partialSequence)) {
+          if ((request.locationMode !== 'abstract' || isAbstractStateValid(partialSequence)) &&
+            isAbstractHandlingChainsValid(partialSequence, false)) {
             yield* visit(index + 1, nextEntries);
           }
           newlyCovered.forEach((covered) => occupied.delete(covered));
