@@ -576,7 +576,7 @@ export const sequenceGenerator = {
           if (signal?.aborted || visited >= maxSearchNodes || yielded >= maxResults) {
         if (visited >= maxSearchNodes && !searchLimitNotified) {
           searchLimitNotified = true;
-          request.onSearchLimitReached?.('locations');
+          request.onSearchLimitReached?.('structures');
         }
         return;
       }
