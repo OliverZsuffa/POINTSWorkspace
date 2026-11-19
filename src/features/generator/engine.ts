@@ -646,7 +646,13 @@ export const sequenceGenerator = {
     const selected = new Map<string, LocationTarget>();
 
     async function* visit(index: number): AsyncGenerator<Sequence> {
-      if (signal?.aborted || visited >= maxSearchNodes || yielded >= maxResults) return;
+      if (signal?.aborted || visited >= maxSearchNodes || yielded >= maxResults) {
+        if (visited >= maxSearchNodes && !searchLimitNotified) {
+          searchLimitNotified = true;
+          request.onSearchLimitReached?.('locations');
+        }
+        return;
+      }
       visited += 1;
       if (visited % 256 === 0) await new Promise<void>((resolve) => setTimeout(resolve, 0));
       if (index >= expandable.length) {
@@ -665,7 +671,13 @@ export const sequenceGenerator = {
         selected.set(entry.id, option.target);
         yield* visit(index + 1);
         selected.delete(entry.id);
-        if (signal?.aborted || visited >= maxSearchNodes || yielded >= maxResults) return;
+        if (signal?.aborted || visited >= maxSearchNodes || yielded >= maxResults) {
+          if (visited >= maxSearchNodes && !searchLimitNotified) {
+            searchLimitNotified = true;
+            request.onSearchLimitReached?.('locations');
+          }
+          return;
+        }
       }
     }
 
