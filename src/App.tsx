@@ -2038,7 +2038,7 @@ export default function App() {
           </details>
           {generatorError && <p role="alert">{generatorError}</p>}
           {generatorStage === 'locations' && <button type="button" onClick={() => { setGeneratorStage('structures'); setGeneratorResults([]); setGeneratorFlourishResults([]); setGeneratorHasMore(false); generatorIteratorRef.current = null; }}>Back to structures</button>}
-          {!generatorRunning && generatorStage === 'structures' && generatorStructureResults.length === 0 && !generatorError && <p>No structures yet. Choose a mode and start generation.</p>}
+          {generatorStage === 'flourishes' && <button type="button" onClick={() => { setGeneratorStage('locations'); setGeneratorResults(generatorCoreSequence ? [generatorCoreSequence] : []); }}>Back to core sequence</button>}\n          {!generatorRunning && generatorStage === 'structures' && generatorStructureResults.length === 0 && !generatorError && <p>No structures yet. Choose a mode and start generation.</p>}
           {!generatorRunning && generatorStage === 'locations' && generatorResults.length === 0 && !generatorError && <p>No valid location arrangements found for this structure.</p>}
           <div className="generator-results">
             {generatorStage === 'structures' && generatorStructureResults.map((result, resultIndex) => (
