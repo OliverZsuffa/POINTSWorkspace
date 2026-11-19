@@ -358,45 +358,51 @@ function validateActionChains(sequence: Sequence): ValidationIssue[] {
     String(a.performerId).localeCompare(String(b.performerId)) || a.hand.localeCompare(b.hand));
   const previous = new Map<string, NotationEntry>();
   const active = new Set<string>();
+  const openedDuringSequence = new Set<string>();
   for (const entry of entries) {
     const handKey = String(entry.performerId) + ':' + entry.hand;
     const prior = previous.get(handKey);
     const action = entry.action;
-    // Individual passing actions are paired transfer notation, not solo handling chains.
     const isPass = (action.type === 'LIFT' && action.target.kind === 'pass-source') ||
       (action.type === 'LEAVE' && action.target.kind === 'pass-recipient-hand');
     if (!isPass) {
       if (action.type === 'LIFT') {
+        if (active.has(handKey)) issues.push(problem('invalid-handling-chain-action', 'LIFT cannot interrupt an active handling chain.', [entry, ...(prior ? [prior] : [])]));
         active.add(handKey);
-      } else if (action.type === 'HOLD' && active.has(handKey)) {
-        if (!prior || !(['LIFT', 'HOLD', 'ZIP', 'BOUNCE'].includes(prior.action.type))) {
-          issues.push(problem('invalid-hold-predecessor', 'HOLD must follow LIFT, HOLD or a receiving ZIP in the same handling chain.', [entry, ...(prior ? [prior] : [])]));
+        openedDuringSequence.add(handKey);
+      } else if (action.type === 'HOLD' || action.type === 'BOUNCE') {
+        if (!active.has(handKey) || !prior || !(['LIFT', 'HOLD', 'ZIP', 'BOUNCE'].includes(prior.action.type))) {
+          issues.push(problem('invalid-hold-predecessor', action.type + ' must extend an active handling chain.', [entry, ...(prior ? [prior] : [])]));
         }
       } else if (action.type === 'ZIP') {
         if (action.role === 'source') {
-          if (active.has(handKey) && (!prior || !(['LIFT', 'HOLD', 'ZIP', 'BOUNCE'].includes(prior.action.type)))) {
-            issues.push(problem('invalid-zip-predecessor', 'ZIP source must follow LIFT, HOLD or ZIP in the same handling chain.', [entry, ...(prior ? [prior] : [])]));
+          if (!active.has(handKey) || !prior || !(['LIFT', 'HOLD', 'ZIP', 'BOUNCE'].includes(prior.action.type))) {
+            issues.push(problem('invalid-zip-predecessor', 'ZIP source must follow an active handling chain.', [entry, ...(prior ? [prior] : [])]));
           }
           active.delete(handKey);
+          openedDuringSequence.delete(handKey);
         } else {
+          if (active.has(handKey)) issues.push(problem('invalid-handling-chain-action', 'A receiving ZIP cannot interrupt an active handling chain.', [entry, ...(prior ? [prior] : [])]));
           active.add(handKey);
+          openedDuringSequence.add(handKey);
         }
       } else if (action.type === 'LEAVE') {
-        if (active.has(handKey) && (!prior || !(['LIFT', 'HOLD', 'ZIP', 'BOUNCE'].includes(prior.action.type)))) {
-          issues.push(problem('invalid-leave-predecessor', 'LEAVE must follow LIFT, HOLD or ZIP in the same handling chain.', [entry, ...(prior ? [prior] : [])]));
+        if (!active.has(handKey) || !prior || !(['LIFT', 'HOLD', 'ZIP', 'BOUNCE'].includes(prior.action.type))) {
+          issues.push(problem('invalid-leave-predecessor', 'LEAVE must close an active handling chain, beginning with LIFT or receiving ZIP.', [entry, ...(prior ? [prior] : [])]));
         }
         active.delete(handKey);
+        openedDuringSequence.delete(handKey);
+      } else if (active.has(handKey)) {
+        issues.push(problem('interrupted-handling-chain', 'EMPTY, TAP or SPECIAL cannot interrupt an active handling chain. Close it with LEAVE first.', [entry, ...(prior ? [prior] : [])]));
+        active.delete(handKey);
+        openedDuringSequence.delete(handKey);
       }
     }
     previous.set(handKey, entry);
   }
-  for (const handKey of active) {
+  for (const handKey of openedDuringSequence) {
     const last = previous.get(handKey);
-    // Only HOLD endings are unfinished. LIFT or receiving ZIP may legitimately
-    // leave an object held at the end of a sequence.
-    if (last?.action.type === 'HOLD') {
-      issues.push(problem('unfinished-action-chain', 'A HOLD chain must eventually be closed with LEAVE.', [last]));
-    }
+    if (last) issues.push(problem('unfinished-action-chain', 'A handling chain opened with LIFT or receiving ZIP must be closed with LEAVE.', [last]));
   }
   return issues;
 }
