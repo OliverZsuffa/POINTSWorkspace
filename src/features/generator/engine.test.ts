@@ -299,6 +299,7 @@ describe('sequence generator', () => {
     expect(variants.every((variant) => simulateSequence(variant).validation.isValid)).toBe(true);
     expect(variants.some((variant) => variant.notation.some((entry) => entry.action.type === 'BOUNCE'))).toBe(true);
     expect(variants.some((variant) => variant.notation.some((entry) => entry.action.type === 'TAP'))).toBe(true);
+    expect(variants.some((variant) => variant.notation.filter((entry) => entry.action.type === 'TAP' || entry.action.type === 'BOUNCE' || (entry.action.type === 'SPECIAL' && entry.action.text === 'Clap')).length >= 2)).toBe(true);
   });
 
 });
