@@ -293,7 +293,9 @@ export default function App() {
   const [generatorPassCount, setGeneratorPassCount] = useState('');
   const [generatorRequiredFragmentCode, setGeneratorRequiredFragmentCode] = useState('');
   const [generatorForbiddenFragmentCode, setGeneratorForbiddenFragmentCode] = useState('');
-  const [generatorResults, setGeneratorResults] = useState<Sequence[]>([]);\n  const [generatorFlourishResults, setGeneratorFlourishResults] = useState<Sequence[]>([]);\n  const [generatorCoreSequence, setGeneratorCoreSequence] = useState<Sequence | null>(null);
+  const [generatorResults, setGeneratorResults] = useState<Sequence[]>([]);
+  const [generatorFlourishResults, setGeneratorFlourishResults] = useState<Sequence[]>([]);
+  const [generatorCoreSequence, setGeneratorCoreSequence] = useState<Sequence | null>(null);
   const [generatorStructureResults, setGeneratorStructureResults] = useState<Sequence[]>([]);
   const [generatorStage, setGeneratorStage] = useState<'structures' | 'locations' | 'flourishes'>('structures');
   const [generatorRunning, setGeneratorRunning] = useState(false);
@@ -1004,7 +1006,8 @@ export default function App() {
     await loadGeneratorPage('locations');
   };
 
-  const exploreGeneratorFlourishes = (core: Sequence) => {\n    setGeneratorCoreSequence(core);
+  const exploreGeneratorFlourishes = (core: Sequence) => {
+    setGeneratorCoreSequence(core);
     setGeneratorStage('flourishes');
     setGeneratorFlourishResults(generateFlourishes(core));
     setGeneratorHasMore(false);
@@ -2038,7 +2041,8 @@ export default function App() {
           </details>
           {generatorError && <p role="alert">{generatorError}</p>}
           {generatorStage === 'locations' && <button type="button" onClick={() => { setGeneratorStage('structures'); setGeneratorResults([]); setGeneratorFlourishResults([]); setGeneratorHasMore(false); generatorIteratorRef.current = null; }}>Back to structures</button>}
-          {generatorStage === 'flourishes' && <button type="button" onClick={() => { setGeneratorStage('locations'); setGeneratorResults(generatorCoreSequence ? [generatorCoreSequence] : []); }}>Back to core sequence</button>}\n          {!generatorRunning && generatorStage === 'structures' && generatorStructureResults.length === 0 && !generatorError && <p>No structures yet. Choose a mode and start generation.</p>}
+          {generatorStage === 'flourishes' && <button type="button" onClick={() => { setGeneratorStage('locations'); setGeneratorResults(generatorCoreSequence ? [generatorCoreSequence] : []); }}>Back to core sequence</button>}
+          {!generatorRunning && generatorStage === 'structures' && generatorStructureResults.length === 0 && !generatorError && <p>No structures yet. Choose a mode and start generation.</p>}
           {!generatorRunning && generatorStage === 'locations' && generatorResults.length === 0 && !generatorError && <p>No valid location arrangements found for this structure.</p>}
           <div className="generator-results">
             {generatorStage === 'structures' && generatorStructureResults.map((result, resultIndex) => (
