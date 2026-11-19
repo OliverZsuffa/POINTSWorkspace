@@ -378,9 +378,7 @@ function validateActionChains(sequence: Sequence): ValidationIssue[] {
         }
         active.delete(handKey);
       } else {
-        if (!prior || prior.action.type !== 'ZIP') {
-          issues.push(problem('invalid-zip-predecessor', 'ZIP receiver must be preceded by a ZIP in the same hand.', [entry, ...(prior ? [prior] : [])]));
-        }
+        // A receiving ZIP initiates a handling chain in this hand.
         active.set(handKey, entry);
       }
     } else if (action.type === 'LEAVE') {
