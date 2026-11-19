@@ -392,7 +392,7 @@ function validateActionChains(sequence: Sequence): ValidationIssue[] {
   }
   for (const handKey of active) {
     const last = previous.get(handKey);
-    if (last) issues.push(problem('unfinished-action-chain', 'A handling chain started with LIFT must end with LEAVE.', [last]));
+    if (last?.action.type === 'HOLD') issues.push(problem('unfinished-action-chain', 'A HOLD chain must eventually be closed with LEAVE.', [last]));
   }
   return issues;
 }
