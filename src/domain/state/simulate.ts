@@ -101,8 +101,8 @@ function initialState(sequence: Sequence): { state: State; issues: ValidationIss
       valid = positions.get(location.positionId)?.kind === 'table';
       if (!valid) issues.push(problem('invalid-initial-position', 'Initial position is unknown or is not a table position.', [], [location.positionId]));
     } else if (location.kind === 'hand-held') {
-      valid = sequence.performers.some((performer) => performer.id === location.performerId);
-      if (!valid) issues.push(problem('unknown-performer', 'Initial state references an unknown performer.'));
+      valid = false;
+      issues.push(problem('initial-hand-held-object', 'Objects cannot start held in the fingers. Initial objects must be on table positions or balanced hand-back positions.'));
     } else {
       const position = positions.get(location.positionId);
       valid = position?.kind === 'hand-back' &&
@@ -348,7 +348,7 @@ function evaluateBeat(sequence: Sequence, entries: readonly NotationEntry[], sta
 }
 
 
-/** Validate action progression for objects picked up within the sequence. Initial held objects remain valid starting points, but every chain opened within the sequence must close. */
+/** Validate action progression for objects picked up within the sequence. Handling chains must be opened by LIFT and closed by LEAVE or ZIP transfer. */
 function validateActionChains(sequence: Sequence): ValidationIssue[] {
   const issues: ValidationIssue[] = [];
   const beatIndex = new Map(sequence.beats.map((beat, index) => [beat.id, index]));
@@ -356,10 +356,9 @@ function validateActionChains(sequence: Sequence): ValidationIssue[] {
     (beatIndex.get(a.time.beatId) ?? 0) - (beatIndex.get(b.time.beatId) ?? 0) ||
     String(a.performerId).localeCompare(String(b.performerId)) || a.hand.localeCompare(b.hand));
   const handKey = (entry: NotationEntry) => String(entry.performerId) + ':' + entry.hand;
-  const active = new Set<string>(), initiallyHeld = new Set<string>(), previous = new Map<string, NotationEntry>();
+  const active = new Set<string>(), previous = new Map<string, NotationEntry>();
   const zipPairs = new Map<string, NotationEntry>();
   for (const entry of entries) if (entry.action.type === 'ZIP' && entry.action.role === 'receiver') zipPairs.set(entry.action.linkId, entry);
-  for (const placement of sequence.initialState.placements) if (placement.location.kind === 'hand-held') initiallyHeld.add(String(placement.location.performerId) + ':' + placement.location.hand);
   const validPredecessors = ['LIFT', 'HOLD', 'ZIP', 'BOUNCE'];
   for (const entry of entries) {
     const hand = handKey(entry), prior = previous.get(hand), action = entry.action;
@@ -367,13 +366,13 @@ function validateActionChains(sequence: Sequence): ValidationIssue[] {
     if (action.type === 'LIFT' && action.target.kind === 'pass-source' || action.type === 'LEAVE' && action.target.kind === 'pass-recipient-hand') { previous.set(hand, entry); continue; }
     if (action.type === 'LIFT') active.add(hand);
     else if (action.type === 'HOLD' || action.type === 'BOUNCE') {
-      if ((!active.has(hand) && !initiallyHeld.has(hand)) || (!prior && !initiallyHeld.has(hand)) || (prior && !validPredecessors.includes(prior.action.type)))
+      if ((!active.has(hand)) || (!prior) || (prior && !validPredecessors.includes(prior.action.type)))
         issues.push(problem('invalid-hold-predecessor', action.type + ' must follow LIFT, HOLD, ZIP or BOUNCE in the same handling chain.', [entry, ...(prior ? [prior] : [])]));
       else active.add(hand);
     } else if (action.type === 'ZIP') {
       const receiver = zipPairs.get(action.linkId);
       if (action.role === 'source') {
-        if ((!active.has(hand) && !initiallyHeld.has(hand)) || (prior && !validPredecessors.includes(prior.action.type)) || (!prior && !initiallyHeld.has(hand)))
+        if ((!active.has(hand)) || (prior && !validPredecessors.includes(prior.action.type)) || (!prior))
           issues.push(problem('invalid-zip-predecessor', 'ZIP source must follow LIFT, HOLD, ZIP or an initial held object.', [entry, ...(prior ? [prior] : [])]));
         if (receiver && active.has(hand)) active.add(handKey(receiver));
         active.delete(hand);
