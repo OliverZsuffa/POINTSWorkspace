@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { asActionEntryId, asLinkId } from '../../domain/ids';
 import type { GeneratorRequest } from '../../domain/model';
 import { representativeSoloSequence } from '../../fixtures/sequences';
-import { candidateKey, isAbstractStateValid, sequenceGenerator } from './engine';
+import { candidateKey, generateFlourishes, isAbstractStateValid, sequenceGenerator } from './engine';\nimport { simulateSequence } from '../../domain/state';
 
 function request(mode: GeneratorRequest['mode']): GeneratorRequest {
   const sequence = representativeSoloSequence;
