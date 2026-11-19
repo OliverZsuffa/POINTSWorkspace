@@ -64,6 +64,8 @@ function buildChoices(
   cells: readonly Cell[],
   occupied: ReadonlySet<string>,
   abstractLocations = false,
+  allowClap = !abstractLocations,
+  allowTapBounce = !abstractLocations,
 ): Choice[] {
   const choices: Choice[] = [];
   const targetFor = (position: Extract<Sequence['positions'][number], { kind: 'table' }>) => sequence.sequenceType === 'circle-passing'
@@ -81,7 +83,7 @@ function buildChoices(
       return [
         { type: 'LIFT' as const, target },
         { type: 'LEAVE' as const, target },
-        ...(position.kind === 'table' ? [
+        ...(position.kind === 'table' && allowTapBounce ? [
           { type: 'TAP' as const, target },
           { type: 'BOUNCE' as const, target },
         ] : []),
@@ -106,7 +108,8 @@ function buildChoices(
 
   for (const partner of partnerCells) {
     if (partner.performerId === cell.performerId && partner.hand !== cell.hand) {
-      const clapLinkId = asLinkId('gen-clap-' + cell.beatIndex + '-' + cell.performerIndex);
+      if (allowClap) {
+        const clapLinkId = asLinkId('gen-clap-' + cell.beatIndex + '-' + cell.performerIndex);
       choices.push({
         entries: [
           makeEntry(cell, { type: 'SPECIAL', text: 'Clap', linkId: clapLinkId }, 'clap-left'),
@@ -114,6 +117,7 @@ function buildChoices(
         ],
         coveredCells: [cellKey(cell), cellKey(partner)],
       });
+      }
       for (const [source, receiver] of [[cell, partner], [partner, cell]] as const) {
         const linkId = asLinkId('gen-zip-' + cell.beatIndex + '-' + cell.performerIndex + '-' + source.hand);
         choices.push({
@@ -349,6 +353,55 @@ function locationTarget(sequence: Sequence, position: Sequence['positions'][numb
   return { kind: 'position', positionId: position.id };
 }
 
+/** Builds simulator-validated optional flourish combinations from a core sequence. */
+export function generateFlourishes(sequence: Sequence): Sequence[] {
+  const tablePosition = sequence.positions.find((position) => position.kind === 'table');
+  if (!tablePosition) return [sequence];
+  const target = sequence.sequenceType === 'circle-passing'
+    ? { kind: 'circle-position' as const, position: tablePosition.name as 'A' | 'B' | 'C' }
+    : { kind: 'position' as const, positionId: tablePosition.id };
+  const variants: Sequence[] = [sequence];
+  const seen = new Set([candidateKey(sequence)]);
+  const maxVariants = 64;
+
+  const add = (source: Sequence, notation: NotationEntry[]) => {
+    if (variants.length >= maxVariants) return;
+    const candidate = { ...source, notation };
+    if (!simulateSequence(candidate).validation.isValid) return;
+    const key = candidateKey(candidate);
+    if (seen.has(key)) return;
+    seen.add(key);
+    variants.push(candidate);
+  };
+
+  // Grow the set iteratively, so compatible flourishes can coexist rather
+  // than only ever producing one isolated substitution per core sequence.
+  for (let cursor = 0; cursor < variants.length && variants.length < maxVariants; cursor++) {
+    const source = variants[cursor]!;
+    source.notation.forEach((entry) => {
+      if (entry.action.type === 'HOLD') {
+        add(source, source.notation.map((item) => item.id === entry.id
+          ? { ...item, action: { type: 'BOUNCE' as const, target } } : item));
+      } else if (entry.action.type === 'EMPTY') {
+        add(source, source.notation.map((item) => item.id === entry.id
+          ? { ...item, action: { type: 'TAP' as const, target } } : item));
+      }
+    });
+    for (const performer of source.performers) {
+      for (const beat of source.beats) {
+        const left = source.notation.find((entry) => entry.performerId === performer.id && entry.hand === 'left' && entry.time.beatId === beat.id && entry.action.type === 'EMPTY');
+        const right = source.notation.find((entry) => entry.performerId === performer.id && entry.hand === 'right' && entry.time.beatId === beat.id && entry.action.type === 'EMPTY');
+        if (!left || !right) continue;
+        const linkId = asLinkId('flourish-clap-' + performer.id + '-' + beat.id);
+        add(source, source.notation.map((entry) => entry.id === left.id || entry.id === right.id
+          ? { ...entry, action: { type: 'SPECIAL' as const, text: 'Clap', linkId } }
+          : entry));
+      }
+    }
+  }
+  return variants;
+}
+
 export function candidateKey(sequence: Sequence, canonicalizeRotation = false): string {
   const beatIndex = new Map(sequence.beats.map((beat, index) => [beat.id, index]));
   const performerIndex = new Map(sequence.performers.map((performer, index) => [performer.id, index]));
@@ -413,6 +466,7 @@ export const sequenceGenerator = {
     const maxSearchNodes = Math.max(1, Math.floor(request.maxSearchNodes ?? 100_000));
     let yielded = 0;
     let visited = 0;
+    let searchLimitNotified = false;
     const seen = new Set<string>();
 
     for (const template of templates) {
@@ -426,7 +480,13 @@ export const sequenceGenerator = {
       const occupied = new Set(existing);
 
       async function* visit(index: number, entries: readonly NotationEntry[]): AsyncGenerator<Sequence> {
-        if (signal?.aborted || visited >= maxSearchNodes || yielded >= maxResults) return;
+        if (signal?.aborted || visited >= maxSearchNodes || yielded >= maxResults) {
+          if (visited >= maxSearchNodes && !searchLimitNotified) {
+            searchLimitNotified = true;
+            request.onSearchLimitReached?.('structures');
+          }
+          return;
+        }
         visited += 1;
         if (visited % 256 === 0) await new Promise<void>((resolve) => setTimeout(resolve, 0));
 
@@ -499,7 +559,7 @@ export const sequenceGenerator = {
           occupied.delete(key);
         }
 
-        const choices = buildChoices(template, cell, cells, occupied, request.locationMode === 'abstract');
+        const choices = buildChoices(template, cell, cells, occupied, request.locationMode === 'abstract', request.constraints.actionRequirements.some((requirement) => (requirement.actionType === 'SPECIAL' || requirement.actionType === 'TAP' || requirement.actionType === 'BOUNCE') && requirement.occurrence !== 'forbidden') || request.constraints.requiredActionPerPerformer === 'SPECIAL', request.constraints.actionRequirements.some((requirement) => (requirement.actionType === 'TAP' || requirement.actionType === 'BOUNCE') && requirement.occurrence !== 'forbidden'));
         const choicePriority = (choice: Choice): number => {
           let score = 0;
           if (zipStillNeeded && choice.entries.some((entry) => entry.action.type === 'ZIP')) score += 1000;
@@ -513,7 +573,13 @@ export const sequenceGenerator = {
         };
         choices.sort((left, right) => choicePriority(right) - choicePriority(left));
         for (const choice of choices) {
-          if (signal?.aborted || visited >= maxSearchNodes || yielded >= maxResults) return;
+          if (signal?.aborted || visited >= maxSearchNodes || yielded >= maxResults) {
+        if (visited >= maxSearchNodes && !searchLimitNotified) {
+          searchLimitNotified = true;
+          request.onSearchLimitReached?.('structures');
+        }
+        return;
+      }
           if (mustUseThisPerformerBeat && choice.entries.every((entry) => entry.action.type === 'EMPTY')) continue;
           if (exactZipTarget !== undefined &&
             currentZipLinks.size >= exactZipTarget &&
@@ -574,12 +640,19 @@ export const sequenceGenerator = {
     const maxResults = Math.max(1, Math.floor(request.maxResults ?? 100));
     const maxSearchNodes = Math.max(1, Math.floor(request.maxSearchNodes ?? 100_000));
     let visited = 0;
+    let searchLimitNotified = false;
     let yielded = 0;
     const seen = new Set<string>();
     const selected = new Map<string, LocationTarget>();
 
     async function* visit(index: number): AsyncGenerator<Sequence> {
-      if (signal?.aborted || visited >= maxSearchNodes || yielded >= maxResults) return;
+      if (signal?.aborted || visited >= maxSearchNodes || yielded >= maxResults) {
+        if (visited >= maxSearchNodes && !searchLimitNotified) {
+          searchLimitNotified = true;
+          request.onSearchLimitReached?.('locations');
+        }
+        return;
+      }
       visited += 1;
       if (visited % 256 === 0) await new Promise<void>((resolve) => setTimeout(resolve, 0));
       if (index >= expandable.length) {
@@ -598,7 +671,13 @@ export const sequenceGenerator = {
         selected.set(entry.id, option.target);
         yield* visit(index + 1);
         selected.delete(entry.id);
-        if (signal?.aborted || visited >= maxSearchNodes || yielded >= maxResults) return;
+        if (signal?.aborted || visited >= maxSearchNodes || yielded >= maxResults) {
+          if (visited >= maxSearchNodes && !searchLimitNotified) {
+            searchLimitNotified = true;
+            request.onSearchLimitReached?.('locations');
+          }
+          return;
+        }
       }
     }
 

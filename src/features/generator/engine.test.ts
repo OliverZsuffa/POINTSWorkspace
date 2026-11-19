@@ -2,7 +2,8 @@ import { describe, expect, it } from 'vitest';
 import { asActionEntryId, asLinkId } from '../../domain/ids';
 import type { GeneratorRequest } from '../../domain/model';
 import { representativeSoloSequence } from '../../fixtures/sequences';
-import { candidateKey, isAbstractStateValid, sequenceGenerator } from './engine';
+import { candidateKey, generateFlourishes, isAbstractStateValid, sequenceGenerator } from './engine';
+import { simulateSequence } from '../../domain/state';
 
 function request(mode: GeneratorRequest['mode']): GeneratorRequest {
   const sequence = representativeSoloSequence;
@@ -39,6 +40,30 @@ describe('sequence generator', () => {
     expect(candidates[0]?.notation.some((entry) => entry.action.type === 'LIFT')).toBe(true);
   });
 
+  it('generates executable core sequences containing LEAVE when required', async () => {
+    const base = representativeSoloSequence;
+    const initialState = { placements: [{ ballId: base.balls[0]!.id, location: { kind: 'hand-held' as const, performerId: base.performers[0]!.id, hand: 'left' as const } }] };
+    const leaveRequest: GeneratorRequest = {
+      ...request('from-scratch'),
+      templateSequence: { ...base, beats: base.beats.slice(0, 3), notation: [], initialState },
+      beatCount: 3,
+      initialState,
+      locationMode: 'abstract',
+      constraints: {
+        looping: 'either',
+        actionRequirements: [{ actionType: 'LEAVE', occurrence: 'at-least-once' }],
+        requiredFragments: [],
+        forbiddenFragments: [],
+      },
+      maxResults: 1,
+    };
+    const candidates = [];
+    for await (const candidate of sequenceGenerator.generate(leaveRequest)) candidates.push(candidate.sequence);
+    expect(candidates).toHaveLength(1);
+    expect(candidates[0]!.notation.some((entry) => entry.action.type === 'LEAVE')).toBe(true);
+    expect(simulateSequence(candidates[0]!).validation.isValid).toBe(true);
+  });
+
   it('completes a base without changing any existing action or beat', async () => {
     const base = representativeSoloSequence;
     const candidates = [];
@@ -61,6 +86,21 @@ describe('sequence generator', () => {
     };
     expect(candidateKey(sequence, true)).toBe(candidateKey(rotated, true));
     expect(candidateKey(sequence, false)).not.toBe(candidateKey(rotated, false));
+  });
+
+  it('reports when abstract generation reaches its search node limit', async () => {
+    const limited = { ...request('from-scratch'), maxSearchNodes: 1 };
+    let notified = false;
+    const boundedRequest = { ...limited, onSearchLimitReached: (stage: 'structures' | 'locations') => { if (stage === 'structures') notified = true; } };
+    for await (const _candidate of sequenceGenerator.generate(boundedRequest)) { void _candidate; }
+    expect(notified).toBe(true);
+  });
+
+  it('reports when concrete location expansion reaches its search node limit', async () => {
+    let notified = false;
+    const boundedRequest = { ...request('from-scratch'), maxSearchNodes: 1, onSearchLimitReached: (stage: 'structures' | 'locations') => { if (stage === 'locations') notified = true; } };
+    for await (const _candidate of sequenceGenerator.expandLocations(representativeSoloSequence, boundedRequest)) { void _candidate; }
+    expect(notified).toBe(true);
   });
 
   it('stops promptly when its abort signal is already cancelled', async () => {
@@ -183,6 +223,7 @@ describe('sequence generator', () => {
       entry.action.type === 'TAP' || entry.action.type === 'BOUNCE',
     );
     expect(abstractTargets.length).toBeGreaterThan(0);
+    expect(structures[0]!.notation.every((entry) => entry.action.type !== 'TAP' && entry.action.type !== 'BOUNCE' && !(entry.action.type === 'SPECIAL' && entry.action.text === 'Clap'))).toBe(true);
     expect(abstractTargets.every((entry) =>
       entry.action.type === 'LIFT' || entry.action.type === 'LEAVE' ||
       entry.action.type === 'TAP' || entry.action.type === 'BOUNCE'
@@ -288,6 +329,17 @@ describe('sequence generator', () => {
       }],
     };
     expect(isAbstractStateValid(sequence)).toBe(false);
+  });
+
+  it('creates optional flourish variants and keeps the core sequence', () => {
+    const core = representativeSoloSequence;
+    const variants = generateFlourishes(core);
+    expect(variants[0]).toBe(core);
+    expect(variants.length).toBeGreaterThan(1);
+    expect(variants.every((variant) => simulateSequence(variant).validation.isValid)).toBe(true);
+    expect(variants.some((variant) => variant.notation.some((entry) => entry.action.type === 'BOUNCE'))).toBe(true);
+    expect(variants.some((variant) => variant.notation.some((entry) => entry.action.type === 'TAP'))).toBe(true);
+    expect(variants.some((variant) => variant.notation.filter((entry) => entry.action.type === 'TAP' || entry.action.type === 'BOUNCE' || (entry.action.type === 'SPECIAL' && entry.action.text === 'Clap')).length >= 2)).toBe(true);
   });
 
 });

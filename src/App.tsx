@@ -30,7 +30,7 @@ import { NotationSymbol } from './features/notation/NotationSymbol';
 import { getBallRectangleEntries } from './features/editor/rectangles';
 import { getTimelineSlots, type TimelineSlot } from './features/editor/timeline';
 import SequenceRenderer from './features/renderer/SequenceRenderer';
-import { sequenceGenerator } from './features/generator';
+import { sequenceGenerator, generateFlourishes } from './features/generator';
 import SequenceDataTools from './features/export/SequenceDataTools';
 import { restoreSequence, saveSequence } from './features/data/persistence';
 import { sequenceCodec } from './features/data/codec';
@@ -222,7 +222,7 @@ function circleSubscript(target: Extract<TableActionTarget, { kind: 'circle-posi
 }
 
 function ActionSymbol({ action, sequence, hand, abstractTargets = false }: { action: NotationAction; sequence: Sequence; hand: Hand; abstractTargets?: boolean }) {
-  return <NotationSymbol action={action} sequence={sequence} hand={hand} abstractTargets={abstractTargets} className="notation-symbol" />;
+  return <NotationSymbol action={action} sequence={sequence} hand={hand} abstractTargets={abstractTargets} className="notation-symbol ball-segment" />;
 }
 
 function NotationMark({ action, sequence, hand }: { action: NotationAction; sequence: Sequence; hand: Hand }) {
@@ -294,11 +294,14 @@ export default function App() {
   const [generatorRequiredFragmentCode, setGeneratorRequiredFragmentCode] = useState('');
   const [generatorForbiddenFragmentCode, setGeneratorForbiddenFragmentCode] = useState('');
   const [generatorResults, setGeneratorResults] = useState<Sequence[]>([]);
+  const [generatorFlourishResults, setGeneratorFlourishResults] = useState<Sequence[]>([]);
+  const [generatorCoreSequence, setGeneratorCoreSequence] = useState<Sequence | null>(null);
   const [generatorStructureResults, setGeneratorStructureResults] = useState<Sequence[]>([]);
-  const [generatorStage, setGeneratorStage] = useState<'structures' | 'locations'>('structures');
+  const [generatorStage, setGeneratorStage] = useState<'structures' | 'locations' | 'flourishes'>('structures');
   const [generatorRunning, setGeneratorRunning] = useState(false);
   const [generatorHasMore, setGeneratorHasMore] = useState(false);
   const [generatorError, setGeneratorError] = useState('');
+  const [generatorSearchLimitReached, setGeneratorSearchLimitReached] = useState(false);
   const generatorAbortRef = useRef<AbortController | null>(null);
   const generatorIteratorRef = useRef<AsyncIterator<GeneratedCandidate> | null>(null);
   const generatorPendingRef = useRef<GeneratedCandidate | null>(null);
@@ -850,7 +853,7 @@ export default function App() {
     setShowActionMenu(false);
   };
 
-  const loadGeneratorPage = async (targetStage: 'structures' | 'locations' = generatorStage) => {
+  const loadGeneratorPage = async (targetStage: 'structures' | 'locations' = generatorStage === 'flourishes' ? 'locations' : generatorStage) => {
     if (generatorRunning || !generatorIteratorRef.current) return;
     const iterator = generatorIteratorRef.current;
     setGeneratorRunning(true);
@@ -962,6 +965,7 @@ export default function App() {
       initialState: sequence.initialState,
       maxResults: 100_000,
       maxSearchNodes: 100_000,
+      onSearchLimitReached: () => setGeneratorSearchLimitReached(true),
       constraints: {
         looping: generatorLooping,
         actionRequirements,
@@ -978,6 +982,7 @@ export default function App() {
     generatorAbortRef.current = controller;
     generatorRequestRef.current = request;
     setGeneratorStage('structures');
+    setGeneratorSearchLimitReached(false);
     setGeneratorStructureResults([]);
     const generatorSearch = sequenceGenerator.generate(request, controller.signal);
     generatorIteratorRef.current = generatorSearch[Symbol.asyncIterator]();
@@ -1002,6 +1007,16 @@ export default function App() {
     setGeneratorError('');
     setGeneratorHasMore(true);
     await loadGeneratorPage('locations');
+  };
+
+  const exploreGeneratorFlourishes = (core: Sequence) => {
+    setGeneratorCoreSequence(core);
+    setGeneratorStage('flourishes');
+    setGeneratorFlourishResults(generateFlourishes(core));
+    setGeneratorHasMore(false);
+    setGeneratorError('');
+    generatorIteratorRef.current = null;
+    generatorPendingRef.current = null;
   };
 
   const stopGenerator = () => {
@@ -2028,7 +2043,9 @@ export default function App() {
             </label>
           </details>
           {generatorError && <p role="alert">{generatorError}</p>}
-          {generatorStage === 'locations' && <button type="button" onClick={() => { setGeneratorStage('structures'); setGeneratorResults([]); setGeneratorHasMore(false); generatorIteratorRef.current = null; }}>Back to structures</button>}
+          {generatorSearchLimitReached && <p role="status">Search limit reached. Results found so far are shown, but the search was not exhaustive.</p>}
+          {generatorStage === 'locations' && <button type="button" onClick={() => { setGeneratorStage('structures'); setGeneratorResults([]); setGeneratorFlourishResults([]); setGeneratorHasMore(false); generatorIteratorRef.current = null; }}>Back to structures</button>}
+          {generatorStage === 'flourishes' && <button type="button" onClick={() => { setGeneratorStage('locations'); setGeneratorResults(generatorCoreSequence ? [generatorCoreSequence] : []); }}>Back to core sequence</button>}
           {!generatorRunning && generatorStage === 'structures' && generatorStructureResults.length === 0 && !generatorError && <p>No structures yet. Choose a mode and start generation.</p>}
           {!generatorRunning && generatorStage === 'locations' && generatorResults.length === 0 && !generatorError && <p>No valid location arrangements found for this structure.</p>}
           <div className="generator-results">
@@ -2074,10 +2091,32 @@ export default function App() {
                     </div>
                   ))}
                 </div>
-                <button type="button" onClick={() => { commit(result); setShowGenerator(false); }}>Load into editor</button>
+                <button type="button" onClick={() => exploreGeneratorFlourishes(result)}>Generate flourishes</button> <button type="button" onClick={() => { commit(result); setShowGenerator(false); }}>Load into editor</button>
               </article>
             ))}
           </div>
+            {generatorStage === 'flourishes' && generatorFlourishResults.map((result, resultIndex) => (
+              <article className="generator-result" key={'flourish-' + resultIndex}>
+                <div className="generator-result-heading"><strong>{resultIndex === 0 ? 'Core sequence' : 'Flourish ' + resultIndex}</strong><span>{result.notation.length} actions</span></div>
+                <div className="generator-preview">
+                  {result.performers.map((performer) => (
+                    <div className="generator-preview-performer" key={performer.id}>
+                      <strong>{performer.name}</strong>
+                      {hands.map((hand) => (
+                        <div className="generator-preview-row" key={hand} style={{ gridTemplateColumns: `82px repeat(${result.beats.length}, var(--notation-cell-size))` }}>
+                          <span className="row-label">{hand === 'left' ? 'L' : 'R'}</span>
+                          {result.beats.map((beat) => {
+                            const entry = result.notation.find((item) => item.performerId === performer.id && item.hand === hand && item.time.beatId === beat.id);
+                            return <div className="notation-cell generator-preview-cell" key={beat.id}>{entry ? <ActionSymbol action={entry.action} sequence={result} hand={hand} /> : null}</div>;
+                          })}
+                        </div>
+                      ))}
+                    </div>
+                  ))}
+                </div>
+                <button type="button" onClick={() => { commit(result); setShowGenerator(false); }}>Load into editor</button>
+              </article>
+            ))}
           {generatorHasMore && <button type="button" onClick={() => void loadGeneratorPage()} disabled={generatorRunning}>Load more results</button>}
         </>}
       </section>
