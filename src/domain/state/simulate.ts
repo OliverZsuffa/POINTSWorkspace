@@ -369,7 +369,7 @@ function validateActionChains(sequence: Sequence): ValidationIssue[] {
       if (action.type === 'LIFT') {
         active.add(handKey);
       } else if (action.type === 'HOLD' && active.has(handKey)) {
-        if (!prior || !(['LIFT', 'HOLD', 'ZIP'].includes(prior.action.type))) {
+        if (!prior || !(['LIFT', 'HOLD', 'ZIP', 'BOUNCE'].includes(prior.action.type))) {
           issues.push(problem('invalid-hold-predecessor', 'HOLD must follow LIFT, HOLD or a receiving ZIP in the same handling chain.', [entry, ...(prior ? [prior] : [])]));
         }
       } else if (action.type === 'ZIP') {
