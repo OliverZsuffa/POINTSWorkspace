@@ -241,10 +241,8 @@ describe('object state simulation', () => {
       initialState: {
         placements: [{ ballId: asBallId('ball-1'), location: { kind: 'position', positionId: otherA } }],
       },
-      notation: [entry('circle-lift', 'right', {
-        type: 'LIFT',
-        target: { kind: 'circle-position', position: 'A', direction: 'left', distance: 1 },
-      })],
+      beats: representativeSoloSequence.beats.slice(0, 2),
+      notation: [entry('circle-lift', 'right', { type: 'LIFT', target: { kind: 'circle-position', position: 'A', direction: 'left', distance: 1 } }), { ...entry('circle-close', 'right', { type: 'LEAVE', target: { kind: 'position', positionId: otherA } }), time: { beatId: representativeSoloSequence.beats[1]!.id, offset: rational(0) } }],
     };
 
     const result = simulateSequence(sequence);
@@ -280,10 +278,8 @@ describe('object state simulation', () => {
       performers,
       positions,
       initialState: { placements: [{ ballId: asBallId('ball-1'), location: { kind: 'position' as const, positionId: expectedPosition } }] },
-      notation: [entry('circle-direction-' + direction, 'right', {
-        type: 'LIFT',
-        target: { kind: 'circle-position', position: 'A', direction, distance: 1 },
-      })],
+      beats: representativeSoloSequence.beats.slice(0, 2),
+      notation: [entry('circle-direction-' + direction, 'right', { type: 'LIFT', target: { kind: 'circle-position', position: 'A', direction, distance: 1 } }), { ...entry('circle-direction-close-' + direction, 'right', { type: 'LEAVE', target: { kind: 'position', positionId: expectedPosition } }), time: { beatId: representativeSoloSequence.beats[1]!.id, offset: rational(0) } }],
     });
     expect(run('left', positions[1]!.id).validation.isValid).toBe(true);
     expect(run('right', positions[2]!.id).validation.isValid).toBe(true);
@@ -366,9 +362,12 @@ describe('object state simulation', () => {
           { ballId: asBallId('ball-2'), location: { kind: 'position', positionId: positionC } },
         ],
       },
+      beats: representativeSoloSequence.beats.slice(0, 2),
       notation: [
         entry('lift-right-a', 'right', { type: 'LIFT', target: { kind: 'position', positionId: positionA } }),
         entry('lift-left-c', 'left', { type: 'LIFT', target: { kind: 'position', positionId: positionC } }),
+        { ...entry('leave-right-a', 'right', { type: 'LEAVE', target: { kind: 'position', positionId: positionA } }), time: { beatId: representativeSoloSequence.beats[1]!.id, offset: rational(0) } },
+        { ...entry('leave-left-c', 'left', { type: 'LEAVE', target: { kind: 'position', positionId: positionC } }), time: { beatId: representativeSoloSequence.beats[1]!.id, offset: rational(0) } },
       ],
     };
     const forward = simulateSequence(sequence);
@@ -418,13 +417,8 @@ describe('object state simulation', () => {
           location: { kind: 'position', positionId: asPositionId('circle-a-A') },
         }],
       },
-      notation: [{
-        id: asActionEntryId('circle-own-lift'),
-        performerId: firstPerformer,
-        hand: 'left',
-        time: { beatId: asBeatId('pass-beat-1'), offset: rational(0) },
-        action: { type: 'LIFT', target: { kind: 'circle-position', position: 'A' } },
-      }],
+      beats: representativeSoloSequence.beats.slice(0, 2),
+      notation: [{ id: asActionEntryId('circle-own-lift'), performerId: firstPerformer, hand: 'left', time: { beatId: representativeSoloSequence.beats[0]!.id, offset: rational(0) }, action: { type: 'LIFT', target: { kind: 'circle-position', position: 'A' } } }, { id: asActionEntryId('circle-own-leave'), performerId: firstPerformer, hand: 'left', time: { beatId: representativeSoloSequence.beats[1]!.id, offset: rational(0) }, action: { type: 'LEAVE', target: { kind: 'circle-position', position: 'A' } } }],
     };
     const result = simulateSequence(sequence);
     expect(result.validation.isValid).toBe(true);
