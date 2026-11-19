@@ -167,7 +167,7 @@ describe('sequence generator', () => {
     expect(new Set(clapEntries.map((entry) => entry.action.type === 'SPECIAL' ? entry.action.linkId : undefined)).size).toBe(1);
   });
 
-  it('finds two ZIP transfers when the second one must reverse direction', async () => {
+  it('finds two ZIP transfers with enough beats to open, transfer twice and close the chain', async () => {
     const base = representativeSoloSequence;
     const performerId = base.performers[0]!.id;
     const initialState = {
@@ -178,8 +178,8 @@ describe('sequence generator', () => {
     };
     const zipRequest: GeneratorRequest = {
       ...request('from-scratch'),
-      templateSequence: { ...base, beats: base.beats.slice(0, 2), notation: [], initialState },
-      beatCount: 2,
+      templateSequence: { ...base, beats: base.beats.slice(0, 4), notation: [], initialState },
+      beatCount: 4,
       initialState,
       constraints: {
         looping: 'either',
