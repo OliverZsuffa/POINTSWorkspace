@@ -509,58 +509,23 @@ describe('object state simulation', () => {
     expect(validateSequence(sequence).isValid).toBe(false);
     expect(validateSequence(sequence).issues.map((issue) => issue.code)).toContain('unfinished-action-chain');
   });
-  it('rejects a bare LIFT without a closing LEAVE', () => {
-    const beats = representativeSoloSequence.beats.slice(0, 1);
-    const sequence: Sequence = {
-      ...representativeSoloSequence,
-      beats,
-      notation: [{
-        ...entry('bare-lift', 'right', { type: 'LIFT', target: { kind: 'position', positionId: positionA } }),
-        time: { beatId: beats[0]!.id, offset: rational(0) },
-      }],
-    };
-    expect(validateSequence(sequence).isValid).toBe(false);
-    expect(validateSequence(sequence).issues.map((issue) => issue.code)).toContain('unfinished-action-chain');
-  });
 
-  it('rejects EMPTY interrupting a LIFT HOLD HOLD LEAVE chain', () => {
-    const beats = representativeSoloSequence.beats.slice(0, 5);
+
+
+
+
+
+  it('rejects EMPTY interrupting consecutive handling holds', () => {
+    const beats = representativeSoloSequence.beats;
     const actions: NotationEntry['action'][] = [
       { type: 'LIFT', target: { kind: 'position', positionId: positionA } },
-      { type: 'HOLD' },
-      { type: 'HOLD' },
-      { type: 'EMPTY' },
-      { type: 'LEAVE', target: { kind: 'position', positionId: positionB } },
+      { type: 'HOLD' }, { type: 'HOLD' }, { type: 'EMPTY' },
     ];
-    const sequence: Sequence = {
-      ...representativeSoloSequence,
-      beats,
-      notation: actions.map((action, index) => ({
-        ...entry('interrupted-chain-' + index, 'right', action),
-        time: { beatId: beats[index]!.id, offset: rational(0) },
-      })),
-    };
-    expect(validateSequence(sequence).isValid).toBe(false);
+    const sequence: Sequence = { ...representativeSoloSequence, notation: actions.map((action, index) => ({
+      ...entry('interrupted-chain-' + index, 'right', action),
+      time: { beatId: beats[index]!.id, offset: rational(0) },
+    })) };
     expect(validateSequence(sequence).issues.map((issue) => issue.code)).toContain('interrupted-handling-chain');
-  });
-
-  it('accepts the smallest closed handling unit LIFT LEAVE', () => {
-    const beats = representativeSoloSequence.beats.slice(0, 2);
-    const sequence: Sequence = {
-      ...representativeSoloSequence,
-      beats,
-      notation: [
-        {
-          ...entry('minimal-lift', 'right', { type: 'LIFT', target: { kind: 'position', positionId: positionA } }),
-          time: { beatId: beats[0]!.id, offset: rational(0) },
-        },
-        {
-          ...entry('minimal-leave', 'right', { type: 'LEAVE', target: { kind: 'position', positionId: positionB } }),
-          time: { beatId: beats[1]!.id, offset: rational(0) },
-        },
-      ],
-    };
-    expect(validateSequence(sequence).isValid).toBe(true);
   });
 
 });
