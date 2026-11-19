@@ -596,6 +596,15 @@ export const sequenceGenerator = {
         const choices = buildChoices(template, cell, cells, occupied, request.locationMode === 'abstract', request.constraints.actionRequirements.some((requirement) => (requirement.actionType === 'SPECIAL' || requirement.actionType === 'TAP' || requirement.actionType === 'BOUNCE') && requirement.occurrence !== 'forbidden') || request.constraints.requiredActionPerPerformer === 'SPECIAL', request.constraints.actionRequirements.some((requirement) => (requirement.actionType === 'TAP' || requirement.actionType === 'BOUNCE') && requirement.occurrence !== 'forbidden'));
         const choicePriority = (choice: Choice): number => {
           let score = 0;
+          const chainOpened = currentEntries.some((entry) => entry.action.type === 'LIFT' && entry.action.target.kind !== 'pass-source');
+          const hasActiveChain = currentEntries.some((entry) =>
+            ['LIFT', 'HOLD', 'BOUNCE', 'ZIP'].includes(entry.action.type),
+          );
+          // ZIP transfers cannot begin a handling chain. When transfers remain
+          // and no chain has been opened yet, prefer opening one before exploring
+          // transfer symbols that the abstract validator must reject.
+          if (zipStillNeeded && !chainOpened && !hasActiveChain &&
+            choice.entries.some((entry) => entry.action.type === 'LIFT' && entry.action.target.kind !== 'pass-source')) score += 900;
           if (zipStillNeeded && choice.entries.some((entry) => entry.action.type === 'ZIP')) score += 1000;
           if (clapStillNeeded && choice.entries.length === 2 && choice.entries.every((entry) =>
             entry.action.type === 'SPECIAL' && entry.action.text === 'Clap',
