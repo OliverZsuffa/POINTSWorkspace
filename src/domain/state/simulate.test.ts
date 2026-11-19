@@ -293,7 +293,7 @@ describe('object state simulation', () => {
     ] };
     const result = simulateSequence(sequence);
     expect(result.validation.isValid).toBe(true);
-    expect(result.snapshots[3]?.handStates[performerId]?.left.heldBallId).toBeNull();
+    expect(result.snapshots[5]?.handStates[performerId]?.left.heldBallId).toBeNull();
   });
 
   it('resolves an own-performer circle passing position without a subscript', () => {
