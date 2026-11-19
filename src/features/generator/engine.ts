@@ -600,11 +600,12 @@ export const sequenceGenerator = {
           const hasActiveChain = currentEntries.some((entry) =>
             ['LIFT', 'HOLD', 'BOUNCE', 'ZIP'].includes(entry.action.type),
           );
-          // ZIP transfers cannot begin a handling chain. When transfers remain
-          // and no chain has been opened yet, prefer opening one before exploring
-          // transfer symbols that the abstract validator must reject.
+          // A ZIP can only move an already opened handling chain. Prioritise
+          // starting that chain before ZIP choices, then prefer transfers once
+          // a chain exists. Previously impossible ZIP choices outranked LIFT,
+          // making the DFS waste its node budget before opening a chain.
           if (zipStillNeeded && !chainOpened && !hasActiveChain &&
-            choice.entries.some((entry) => entry.action.type === 'LIFT' && entry.action.target.kind !== 'pass-source')) score += 900;
+            choice.entries.some((entry) => entry.action.type === 'LIFT' && entry.action.target.kind !== 'pass-source')) score += 2500;
           if (zipStillNeeded && choice.entries.some((entry) => entry.action.type === 'ZIP')) score += 1000;
           if (clapStillNeeded && choice.entries.length === 2 && choice.entries.every((entry) =>
             entry.action.type === 'SPECIAL' && entry.action.text === 'Clap',
