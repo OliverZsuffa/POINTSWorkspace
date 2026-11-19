@@ -77,7 +77,6 @@ function buildChoices(
     ? abstractPosition ? [abstractPosition] : []
     : sequence.positions;
   const singles: NotationAction[] = [
-    { type: 'HOLD' },
     ...targetPositions.flatMap((position) => {
       const target = position.kind === 'table' ? targetFor(position) : { kind: 'position' as const, positionId: position.id };
       return [
