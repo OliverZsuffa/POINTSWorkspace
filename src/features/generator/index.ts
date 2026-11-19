@@ -1,4 +1,4 @@
-export { sequenceGenerator } from './engine';
+export { sequenceGenerator, generateFlourishes } from './engine';
 export {
   allBeatsUsed,
   isLoopClosed,
