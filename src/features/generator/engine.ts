@@ -65,6 +65,7 @@ function buildChoices(
   occupied: ReadonlySet<string>,
   abstractLocations = false,
   allowClap = !abstractLocations,
+  allowTapBounce = !abstractLocations,
 ): Choice[] {
   const choices: Choice[] = [];
   const targetFor = (position: Extract<Sequence['positions'][number], { kind: 'table' }>) => sequence.sequenceType === 'circle-passing'
@@ -82,7 +83,7 @@ function buildChoices(
       return [
         { type: 'LIFT' as const, target },
         { type: 'LEAVE' as const, target },
-        ...(position.kind === 'table' && !abstractLocations ? [
+        ...(position.kind === 'table' && allowTapBounce ? [
           { type: 'TAP' as const, target },
           { type: 'BOUNCE' as const, target },
         ] : []),
@@ -551,7 +552,7 @@ export const sequenceGenerator = {
           occupied.delete(key);
         }
 
-        const choices = buildChoices(template, cell, cells, occupied, request.locationMode === 'abstract', request.constraints.actionRequirements.some((requirement) => requirement.actionType === 'SPECIAL' && requirement.occurrence !== 'forbidden'));
+        const choices = buildChoices(template, cell, cells, occupied, request.locationMode === 'abstract', request.constraints.actionRequirements.some((requirement) => (requirement.actionType === 'SPECIAL' || requirement.actionType === 'TAP' || requirement.actionType === 'BOUNCE') && requirement.occurrence !== 'forbidden') || request.constraints.requiredActionPerPerformer === 'SPECIAL', request.constraints.actionRequirements.some((requirement) => (requirement.actionType === 'TAP' || requirement.actionType === 'BOUNCE') && requirement.occurrence !== 'forbidden'));
         const choicePriority = (choice: Choice): number => {
           let score = 0;
           if (zipStillNeeded && choice.entries.some((entry) => entry.action.type === 'ZIP')) score += 1000;
