@@ -359,7 +359,7 @@ function validateActionChains(sequence: Sequence): ValidationIssue[] {
   const previous = new Map<string, NotationEntry>(), active = new Set<string>(), initiallyHeld = new Set<string>();
   for (const placement of sequence.initialState.placements) if (placement.location.kind === 'hand-held') {
     const hand = String(placement.location.performerId) + ':' + placement.location.hand;
-    active.add(hand); initiallyHeld.add(hand);
+    initiallyHeld.add(hand);
   }
   const validPredecessors = ['LIFT', 'HOLD', 'ZIP', 'BOUNCE'];
   for (const entry of entries) {
@@ -370,6 +370,7 @@ function validateActionChains(sequence: Sequence): ValidationIssue[] {
       else if (action.type === 'HOLD' || action.type === 'BOUNCE') {
         if ((!active.has(handKey) && !initiallyHeld.has(handKey)) || (!prior && !initiallyHeld.has(handKey)) || (prior && !validPredecessors.includes(prior.action.type)))
           issues.push(problem('invalid-hold-predecessor', action.type + ' must follow LIFT, HOLD, ZIP or BOUNCE in the same handling chain.', [entry, ...(prior ? [prior] : [])]));
+        else active.add(handKey);
       } else if (action.type === 'ZIP') {
         if (action.role === 'source') {
           if ((!active.has(handKey) && !initiallyHeld.has(handKey)) || (prior && !validPredecessors.includes(prior.action.type)) || (!prior && !initiallyHeld.has(handKey)))
