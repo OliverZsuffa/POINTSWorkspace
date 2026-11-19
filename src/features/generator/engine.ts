@@ -336,7 +336,8 @@ function isAbstractHandlingChainsValid(sequence: Sequence): boolean {
   for (const entry of entries) {
     const hand = key(entry), prior = previous.get(hand), action = entry.action;
     if (action.type === 'ZIP' && action.role === 'receiver') { previous.set(hand, entry); continue; }
-    if (action.type === 'LIFT' && action.target.kind === 'pass-source' || action.type === 'LEAVE' && action.target.kind === 'pass-recipient-hand') { previous.set(hand, entry); continue; }
+    if (action.type === 'LIFT' && action.target.kind === 'pass-source') { previous.set(hand, entry); continue; }
+    if (action.type === 'LEAVE' && action.target.kind === 'pass-recipient-hand') { active.delete(hand); previous.set(hand, entry); continue; }
     if (action.type === 'LIFT') active.add(hand);
     else if (action.type === 'HOLD' || action.type === 'BOUNCE') {
       if ((!active.has(hand)) || (!prior) || (prior && !validPredecessors.includes(prior.action.type))) return false;
