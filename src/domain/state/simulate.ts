@@ -348,7 +348,8 @@ function evaluateBeat(sequence: Sequence, entries: readonly NotationEntry[], sta
 }
 
 
-/** Validate the structural progression of handling actions across the sequence. */
+/** Validate action progression for objects picked up within the sequence. Initial held objects
+ * remain valid starting points, and sequences may legitimately end with an object in hand. */
 function validateActionChains(sequence: Sequence): ValidationIssue[] {
   const issues: ValidationIssue[] = [];
   const beatIndex = new Map(sequence.beats.map((beat, index) => [beat.id, index]));
@@ -356,47 +357,38 @@ function validateActionChains(sequence: Sequence): ValidationIssue[] {
     (beatIndex.get(a.time.beatId) ?? 0) - (beatIndex.get(b.time.beatId) ?? 0) ||
     String(a.performerId).localeCompare(String(b.performerId)) || a.hand.localeCompare(b.hand));
   const previous = new Map<string, NotationEntry>();
-  const active = new Map<string, NotationEntry>();
-  let lifts = 0;
-  let leaves = 0;
+  const active = new Set<string>();
   for (const entry of entries) {
     const handKey = String(entry.performerId) + ':' + entry.hand;
     const prior = previous.get(handKey);
     const action = entry.action;
-    if (action.type === 'LIFT') lifts++;
-    if (action.type === 'LEAVE') leaves++;
-    if (action.type === 'LIFT') {
-      active.set(handKey, entry);
-    } else if (action.type === 'HOLD') {
-      if (!prior || !(['LIFT', 'ZIP'].includes(prior.action.type)) || !active.has(handKey)) {
-        issues.push(problem('invalid-hold-predecessor', 'HOLD must follow LIFT or a receiving ZIP in the same hand.', [entry, ...(prior ? [prior] : [])]));
-      }
-    } else if (action.type === 'ZIP') {
-      if (action.role === 'source') {
-        if (!prior || !(['LIFT', 'HOLD'].includes(prior.action.type)) || !active.has(handKey)) {
-          issues.push(problem('invalid-zip-predecessor', 'ZIP source must follow LIFT or HOLD in the same hand.', [entry, ...(prior ? [prior] : [])]));
+    // Individual passing actions are paired transfer notation, not solo handling chains.
+    const isPass = (action.type === 'LIFT' && action.target.kind === 'pass-source') ||
+      (action.type === 'LEAVE' && action.target.kind === 'pass-recipient-hand');
+    if (!isPass) {
+      if (action.type === 'LIFT') {
+        active.add(handKey);
+      } else if (action.type === 'HOLD' && active.has(handKey)) {
+        if (!prior || !(['LIFT', 'ZIP'].includes(prior.action.type))) {
+          issues.push(problem('invalid-hold-predecessor', 'HOLD must follow LIFT or a receiving ZIP in the same handling chain.', [entry, ...(prior ? [prior] : [])]));
+        }
+      } else if (action.type === 'ZIP') {
+        if (action.role === 'source') {
+          if (active.has(handKey) && (!prior || !(['LIFT', 'HOLD'].includes(prior.action.type)))) {
+            issues.push(problem('invalid-zip-predecessor', 'ZIP source must follow LIFT or HOLD in the same handling chain.', [entry, ...(prior ? [prior] : [])]));
+          }
+          active.delete(handKey);
+        } else {
+          active.add(handKey);
+        }
+      } else if (action.type === 'LEAVE') {
+        if (active.has(handKey) && (!prior || !(['LIFT', 'HOLD', 'ZIP'].includes(prior.action.type)))) {
+          issues.push(problem('invalid-leave-predecessor', 'LEAVE must follow LIFT, HOLD or ZIP in the same handling chain.', [entry, ...(prior ? [prior] : [])]));
         }
         active.delete(handKey);
-      } else {
-        // A receiving ZIP initiates a handling chain in this hand.
-        active.set(handKey, entry);
       }
-    } else if (action.type === 'LEAVE') {
-      if (!prior || !(['LIFT', 'HOLD', 'ZIP'].includes(prior.action.type)) || !active.has(handKey)) {
-        issues.push(problem('invalid-leave-predecessor', 'LEAVE must follow LIFT, HOLD or ZIP in the same hand.', [entry, ...(prior ? [prior] : [])]));
-      }
-      active.delete(handKey);
     }
     previous.set(handKey, entry);
-  }
-  if (leaves > lifts) {
-    issues.push(problem('lift-leave-count', 'The sequence must contain at least as many LIFT actions as LEAVE actions.', entries.filter(e => e.action.type === 'LIFT' || e.action.type === 'LEAVE')));
-  }
-  for (const [handKey, start] of active) {
-    const last = previous.get(handKey);
-    if (last && (last.action.type === 'HOLD' || (last.action.type === 'ZIP' && last.action.role === 'receiver') || last.action.type === 'LIFT')) {
-      issues.push(problem('unfinished-action-chain', 'A handling chain must be completed by LEAVE or transferred by a ZIP source.', [start, last]));
-    }
   }
   return issues;
 }
