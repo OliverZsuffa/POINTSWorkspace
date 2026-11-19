@@ -382,7 +382,7 @@ function validateActionChains(sequence: Sequence): ValidationIssue[] {
           active.add(handKey);
         }
       } else if (action.type === 'LEAVE') {
-        if (active.has(handKey) && (!prior || !(['LIFT', 'HOLD', 'ZIP'].includes(prior.action.type)))) {
+        if (active.has(handKey) && (!prior || !(['LIFT', 'HOLD', 'ZIP', 'BOUNCE'].includes(prior.action.type)))) {
           issues.push(problem('invalid-leave-predecessor', 'LEAVE must follow LIFT, HOLD or ZIP in the same handling chain.', [entry, ...(prior ? [prior] : [])]));
         }
         active.delete(handKey);
