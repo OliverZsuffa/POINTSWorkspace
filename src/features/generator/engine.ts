@@ -466,6 +466,7 @@ export const sequenceGenerator = {
     const maxSearchNodes = Math.max(1, Math.floor(request.maxSearchNodes ?? 100_000));
     let yielded = 0;
     let visited = 0;
+    let searchLimitNotified = false;
     const seen = new Set<string>();
 
     for (const template of templates) {
@@ -479,7 +480,13 @@ export const sequenceGenerator = {
       const occupied = new Set(existing);
 
       async function* visit(index: number, entries: readonly NotationEntry[]): AsyncGenerator<Sequence> {
-        if (signal?.aborted || visited >= maxSearchNodes || yielded >= maxResults) return;
+        if (signal?.aborted || visited >= maxSearchNodes || yielded >= maxResults) {
+          if (visited >= maxSearchNodes && !searchLimitNotified) {
+            searchLimitNotified = true;
+            request.onSearchLimitReached?.('structures');
+          }
+          return;
+        }
         visited += 1;
         if (visited % 256 === 0) await new Promise<void>((resolve) => setTimeout(resolve, 0));
 
@@ -566,7 +573,13 @@ export const sequenceGenerator = {
         };
         choices.sort((left, right) => choicePriority(right) - choicePriority(left));
         for (const choice of choices) {
-          if (signal?.aborted || visited >= maxSearchNodes || yielded >= maxResults) return;
+          if (signal?.aborted || visited >= maxSearchNodes || yielded >= maxResults) {
+        if (visited >= maxSearchNodes && !searchLimitNotified) {
+          searchLimitNotified = true;
+          request.onSearchLimitReached?.('locations');
+        }
+        return;
+      }
           if (mustUseThisPerformerBeat && choice.entries.every((entry) => entry.action.type === 'EMPTY')) continue;
           if (exactZipTarget !== undefined &&
             currentZipLinks.size >= exactZipTarget &&
@@ -627,6 +640,7 @@ export const sequenceGenerator = {
     const maxResults = Math.max(1, Math.floor(request.maxResults ?? 100));
     const maxSearchNodes = Math.max(1, Math.floor(request.maxSearchNodes ?? 100_000));
     let visited = 0;
+    let searchLimitNotified = false;
     let yielded = 0;
     const seen = new Set<string>();
     const selected = new Map<string, LocationTarget>();
