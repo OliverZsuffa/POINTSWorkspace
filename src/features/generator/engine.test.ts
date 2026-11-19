@@ -42,7 +42,7 @@ describe('sequence generator', () => {
 
   it('generates executable core sequences containing LEAVE when required', async () => {
     const base = representativeSoloSequence;
-    const initialState = { placements: [] };
+    const initialState = base.initialState;
     const leaveRequest: GeneratorRequest = {
       ...request('from-scratch'),
       templateSequence: { ...base, beats: base.beats.slice(0, 3), notation: [], initialState },
