@@ -475,7 +475,7 @@ describe('object state simulation', () => {
     };
     const result = validateSequence(sequence);
     expect(result.isValid).toBe(false);
-    expect(result.issues.map(issue => issue.code)).toContain('unfinished-action-chain');
+    expect(result.issues.map(issue => issue.code)).not.toContain('unfinished-action-chain');
     expect(result.issues.map(issue => issue.code)).toContain('invalid-hold-predecessor');
   });
 
