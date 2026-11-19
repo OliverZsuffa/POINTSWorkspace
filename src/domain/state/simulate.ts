@@ -374,7 +374,7 @@ function validateActionChains(sequence: Sequence): ValidationIssue[] {
         }
       } else if (action.type === 'ZIP') {
         if (action.role === 'source') {
-          if (active.has(handKey) && (!prior || !(['LIFT', 'HOLD', 'ZIP'].includes(prior.action.type)))) {
+          if (active.has(handKey) && (!prior || !(['LIFT', 'HOLD', 'ZIP', 'BOUNCE'].includes(prior.action.type)))) {
             issues.push(problem('invalid-zip-predecessor', 'ZIP source must follow LIFT, HOLD or ZIP in the same handling chain.', [entry, ...(prior ? [prior] : [])]));
           }
           active.delete(handKey);
