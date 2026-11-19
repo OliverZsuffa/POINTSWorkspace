@@ -333,13 +333,22 @@ function isAbstractHandlingChainsValid(sequence: Sequence): boolean {
   const previous = new Map<string, NotationEntry>();
   const key = (entry: NotationEntry) => String(entry.performerId) + ':' + entry.hand;
   const validPredecessors = ['LIFT', 'HOLD', 'ZIP', 'BOUNCE'];
+
+  // Objects held before the sequence begins are not newly opened handling chains.
+  // They may be left directly, but cannot be used to justify HOLD or ZIP source.
+  for (const placement of sequence.initialState.placements) {
+    if (placement.location.kind === 'hand-held') {
+      active.add(String(placement.location.performerId) + ':' + placement.location.hand);
+    }
+  }
+
   for (const entry of entries) {
     const hand = key(entry), prior = previous.get(hand), action = entry.action;
     if (action.type === 'LIFT' && action.target.kind !== 'pass-source') active.add(hand);
     else if (action.type === 'HOLD') {
       if (!active.has(hand) || !prior || !validPredecessors.includes(prior.action.type)) return false;
     } else if (action.type === 'LEAVE' && action.target.kind !== 'pass-recipient-hand') {
-      if (!active.has(hand) || !prior || !validPredecessors.includes(prior.action.type)) return false;
+      if (active.has(hand) && prior && !validPredecessors.includes(prior.action.type)) return false;
       active.delete(hand);
     } else if (action.type === 'ZIP') {
       if (action.role === 'source') {
@@ -352,7 +361,6 @@ function isAbstractHandlingChainsValid(sequence: Sequence): boolean {
   for (const hand of active) if (previous.get(hand)?.action.type === 'HOLD') return false;
   return true;
 }
-
 function isStructurallyAccepted(
   request: GeneratorRequest,
   sequence: Sequence,
