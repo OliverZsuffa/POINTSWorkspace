@@ -81,7 +81,7 @@ function buildChoices(
       return [
         { type: 'LIFT' as const, target },
         { type: 'LEAVE' as const, target },
-        ...(position.kind === 'table' ? [
+        ...(position.kind === 'table' && !abstractLocations ? [
           { type: 'TAP' as const, target },
           { type: 'BOUNCE' as const, target },
         ] : []),
@@ -105,7 +105,7 @@ function buildChoices(
   );
 
   for (const partner of partnerCells) {
-    if (partner.performerId === cell.performerId && partner.hand !== cell.hand) {
+    if (partner.performerId === cell.performerId && partner.hand !== cell.hand && !abstractLocations) {
       const clapLinkId = asLinkId('gen-clap-' + cell.beatIndex + '-' + cell.performerIndex);
       choices.push({
         entries: [
