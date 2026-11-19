@@ -359,9 +359,12 @@ function validateActionChains(sequence: Sequence): ValidationIssue[] {
   const previous = new Map<string, NotationEntry>();
   const active = new Set<string>();
   const openedDuringSequence = new Set<string>();
+  const initiallyHeld = new Set<string>();
   for (const placement of sequence.initialState.placements) {
     if (placement.location.kind === 'hand-held') {
-      active.add(String(placement.location.performerId) + ':' + placement.location.hand);
+      const key = String(placement.location.performerId) + ':' + placement.location.hand;
+      active.add(key);
+      initiallyHeld.add(key);
     }
   }
   for (const entry of entries) {
@@ -392,7 +395,7 @@ function validateActionChains(sequence: Sequence): ValidationIssue[] {
           openedDuringSequence.add(handKey);
         }
       } else if (action.type === 'LEAVE') {
-        if (!active.has(handKey) || !prior || !(['LIFT', 'HOLD', 'ZIP', 'BOUNCE'].includes(prior.action.type))) {
+        if (!active.has(handKey) || (!prior && !initiallyHeld.has(handKey)) || (prior && !(['LIFT', 'HOLD', 'ZIP', 'BOUNCE'].includes(prior.action.type)))) {
           issues.push(problem('invalid-leave-predecessor', 'LEAVE must close an active handling chain, beginning with LIFT or receiving ZIP.', [entry, ...(prior ? [prior] : [])]));
         }
         active.delete(handKey);
