@@ -44,7 +44,8 @@ describe('sequence generator', () => {
     const base = representativeSoloSequence;
     const leaveRequest: GeneratorRequest = {
       ...request('from-scratch'),
-      templateSequence: { ...base, notation: [] },
+      templateSequence: { ...base, beats: base.beats.slice(0, 3), notation: [] },
+      beatCount: 3,
       locationMode: 'abstract',
       constraints: {
         looping: 'either',
