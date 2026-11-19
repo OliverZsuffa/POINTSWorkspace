@@ -30,7 +30,7 @@ import { NotationSymbol } from './features/notation/NotationSymbol';
 import { getBallRectangleEntries } from './features/editor/rectangles';
 import { getTimelineSlots, type TimelineSlot } from './features/editor/timeline';
 import SequenceRenderer from './features/renderer/SequenceRenderer';
-import { sequenceGenerator } from './features/generator';
+import { sequenceGenerator, generateFlourishes } from './features/generator';
 import SequenceDataTools from './features/export/SequenceDataTools';
 import { restoreSequence, saveSequence } from './features/data/persistence';
 import { sequenceCodec } from './features/data/codec';
@@ -293,9 +293,9 @@ export default function App() {
   const [generatorPassCount, setGeneratorPassCount] = useState('');
   const [generatorRequiredFragmentCode, setGeneratorRequiredFragmentCode] = useState('');
   const [generatorForbiddenFragmentCode, setGeneratorForbiddenFragmentCode] = useState('');
-  const [generatorResults, setGeneratorResults] = useState<Sequence[]>([]);
+  const [generatorResults, setGeneratorResults] = useState<Sequence[]>([]);\n  const [generatorFlourishResults, setGeneratorFlourishResults] = useState<Sequence[]>([]);
   const [generatorStructureResults, setGeneratorStructureResults] = useState<Sequence[]>([]);
-  const [generatorStage, setGeneratorStage] = useState<'structures' | 'locations'>('structures');
+  const [generatorStage, setGeneratorStage] = useState<'structures' | 'locations' | 'flourishes'>('structures');
   const [generatorRunning, setGeneratorRunning] = useState(false);
   const [generatorHasMore, setGeneratorHasMore] = useState(false);
   const [generatorError, setGeneratorError] = useState('');
@@ -1002,6 +1002,15 @@ export default function App() {
     setGeneratorError('');
     setGeneratorHasMore(true);
     await loadGeneratorPage('locations');
+  };
+
+  const exploreGeneratorFlourishes = (core: Sequence) => {
+    setGeneratorStage('flourishes');
+    setGeneratorFlourishResults(generateFlourishes(core));
+    setGeneratorHasMore(false);
+    setGeneratorError('');
+    generatorIteratorRef.current = null;
+    generatorPendingRef.current = null;
   };
 
   const stopGenerator = () => {
@@ -2028,7 +2037,7 @@ export default function App() {
             </label>
           </details>
           {generatorError && <p role="alert">{generatorError}</p>}
-          {generatorStage === 'locations' && <button type="button" onClick={() => { setGeneratorStage('structures'); setGeneratorResults([]); setGeneratorHasMore(false); generatorIteratorRef.current = null; }}>Back to structures</button>}
+          {generatorStage === 'locations' && <button type="button" onClick={() => { setGeneratorStage('structures'); setGeneratorResults([]); setGeneratorFlourishResults([]); setGeneratorHasMore(false); generatorIteratorRef.current = null; }}>Back to structures</button>}
           {!generatorRunning && generatorStage === 'structures' && generatorStructureResults.length === 0 && !generatorError && <p>No structures yet. Choose a mode and start generation.</p>}
           {!generatorRunning && generatorStage === 'locations' && generatorResults.length === 0 && !generatorError && <p>No valid location arrangements found for this structure.</p>}
           <div className="generator-results">
@@ -2074,7 +2083,7 @@ export default function App() {
                     </div>
                   ))}
                 </div>
-                <button type="button" onClick={() => { commit(result); setShowGenerator(false); }}>Load into editor</button>
+                <button type="button" onClick={() => exploreGeneratorFlourishes(result)}>Generate flourishes</button> <button type="button" onClick={() => { commit(result); setShowGenerator(false); }}>Load into editor</button>
               </article>
             ))}
           </div>
