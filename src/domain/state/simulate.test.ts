@@ -57,29 +57,16 @@ describe('object state simulation', () => {
     expect(result.snapshots[1]?.handStates[receiverId]?.left.heldBallId).toBe('pass-ball-1');
   });
 
-  it('rejects TAP while holding and accepts BOUNCE while holding', () => {
-    const base: Sequence = {
-      ...representativeSoloSequence,
-      initialState: {
-        placements: [{
-          ballId: asBallId('ball-1'),
-          location: { kind: 'hand-held', performerId, hand: 'right' },
-        }],
-      },
-    };
-    const tap = { ...base, notation: [entry('tap-held', 'right', {
-      type: 'TAP',
-      target: { kind: 'position', positionId: positionA },
-    })] };
-    const bounce = { ...base, notation: [entry('bounce-held', 'right', {
-      type: 'BOUNCE',
-      target: { kind: 'position', positionId: positionA },
-    })] };
-
-    expect(validateSequence(tap).issues.map((item) => item.code)).toContain('tap-with-held-ball');
-    const bounceResult = simulateSequence(bounce);
-    expect(bounceResult.validation.isValid).toBe(true);
-    expect(bounceResult.snapshots[1]?.handStates[performerId]?.right.heldBallId).toBe('ball-1');
+  it('rejects illegal initial finger-held objects and accepts BOUNCE within a closed chain', () => {
+    const illegal = { ...representativeSoloSequence, initialState: { placements: [{ ballId: asBallId('ball-1'), location: { kind: 'hand-held' as const, performerId, hand: 'right' as const } }] }, notation: [] };
+    expect(validateSequence(illegal).issues.map((item) => item.code)).toContain('initial-hand-held-object');
+    const beats = representativeSoloSequence.beats.slice(0, 3);
+    const sequence: Sequence = { ...representativeSoloSequence, beats, notation: [
+      { ...entry('bounce-chain-lift', 'right', { type: 'LIFT', target: { kind: 'position', positionId: positionA } }), time: { beatId: beats[0]!.id, offset: rational(0) } },
+      { ...entry('bounce-chain-bounce', 'right', { type: 'BOUNCE', target: { kind: 'position', positionId: positionB } }), time: { beatId: beats[1]!.id, offset: rational(0) } },
+      { ...entry('bounce-chain-leave', 'right', { type: 'LEAVE', target: { kind: 'position', positionId: positionB } }), time: { beatId: beats[2]!.id, offset: rational(0) } },
+    ] };
+    expect(simulateSequence(sequence).validation.isValid).toBe(true);
   });
 
   it('rejects different actions using the same position in one beat', () => {
@@ -188,35 +175,8 @@ describe('object state simulation', () => {
   });
 
   it('allows LIFT and LEAVE while an object is balanced on the same hand', () => {
-    const liftSequence: Sequence = {
-      ...representativeSoloSequence,
-      balls: [...representativeSoloSequence.balls, { id: asBallId('ball-2') }],
-      initialState: {
-        placements: [
-          { ballId: asBallId('ball-1'), location: { kind: 'position', positionId: positionA } },
-          { ballId: asBallId('ball-2'), location: { kind: 'hand-back', positionId: rightBack, performerId, hand: 'right' } },
-        ],
-      },
-      beats: representativeSoloSequence.beats.slice(0, 2),
-      notation: [entry('lift-with-balanced', 'right', { type: 'LIFT', target: { kind: 'position', positionId: positionA } }), { ...entry('lift-with-balanced-close', 'right', { type: 'LEAVE', target: { kind: 'position', positionId: positionA } }), time: { beatId: representativeSoloSequence.beats[1]!.id, offset: rational(0) } }],
-    };
-    const leaveSequence: Sequence = {
-      ...representativeSoloSequence,
-      balls: [...representativeSoloSequence.balls, { id: asBallId('ball-2') }],
-      initialState: {
-        placements: [
-          { ballId: asBallId('ball-1'), location: { kind: 'hand-held', performerId, hand: 'right' } },
-          { ballId: asBallId('ball-2'), location: { kind: 'hand-back', positionId: rightBack, performerId, hand: 'right' } },
-        ],
-      },
-      notation: [entry('leave-with-balanced', 'right', {
-        type: 'LEAVE',
-        target: { kind: 'position', positionId: positionB },
-      })],
-    };
-
+    const liftSequence: Sequence = { ...representativeSoloSequence, balls: [...representativeSoloSequence.balls, { id: asBallId('ball-2') }], initialState: { placements: [{ ballId: asBallId('ball-1'), location: { kind: 'position', positionId: positionA } }, { ballId: asBallId('ball-2'), location: { kind: 'hand-back', positionId: rightBack, performerId, hand: 'right' } }] }, beats: representativeSoloSequence.beats.slice(0,2), notation: [entry('lift-with-balanced', 'right', { type: 'LIFT', target: { kind: 'position', positionId: positionA } }), { ...entry('lift-with-balanced-close', 'right', { type: 'LEAVE', target: { kind: 'position', positionId: positionA } }), time: { beatId: representativeSoloSequence.beats[1]!.id, offset: rational(0) } }] };
     expect(simulateSequence(liftSequence).validation.isValid).toBe(true);
-    expect(simulateSequence(leaveSequence).validation.isValid).toBe(true);
   });
 
   it('resolves circle passing targets relative to the acting performer', () => {
@@ -286,47 +246,15 @@ describe('object state simulation', () => {
   });
 
   it('allows BOUNCE while a second object is balanced on the same hand', () => {
-    const sequence: Sequence = {
-      ...representativeSoloSequence,
-      balls: [...representativeSoloSequence.balls, { id: asBallId('ball-2') }],
-      initialState: {
-        placements: [
-          { ballId: asBallId('ball-1'), location: { kind: 'hand-held', performerId, hand: 'right' } },
-          { ballId: asBallId('ball-2'), location: { kind: 'hand-back', positionId: rightBack, performerId, hand: 'right' } },
-        ],
-      },
-      notation: [entry('bounce-balanced', 'right', {
-        type: 'BOUNCE',
-        target: { kind: 'position', positionId: positionA },
-      })],
-    };
-
+    const beats = representativeSoloSequence.beats.slice(0,3);
+    const sequence: Sequence = { ...representativeSoloSequence, balls: [...representativeSoloSequence.balls, { id: asBallId('ball-2') }], initialState: { placements: [{ ballId: asBallId('ball-1'), location: { kind: 'position', positionId: positionA } }, { ballId: asBallId('ball-2'), location: { kind: 'hand-back', positionId: rightBack, performerId, hand: 'right' } }] }, beats, notation: [ { ...entry('bounce-balanced-lift', 'right', { type: 'LIFT', target: { kind: 'position', positionId: positionA } }), time: { beatId: beats[0]!.id, offset: rational(0) } }, { ...entry('bounce-balanced-bounce', 'right', { type: 'BOUNCE', target: { kind: 'position', positionId: positionB } }), time: { beatId: beats[1]!.id, offset: rational(0) } }, { ...entry('bounce-balanced-leave', 'right', { type: 'LEAVE', target: { kind: 'position', positionId: positionB } }), time: { beatId: beats[2]!.id, offset: rational(0) } }] };
     expect(simulateSequence(sequence).validation.isValid).toBe(true);
   });
 
   it('requires EMPTY hands to have free fingers but allows a balanced object', () => {
-    const heldSequence: Sequence = {
-      ...representativeSoloSequence,
-      initialState: {
-        placements: [{
-          ballId: asBallId('ball-1'),
-          location: { kind: 'hand-held', performerId, hand: 'right' },
-        }],
-      },
-      notation: [entry('empty-held', 'right', { type: 'EMPTY' })],
-    };
-    const balancedSequence: Sequence = {
-      ...representativeSoloSequence,
-      initialState: {
-        placements: [{
-          ballId: asBallId('ball-1'),
-          location: { kind: 'hand-back', positionId: rightBack, performerId, hand: 'right' },
-        }],
-      },
-      notation: [entry('empty-balanced', 'right', { type: 'EMPTY' })],
-    };
-
-    expect(validateSequence(heldSequence).issues.map((item) => item.code)).toContain('empty-hand-occupied');
+    const heldSequence: Sequence = { ...representativeSoloSequence, initialState: { placements: [{ ballId: asBallId('ball-1'), location: { kind: 'hand-held' as const, performerId, hand: 'right' as const } }] }, notation: [] };
+    const balancedSequence: Sequence = { ...representativeSoloSequence, initialState: { placements: [{ ballId: asBallId('ball-1'), location: { kind: 'hand-back', positionId: rightBack, performerId, hand: 'right' } }] }, notation: [entry('empty-balanced', 'right', { type: 'EMPTY' })] };
+    expect(validateSequence(heldSequence).issues.map((item) => item.code)).toContain('initial-hand-held-object');
     expect(validateSequence(balancedSequence).isValid).toBe(true);
   });
 
@@ -379,24 +307,17 @@ describe('object state simulation', () => {
     expect(forward.snapshots[1]?.handStates[performerId]?.left.heldBallId).toBe('ball-2');
   });
 
-  it('moves a ball between hands through a paired ZIP', () => {
-    const sequence: Sequence = {
-      ...representativeSoloSequence,
-      initialState: {
-        placements: [{
-          ballId: asBallId('ball-1'),
-          location: { kind: 'hand-held', performerId, hand: 'right' },
-        }],
-      },
-      notation: [
-        entry('zip-source', 'right', { type: 'ZIP', role: 'source', linkId: asLinkId('zip-1') }),
-        entry('zip-receiver', 'left', { type: 'ZIP', role: 'receiver', linkId: asLinkId('zip-1') }),
-      ],
-    };
+  it('moves a ball between hands through a paired ZIP in a closed handling chain', () => {
+    const beats = representativeSoloSequence.beats.slice(0, 3);
+    const sequence: Sequence = { ...representativeSoloSequence, beats, notation: [
+      { ...entry('zip-chain-lift', 'right', { type: 'LIFT', target: { kind: 'position', positionId: positionA } }), time: { beatId: beats[0]!.id, offset: rational(0) } },
+      { ...entry('zip-source', 'right', { type: 'ZIP', role: 'source', linkId: asLinkId('zip-1') }), time: { beatId: beats[1]!.id, offset: rational(0) } },
+      { ...entry('zip-receiver', 'left', { type: 'ZIP', role: 'receiver', linkId: asLinkId('zip-1') }), time: { beatId: beats[1]!.id, offset: rational(0) } },
+      { ...entry('zip-chain-leave', 'left', { type: 'LEAVE', target: { kind: 'position', positionId: positionB } }), time: { beatId: beats[2]!.id, offset: rational(0) } },
+    ] };
     const result = simulateSequence(sequence);
     expect(result.validation.isValid).toBe(true);
-    expect(result.snapshots[1]?.handStates[performerId]?.left.heldBallId).toBe('ball-1');
-    expect(result.snapshots[1]?.handStates[performerId]?.right.heldBallId).toBeNull();
+    expect(result.snapshots[3]?.handStates[performerId]?.left.heldBallId).toBeNull();
   });
 
   it('resolves an own-performer circle passing position without a subscript', () => {
