@@ -184,6 +184,7 @@ describe('sequence generator', () => {
       entry.action.type === 'TAP' || entry.action.type === 'BOUNCE',
     );
     expect(abstractTargets.length).toBeGreaterThan(0);
+    expect(structures[0]!.notation.every((entry) => entry.action.type !== 'TAP' && entry.action.type !== 'BOUNCE' && !(entry.action.type === 'SPECIAL' && entry.action.text === 'Clap'))).toBe(true);
     expect(abstractTargets.every((entry) =>
       entry.action.type === 'LIFT' || entry.action.type === 'LEAVE' ||
       entry.action.type === 'TAP' || entry.action.type === 'BOUNCE'
