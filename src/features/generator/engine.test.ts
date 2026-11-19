@@ -173,7 +173,7 @@ describe('sequence generator', () => {
     const initialState = {
       placements: [{
         ballId: base.balls[0]!.id,
-        location: { kind: 'hand-held' as const, performerId, hand: 'left' as const },
+        location: { kind: 'position' as const, positionId: base.positions[0]!.id },
       }],
     };
     const zipRequest: GeneratorRequest = {
