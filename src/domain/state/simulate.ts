@@ -347,6 +347,52 @@ function evaluateBeat(sequence: Sequence, entries: readonly NotationEntry[], sta
   return issues;
 }
 
+
+/** Validate action progression for objects picked up within the sequence. Initial held objects
+ * remain valid starting points, and sequences may legitimately end with an object in hand. */
+function validateActionChains(sequence: Sequence): ValidationIssue[] {
+  const issues: ValidationIssue[] = [];
+  const beatIndex = new Map(sequence.beats.map((beat, index) => [beat.id, index]));
+  const entries = [...sequence.notation].sort((a, b) =>
+    (beatIndex.get(a.time.beatId) ?? 0) - (beatIndex.get(b.time.beatId) ?? 0) ||
+    String(a.performerId).localeCompare(String(b.performerId)) || a.hand.localeCompare(b.hand));
+  const previous = new Map<string, NotationEntry>();
+  const active = new Set<string>();
+  for (const entry of entries) {
+    const handKey = String(entry.performerId) + ':' + entry.hand;
+    const prior = previous.get(handKey);
+    const action = entry.action;
+    // Individual passing actions are paired transfer notation, not solo handling chains.
+    const isPass = (action.type === 'LIFT' && action.target.kind === 'pass-source') ||
+      (action.type === 'LEAVE' && action.target.kind === 'pass-recipient-hand');
+    if (!isPass) {
+      if (action.type === 'LIFT') {
+        active.add(handKey);
+      } else if (action.type === 'HOLD' && active.has(handKey)) {
+        if (!prior || !(['LIFT', 'HOLD', 'ZIP', 'BOUNCE'].includes(prior.action.type))) {
+          issues.push(problem('invalid-hold-predecessor', 'HOLD must follow LIFT, HOLD or a receiving ZIP in the same handling chain.', [entry, ...(prior ? [prior] : [])]));
+        }
+      } else if (action.type === 'ZIP') {
+        if (action.role === 'source') {
+          if (active.has(handKey) && (!prior || !(['LIFT', 'HOLD', 'ZIP', 'BOUNCE'].includes(prior.action.type)))) {
+            issues.push(problem('invalid-zip-predecessor', 'ZIP source must follow LIFT, HOLD or ZIP in the same handling chain.', [entry, ...(prior ? [prior] : [])]));
+          }
+          active.delete(handKey);
+        } else {
+          active.add(handKey);
+        }
+      } else if (action.type === 'LEAVE') {
+        if (active.has(handKey) && (!prior || !(['LIFT', 'HOLD', 'ZIP', 'BOUNCE'].includes(prior.action.type)))) {
+          issues.push(problem('invalid-leave-predecessor', 'LEAVE must follow LIFT, HOLD or ZIP in the same handling chain.', [entry, ...(prior ? [prior] : [])]));
+        }
+        active.delete(handKey);
+      }
+    }
+    previous.set(handKey, entry);
+  }
+  return issues;
+}
+
 export function simulateSequence(sequence: Sequence): SimulationResult {
   const initial = initialState(sequence);
   const issues = [...initial.issues];
@@ -414,6 +460,7 @@ export function simulateSequence(sequence: Sequence): SimulationResult {
     snapshots.push(makeSnapshot(sequence, state, at, 'after'));
   }
 
+  issues.push(...validateActionChains(sequence));
   return { snapshots, validation: { isValid: issues.length === 0, issues } };
 }
 

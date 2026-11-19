@@ -457,4 +457,37 @@ describe('object state simulation', () => {
     };
     expect(simulateSequence(sequence).validation.issues.some((issue) => issue.code === 'invalid-action-offset')).toBe(true);
   });
+
+  it('accepts consecutive HOLD actions within a handling chain', () => {
+    const beats = representativeSoloSequence.beats.slice(0, 4);
+    const chain = (action: NotationEntry['action'], index: number): NotationEntry => ({
+      ...entry('chain-' + index, 'right', action),
+      time: { beatId: beats[index]!.id, offset: rational(0) },
+    });
+    const sequence: Sequence = {
+      ...representativeSoloSequence,
+      beats,
+      notation: [
+        chain({ type: 'LIFT', target: { kind: 'position', positionId: positionA } }, 0),
+        chain({ type: 'HOLD' }, 1),
+        chain({ type: 'HOLD' }, 2),
+        chain({ type: 'LEAVE', target: { kind: 'position', positionId: positionB } }, 3),
+      ],
+    };
+    expect(validateSequence(sequence).isValid).toBe(true);
+  });
+
+  it('accepts a completed LIFT to LEAVE chain', () => {
+    const beats = representativeSoloSequence.beats.slice(0, 2);
+    const sequence: Sequence = {
+      ...representativeSoloSequence,
+      beats,
+      notation: [
+        { ...entry('completed-lift', 'right', { type: 'LIFT', target: { kind: 'position', positionId: positionA } }), time: { beatId: beats[0]!.id, offset: rational(0) } },
+        { ...entry('completed-leave', 'right', { type: 'LEAVE', target: { kind: 'position', positionId: positionB } }), time: { beatId: beats[1]!.id, offset: rational(0) } },
+      ],
+    };
+    expect(validateSequence(sequence).isValid).toBe(true);
+  });
+
 });

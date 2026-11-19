@@ -332,7 +332,23 @@ describe('sequence generator', () => {
   });
 
   it('creates optional flourish variants and keeps the core sequence', () => {
-    const core = representativeSoloSequence;
+    const base = representativeSoloSequence;
+    const lastBeat = base.beats[base.beats.length - 1]!;
+    const core = {
+      ...base,
+      notation: [
+        ...base.notation.map((entry) => entry.action.type === 'TAP'
+          ? { ...entry, action: { type: 'EMPTY' as const } }
+          : entry),
+        {
+          ...base.notation[0]!,
+          id: asActionEntryId('flourish-empty-right'),
+          hand: 'right' as const,
+          time: { beatId: lastBeat.id, offset: base.notation[0]!.time.offset },
+          action: { type: 'EMPTY' as const },
+        },
+      ],
+    };
     const variants = generateFlourishes(core);
     expect(variants[0]).toBe(core);
     expect(variants.length).toBeGreaterThan(1);
