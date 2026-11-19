@@ -169,7 +169,6 @@ describe('sequence generator', () => {
 
   it('finds two ZIP transfers with enough beats to open, transfer twice and close the chain', async () => {
     const base = representativeSoloSequence;
-    const performerId = base.performers[0]!.id;
     const initialState = {
       placements: [{
         ballId: base.balls[0]!.id,
