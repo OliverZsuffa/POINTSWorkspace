@@ -390,6 +390,14 @@ function validateActionChains(sequence: Sequence): ValidationIssue[] {
     }
     previous.set(handKey, entry);
   }
+  for (const handKey of active) {
+    const last = previous.get(handKey);
+    // Only HOLD endings are unfinished. LIFT or receiving ZIP may legitimately
+    // leave an object held at the end of a sequence.
+    if (last?.action.type === 'HOLD') {
+      issues.push(problem('unfinished-action-chain', 'A HOLD chain must eventually be closed with LEAVE.', [last]));
+    }
+  }
   return issues;
 }
 

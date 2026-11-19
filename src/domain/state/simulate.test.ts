@@ -490,4 +490,23 @@ describe('object state simulation', () => {
     expect(validateSequence(sequence).isValid).toBe(true);
   });
 
+
+  it('rejects unfinished LIFT HOLD HOLD chains', () => {
+    const beats = representativeSoloSequence.beats.slice(0, 3);
+    const chain = (action: NotationEntry['action'], index: number): NotationEntry => ({
+      ...entry('unfinished-' + index, 'right', action),
+      time: { beatId: beats[index]!.id, offset: rational(0) },
+    });
+    const sequence: Sequence = {
+      ...representativeSoloSequence,
+      beats,
+      notation: [
+        chain({ type: 'LIFT', target: { kind: 'position', positionId: positionA } }, 0),
+        chain({ type: 'HOLD' }, 1),
+        chain({ type: 'HOLD' }, 2),
+      ],
+    };
+    expect(validateSequence(sequence).isValid).toBe(false);
+    expect(validateSequence(sequence).issues.map((issue) => issue.code)).toContain('unfinished-action-chain');
+  });
 });
