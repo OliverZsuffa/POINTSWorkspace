@@ -300,6 +300,8 @@ export interface GeneratorRequest {
   readonly maxResults?: number;
   readonly maxSearchNodes?: number;
   readonly constraints: GeneratorConstraints;
+  /** Optional UI callback when a bounded search stops at its node limit. */
+  readonly onSearchLimitReached?: (stage: 'structures' | 'locations') => void;
 }
 
 export interface GeneratedCandidate {
