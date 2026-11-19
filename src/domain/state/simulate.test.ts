@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { asActionEntryId, asBallId, asBeatId, asLinkId, asPerformerId, asPositionId } from '../ids';
+import { asActionEntryId, asBallId, asLinkId, asPerformerId, asPositionId } from '../ids';
 import type { NotationEntry, Sequence } from '../model';
 import { rational } from '../time/rational';
 import {
