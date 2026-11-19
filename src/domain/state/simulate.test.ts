@@ -124,37 +124,13 @@ describe('object state simulation', () => {
   });
 
   it('can LIFT from and LEAVE onto a hand back position', () => {
-    const liftFromBack: Sequence = {
-      ...representativeSoloSequence,
-      initialState: {
-        placements: [{
-          ballId: asBallId('ball-1'),
-          location: { kind: 'hand-back', positionId: rightBack, performerId, hand: 'right' },
-        }],
-      },
-      beats: representativeSoloSequence.beats.slice(0, 2),
-      notation: [entry('lift-from-back', 'left', { type: 'LIFT', target: { kind: 'position', positionId: rightBack } }), { ...entry('lift-from-back-close', 'left', { type: 'LEAVE', target: { kind: 'position', positionId: positionA } }), time: { beatId: representativeSoloSequence.beats[1]!.id, offset: rational(0) } }],
-    };
-    const leaveToBack: Sequence = {
-      ...representativeSoloSequence,
-      initialState: {
-        placements: [{
-          ballId: asBallId('ball-1'),
-          location: { kind: 'hand-held', performerId, hand: 'right' },
-        }],
-      },
-      notation: [entry('leave-to-back', 'right', {
-        type: 'LEAVE',
-        target: { kind: 'position', positionId: leftBack },
-      })],
-    };
-
-    const lifted = simulateSequence(liftFromBack);
-    const left = simulateSequence(leaveToBack);
+    const liftFromBack: Sequence = { ...representativeSoloSequence, initialState: { placements: [{ ballId: asBallId('ball-1'), location: { kind: 'hand-back', positionId: rightBack, performerId, hand: 'right' } }] }, beats: representativeSoloSequence.beats.slice(0,2), notation: [entry('lift-from-back', 'left', { type: 'LIFT', target: { kind: 'position', positionId: rightBack } }), { ...entry('lift-from-back-close', 'left', { type: 'LEAVE', target: { kind: 'position', positionId: positionA } }), time: { beatId: representativeSoloSequence.beats[1]!.id, offset: rational(0) } }] };
+    const leaveToBack: Sequence = { ...representativeSoloSequence, initialState: { placements: [{ ballId: asBallId('ball-1'), location: { kind: 'position', positionId: positionA } }] }, beats: representativeSoloSequence.beats.slice(0,2), notation: [entry('leave-to-back-lift', 'right', { type: 'LIFT', target: { kind: 'position', positionId: positionA } }), { ...entry('leave-to-back', 'right', { type: 'LEAVE', target: { kind: 'position', positionId: leftBack } }), time: { beatId: representativeSoloSequence.beats[1]!.id, offset: rational(0) } }] };
+    const lifted = simulateSequence(liftFromBack); const left = simulateSequence(leaveToBack);
     expect(lifted.validation.isValid).toBe(true);
     expect(lifted.snapshots[1]?.handStates[performerId]?.left.heldBallId).toBe('ball-1');
     expect(left.validation.isValid).toBe(true);
-    expect(left.snapshots[1]?.handStates[performerId]?.left.balancedBallId).toBe('ball-1');
+    expect(left.snapshots[3]?.handStates[performerId]?.left.balancedBallId).toBe('ball-1');
   });
 
   it('allows a balanced object while the fingers perform SPECIAL', () => {
