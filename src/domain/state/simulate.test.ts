@@ -145,10 +145,8 @@ describe('object state simulation', () => {
           location: { kind: 'hand-back', positionId: rightBack, performerId, hand: 'right' },
         }],
       },
-      notation: [entry('lift-from-back', 'left', {
-        type: 'LIFT',
-        target: { kind: 'position', positionId: rightBack },
-      })],
+      beats: representativeSoloSequence.beats.slice(0, 2),
+      notation: [entry('lift-from-back', 'left', { type: 'LIFT', target: { kind: 'position', positionId: rightBack } }), { ...entry('lift-from-back-close', 'left', { type: 'LEAVE', target: { kind: 'position', positionId: positionA } }), time: { beatId: representativeSoloSequence.beats[1]!.id, offset: rational(0) } }],
     };
     const leaveToBack: Sequence = {
       ...representativeSoloSequence,
@@ -199,10 +197,8 @@ describe('object state simulation', () => {
           { ballId: asBallId('ball-2'), location: { kind: 'hand-back', positionId: rightBack, performerId, hand: 'right' } },
         ],
       },
-      notation: [entry('lift-with-balanced', 'right', {
-        type: 'LIFT',
-        target: { kind: 'position', positionId: positionA },
-      })],
+      beats: representativeSoloSequence.beats.slice(0, 2),
+      notation: [entry('lift-with-balanced', 'right', { type: 'LIFT', target: { kind: 'position', positionId: positionA } }), { ...entry('lift-with-balanced-close', 'right', { type: 'LEAVE', target: { kind: 'position', positionId: positionA } }), time: { beatId: representativeSoloSequence.beats[1]!.id, offset: rational(0) } }],
     };
     const leaveSequence: Sequence = {
       ...representativeSoloSequence,
