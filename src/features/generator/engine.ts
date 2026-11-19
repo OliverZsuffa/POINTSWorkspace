@@ -332,7 +332,7 @@ function isAbstractHandlingChainsValid(sequence: Sequence): boolean {
   const active = new Set<string>(), initiallyHeld = new Set<string>(), previous = new Map<string, NotationEntry>();
   const key = (entry: NotationEntry) => String(entry.performerId) + ':' + entry.hand, validPredecessors = ['LIFT', 'HOLD', 'ZIP', 'BOUNCE'];
   for (const placement of sequence.initialState.placements) if (placement.location.kind === 'hand-held') {
-    const hand = String(placement.location.performerId) + ':' + placement.location.hand; active.add(hand); initiallyHeld.add(hand);
+    const hand = String(placement.location.performerId) + ':' + placement.location.hand; initiallyHeld.add(hand);
   }
   for (const entry of entries) {
     const hand = key(entry), prior = previous.get(hand), action = entry.action;
@@ -341,6 +341,7 @@ function isAbstractHandlingChainsValid(sequence: Sequence): boolean {
       if (action.type === 'LIFT') active.add(hand);
       else if (action.type === 'HOLD' || action.type === 'BOUNCE') {
         if ((!active.has(hand) && !initiallyHeld.has(hand)) || (!prior && !initiallyHeld.has(hand)) || (prior && !validPredecessors.includes(prior.action.type))) return false;
+        active.add(hand);
       } else if (action.type === 'ZIP') {
         if (action.role === 'source') {
           if ((!active.has(hand) && !initiallyHeld.has(hand)) || (prior && !validPredecessors.includes(prior.action.type)) || (!prior && !initiallyHeld.has(hand))) return false;
