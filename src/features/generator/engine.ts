@@ -329,24 +329,22 @@ function isAbstractHandlingChainsValid(sequence: Sequence): boolean {
   const entries = [...sequence.notation].sort((a, b) =>
     (beatIndex.get(a.time.beatId) ?? 0) - (beatIndex.get(b.time.beatId) ?? 0) ||
     String(a.performerId).localeCompare(String(b.performerId)) || a.hand.localeCompare(b.hand));
-  const active = new Set<string>(), initiallyHeld = new Set<string>(), previous = new Map<string, NotationEntry>();
+  const active = new Set<string>(), previous = new Map<string, NotationEntry>();
   const key = (entry: NotationEntry) => String(entry.performerId) + ':' + entry.hand;
   const validPredecessors = ['LIFT', 'HOLD', 'ZIP', 'BOUNCE'];
   const zipReceivers = new Map<string, NotationEntry>();
   for (const entry of entries) if (entry.action.type === 'ZIP' && entry.action.role === 'receiver') zipReceivers.set(entry.action.linkId, entry);
-  for (const placement of sequence.initialState.placements) if (placement.location.kind === 'hand-held')
-    initiallyHeld.add(String(placement.location.performerId) + ':' + placement.location.hand);
   for (const entry of entries) {
     const hand = key(entry), prior = previous.get(hand), action = entry.action;
     if (action.type === 'ZIP' && action.role === 'receiver') { previous.set(hand, entry); continue; }
     if (action.type === 'LIFT' && action.target.kind === 'pass-source' || action.type === 'LEAVE' && action.target.kind === 'pass-recipient-hand') { previous.set(hand, entry); continue; }
     if (action.type === 'LIFT') active.add(hand);
     else if (action.type === 'HOLD' || action.type === 'BOUNCE') {
-      if ((!active.has(hand) && !initiallyHeld.has(hand)) || (!prior && !initiallyHeld.has(hand)) || (prior && !validPredecessors.includes(prior.action.type))) return false;
+      if ((!active.has(hand)) || (!prior) || (prior && !validPredecessors.includes(prior.action.type))) return false;
       active.add(hand);
     } else if (action.type === 'ZIP') {
       if (action.role === 'source') {
-        if ((!active.has(hand) && !initiallyHeld.has(hand)) || (prior && !validPredecessors.includes(prior.action.type)) || (!prior && !initiallyHeld.has(hand))) return false;
+        if ((!active.has(hand)) || (prior && !validPredecessors.includes(prior.action.type)) || (!prior)) return false;
         const receiver = zipReceivers.get(action.linkId);
         if (receiver && active.has(hand)) active.add(key(receiver));
         active.delete(hand);
