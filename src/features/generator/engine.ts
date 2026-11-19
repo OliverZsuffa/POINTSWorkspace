@@ -353,7 +353,7 @@ function isAbstractHandlingChainsValid(sequence: Sequence): boolean {
     }
     previous.set(hand, entry);
   }
-  return true;
+  return active.size === 0;
 }
 
 function isStructurallyAccepted(
