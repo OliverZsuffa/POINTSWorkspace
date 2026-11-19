@@ -349,6 +349,43 @@ function locationTarget(sequence: Sequence, position: Sequence['positions'][numb
   return { kind: 'position', positionId: position.id };
 }
 
+/** Builds optional flourish variants from a fully validated core sequence. */
+export function generateFlourishes(sequence: Sequence): Sequence[] {
+  const variants: Sequence[] = [sequence];
+  const tablePosition = sequence.positions.find((position) => position.kind === 'table');
+  if (!tablePosition) return variants;
+  const target = sequence.sequenceType === 'circle-passing'
+    ? { kind: 'circle-position' as const, position: tablePosition.name as 'A' | 'B' | 'C' }
+    : { kind: 'position' as const, positionId: tablePosition.id };
+  const addIfValid = (notation: NotationEntry[]) => {
+    const candidate = { ...sequence, notation };
+    if (simulateSequence(candidate).validation.isValid && !variants.some((item) => candidateKey(item) === candidateKey(candidate))) {
+      variants.push(candidate);
+    }
+  };
+  sequence.notation.forEach((entry, index) => {
+    if (entry.action.type === 'HOLD') {
+      addIfValid(sequence.notation.map((item, i) => i === index ? { ...item, action: { type: 'BOUNCE' as const, target } } : item));
+    } else if (entry.action.type === 'EMPTY') {
+      addIfValid(sequence.notation.map((item, i) => i === index ? { ...item, action: { type: 'TAP' as const, target } } : item));
+    }
+  });
+  const beatIndex = new Map(sequence.beats.map((beat, index) => [beat.id, index]));
+  for (const performer of sequence.performers) {
+    for (const beat of sequence.beats) {
+      const left = sequence.notation.find((entry) => entry.performerId === performer.id && entry.hand === 'left' && entry.time.beatId === beat.id && entry.action.type === 'EMPTY');
+      const right = sequence.notation.find((entry) => entry.performerId === performer.id && entry.hand === 'right' && entry.time.beatId === beat.id && entry.action.type === 'EMPTY');
+      if (!left || !right) continue;
+      const linkId = asLinkId('flourish-clap-' + performer.id + '-' + beat.id);
+      addIfValid(sequence.notation.map((entry) => entry.id === left.id || entry.id === right.id
+        ? { ...entry, action: { type: 'SPECIAL' as const, text: 'Clap', linkId } }
+        : entry));
+    }
+  }
+  void beatIndex;
+  return variants;
+}
+
 export function candidateKey(sequence: Sequence, canonicalizeRotation = false): string {
   const beatIndex = new Map(sequence.beats.map((beat, index) => [beat.id, index]));
   const performerIndex = new Map(sequence.performers.map((performer, index) => [performer.id, index]));
