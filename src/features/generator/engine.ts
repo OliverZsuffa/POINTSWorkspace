@@ -76,7 +76,7 @@ function buildChoices(
   const targetPositions = abstractLocations
     ? abstractPosition ? [abstractPosition] : []
     : sequence.positions;
-  const singles: NotationAction[] = [
+  const singles: NotationAction[] = [\n    { type: 'HOLD' },
     ...targetPositions.flatMap((position) => {
       const target = position.kind === 'table' ? targetFor(position) : { kind: 'position' as const, positionId: position.id };
       return [
@@ -323,13 +323,42 @@ export function isAbstractStateValid(sequence: Sequence): boolean {
   return true;
 }
 
+function isAbstractHandlingChainsValid(sequence: Sequence): boolean {
+  const beatIndex = new Map(sequence.beats.map((beat, index) => [beat.id, index]));
+  const entries = [...sequence.notation].sort((a, b) =>
+    (beatIndex.get(a.time.beatId) ?? 0) - (beatIndex.get(b.time.beatId) ?? 0) ||
+    String(a.performerId).localeCompare(String(b.performerId)) || a.hand.localeCompare(b.hand));
+  const active = new Set<string>();
+  const previous = new Map<string, NotationEntry>();
+  const key = (entry: NotationEntry) => String(entry.performerId) + ':' + entry.hand;
+  const validPredecessors = ['LIFT', 'HOLD', 'ZIP', 'BOUNCE'];
+  for (const entry of entries) {
+    const hand = key(entry), prior = previous.get(hand), action = entry.action;
+    if (action.type === 'LIFT' && action.target.kind !== 'pass-source') active.add(hand);
+    else if (action.type === 'HOLD') {
+      if (!active.has(hand) || !prior || !validPredecessors.includes(prior.action.type)) return false;
+    } else if (action.type === 'LEAVE' && action.target.kind !== 'pass-recipient-hand') {
+      if (!active.has(hand) || !prior || !validPredecessors.includes(prior.action.type)) return false;
+      active.delete(hand);
+    } else if (action.type === 'ZIP') {
+      if (action.role === 'source') {
+        if (!active.has(hand) || !prior || !validPredecessors.includes(prior.action.type)) return false;
+        active.delete(hand);
+      } else active.add(hand);
+    }
+    previous.set(hand, entry);
+  }
+  for (const hand of active) if (previous.get(hand)?.action.type === 'HOLD') return false;
+  return true;
+}
+
 function isStructurallyAccepted(
   request: GeneratorRequest,
   sequence: Sequence,
   base: Sequence | undefined,
 ): boolean {
   if (base && !preservesBaseSequence(base, sequence)) return false;
-  if (!isAbstractStateValid(sequence)) return false;
+  if (!isAbstractStateValid(sequence) || !isAbstractHandlingChainsValid(sequence)) return false;
   return satisfiesActionRequirements(sequence, {
     ...request.constraints,
     looping: 'either',
