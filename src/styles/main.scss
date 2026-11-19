@@ -757,7 +757,7 @@ html, body, #root { min-height: 100%; background: #90d0d5; }
 .generator-preview-row { display: grid; align-items: stretch; }
 .generator-preview-row > span { display: grid; place-items: center; }
 .generator-preview-cell { display: grid; place-items: center; min-height: 42px; border-left: 1px solid var(--border-subtle); background: #f8faff; }
-.generator-preview-cell svg { max-width: 43px; max-height: 37px; }
+.generator-preview-cell svg.ball-segment { width: 100%; height: 100%; max-width: none; max-height: none; }\n.generator-preview-cell { width: var(--notation-cell-size); min-width: var(--notation-cell-size); height: var(--notation-cell-size); min-height: var(--notation-cell-size); padding: 0; }
 .generator-panel > p { margin: 10px 0 0; color: #7b898b; font-size: 11px; }
 @media (max-width: 700px) { .generator-panel { margin: 0 12px 12px; } }
 
