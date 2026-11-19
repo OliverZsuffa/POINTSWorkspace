@@ -222,7 +222,7 @@ function circleSubscript(target: Extract<TableActionTarget, { kind: 'circle-posi
 }
 
 function ActionSymbol({ action, sequence, hand, abstractTargets = false }: { action: NotationAction; sequence: Sequence; hand: Hand; abstractTargets?: boolean }) {
-  return <NotationSymbol action={action} sequence={sequence} hand={hand} abstractTargets={abstractTargets} className="ball-segment" />;
+  return <NotationSymbol action={action} sequence={sequence} hand={hand} abstractTargets={abstractTargets} className="notation-symbol ball-segment" />;
 }
 
 function NotationMark({ action, sequence, hand }: { action: NotationAction; sequence: Sequence; hand: Hand }) {
