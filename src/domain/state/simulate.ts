@@ -387,6 +387,11 @@ function validateActionChains(sequence: Sequence): ValidationIssue[] {
     }
     previous.set(handKey, entry);
   }
+  for (const handKey of active) {
+    const chainEntries = entries.filter((entry) => String(entry.performerId) + ':' + entry.hand === handKey &&
+      ['LIFT', 'HOLD', 'BOUNCE', 'ZIP'].includes(entry.action.type));
+    issues.push(problem('unfinished-action-chain', 'Handling chains must end with LEAVE or transfer through ZIP.', chainEntries));
+  }
   return issues;
 }
 
