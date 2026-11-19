@@ -105,7 +105,8 @@ function buildChoices(
   );
 
   for (const partner of partnerCells) {
-    if (partner.performerId === cell.performerId && partner.hand !== cell.hand && !abstractLocations) {
+    if (partner.performerId === cell.performerId && partner.hand !== cell.hand) {
+      if (!abstractLocations) {
       const clapLinkId = asLinkId('gen-clap-' + cell.beatIndex + '-' + cell.performerIndex);
       choices.push({
         entries: [
@@ -114,6 +115,7 @@ function buildChoices(
         ],
         coveredCells: [cellKey(cell), cellKey(partner)],
       });
+      }
       for (const [source, receiver] of [[cell, partner], [partner, cell]] as const) {
         const linkId = asLinkId('gen-zip-' + cell.beatIndex + '-' + cell.performerIndex + '-' + source.hand);
         choices.push({
