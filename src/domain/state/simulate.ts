@@ -355,41 +355,41 @@ function validateActionChains(sequence: Sequence): ValidationIssue[] {
   const entries = [...sequence.notation].sort((a, b) =>
     (beatIndex.get(a.time.beatId) ?? 0) - (beatIndex.get(b.time.beatId) ?? 0) ||
     String(a.performerId).localeCompare(String(b.performerId)) || a.hand.localeCompare(b.hand));
-  const previous = new Map<string, NotationEntry>(), active = new Set<string>(), initiallyHeld = new Set<string>();
-  for (const placement of sequence.initialState.placements) if (placement.location.kind === 'hand-held') {
-    const hand = String(placement.location.performerId) + ':' + placement.location.hand;
-    initiallyHeld.add(hand);
-  }
+  const handKey = (entry: NotationEntry) => String(entry.performerId) + ':' + entry.hand;
+  const active = new Set<string>(), initiallyHeld = new Set<string>(), previous = new Map<string, NotationEntry>();
+  const zipReceivers = new Set<ActionEntryId>();
+  const zipPairs = new Map<string, NotationEntry>();
+  for (const entry of entries) if (entry.action.type === 'ZIP' && entry.action.role === 'receiver') zipPairs.set(entry.action.linkId, entry);
+  for (const placement of sequence.initialState.placements) if (placement.location.kind === 'hand-held') initiallyHeld.add(String(placement.location.performerId) + ':' + placement.location.hand);
   const validPredecessors = ['LIFT', 'HOLD', 'ZIP', 'BOUNCE'];
   for (const entry of entries) {
-    const handKey = String(entry.performerId) + ':' + entry.hand, prior = previous.get(handKey), action = entry.action;
-    const isPass = (action.type === 'LIFT' && action.target.kind === 'pass-source') || (action.type === 'LEAVE' && action.target.kind === 'pass-recipient-hand');
-    if (!isPass) {
-      if (action.type === 'LIFT') active.add(handKey);
-      else if (action.type === 'HOLD' || action.type === 'BOUNCE') {
-        if ((!active.has(handKey) && !initiallyHeld.has(handKey)) || (!prior && !initiallyHeld.has(handKey)) || (prior && !validPredecessors.includes(prior.action.type)))
-          issues.push(problem('invalid-hold-predecessor', action.type + ' must follow LIFT, HOLD, ZIP or BOUNCE in the same handling chain.', [entry, ...(prior ? [prior] : [])]));
-        else active.add(handKey);
-      } else if (action.type === 'ZIP') {
-        if (action.role === 'source') {
-          if ((!active.has(handKey) && !initiallyHeld.has(handKey)) || (prior && !validPredecessors.includes(prior.action.type)) || (!prior && !initiallyHeld.has(handKey)))
-            issues.push(problem('invalid-zip-predecessor', 'ZIP source must follow LIFT, HOLD or ZIP in the same handling chain.', [entry, ...(prior ? [prior] : [])]));
-          active.delete(handKey);
-        } else active.add(handKey);
-      } else if (action.type === 'LEAVE') {
-        if ((!active.has(handKey) && !initiallyHeld.has(handKey)) || (prior && !validPredecessors.includes(prior.action.type)) || (!prior && !initiallyHeld.has(handKey)))
-          issues.push(problem('invalid-leave-predecessor', 'LEAVE must follow LIFT, HOLD or ZIP in the same handling chain.', [entry, ...(prior ? [prior] : [])]));
-        active.delete(handKey);
-      } else if (active.has(handKey) && ['EMPTY', 'TAP', 'SPECIAL'].includes(action.type)) {
-        issues.push(problem('interrupted-handling-chain', 'EMPTY, TAP or SPECIAL cannot interrupt an active handling chain. Close it with LEAVE or transfer it with ZIP first.', [entry, ...(prior ? [prior] : [])]));
-        active.delete(handKey);
+    const hand = handKey(entry), prior = previous.get(hand), action = entry.action;
+    if (action.type === 'ZIP' && action.role === 'receiver') { previous.set(hand, entry); continue; }
+    if (action.type === 'LIFT' && action.target.kind === 'pass-source' || action.type === 'LEAVE' && action.target.kind === 'pass-recipient-hand') { previous.set(hand, entry); continue; }
+    if (action.type === 'LIFT') active.add(hand);
+    else if (action.type === 'HOLD' || action.type === 'BOUNCE') {
+      if ((!active.has(hand) && !initiallyHeld.has(hand)) || (!prior && !initiallyHeld.has(hand)) || (prior && !validPredecessors.includes(prior.action.type)))
+        issues.push(problem('invalid-hold-predecessor', action.type + ' must follow LIFT, HOLD, ZIP or BOUNCE in the same handling chain.', [entry, ...(prior ? [prior] : [])]));
+      else active.add(hand);
+    } else if (action.type === 'ZIP') {
+      const receiver = zipPairs.get(action.linkId);
+      if (action.role === 'source') {
+        if ((!active.has(hand) && !initiallyHeld.has(hand)) || (prior && !validPredecessors.includes(prior.action.type)) || (!prior && !initiallyHeld.has(hand)))
+          issues.push(problem('invalid-zip-predecessor', 'ZIP source must follow LIFT, HOLD, ZIP or an initial held object.', [entry, ...(prior ? [prior] : [])]));
+        if (receiver && active.has(hand)) active.add(handKey(receiver));
+        active.delete(hand);
       }
+    } else if (action.type === 'LEAVE') {
+      if ((!active.has(hand) && !initiallyHeld.has(hand)) || (prior && !validPredecessors.includes(prior.action.type)) || (!prior && !initiallyHeld.has(hand)))
+        issues.push(problem('invalid-leave-predecessor', 'LEAVE must follow LIFT, HOLD, ZIP or an initial held object.', [entry, ...(prior ? [prior] : [])]));
+      active.delete(hand);
+    } else if (active.has(hand) && ['EMPTY', 'TAP', 'SPECIAL'].includes(action.type)) {
+      issues.push(problem('interrupted-handling-chain', 'EMPTY, TAP or SPECIAL cannot interrupt an active handling chain. Close it with LEAVE or transfer it with ZIP first.', [entry, ...(prior ? [prior] : [])]));
     }
-    previous.set(handKey, entry);
+    previous.set(hand, entry);
   }
-  for (const handKey of active) {
-    const chainEntries = entries.filter((entry) => String(entry.performerId) + ':' + entry.hand === handKey &&
-      ['LIFT', 'HOLD', 'BOUNCE', 'ZIP'].includes(entry.action.type));
+  for (const hand of active) {
+    const chainEntries = entries.filter((entry) => handKey(entry) === hand && ['LIFT', 'HOLD', 'BOUNCE', 'ZIP'].includes(entry.action.type));
     issues.push(problem('unfinished-action-chain', 'Handling chains must end with LEAVE or transfer through ZIP.', chainEntries));
   }
   return issues;
